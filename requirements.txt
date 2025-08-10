@@ -4,3 +4,4 @@ numpy
 python-docx
 groq
 yagmail
+vnstock
