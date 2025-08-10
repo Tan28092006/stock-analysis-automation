@@ -7,7 +7,7 @@ import json
 import glob
 from docx import Document
 from groq import Groq
-
+import yagmail
 # ==== Thiết lập biến môi trường ====
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 if not GROQ_API_KEY:
@@ -153,5 +153,28 @@ for line in report_text.strip().split('\n'):
 
 report_path = os.path.join(save_path, "Bao_cao_phan_tich_co_phieu.docx")
 doc.save(report_path)
+def send_email_report(receiver_email, subject, content, attachment_path):
+    sender_email = os.getenv("EMAIL_USER")  # Email người gửi (Gmail)
+    sender_password = os.getenv("EMAIL_PASS")  # Mật khẩu ứng dụng Gmail
 
+    if not sender_email or not sender_password:
+        raise Exception("Chưa set EMAIL_USER và EMAIL_PASS trong secrets")
+
+    yag = yagmail.SMTP(user=sender_email, password=sender_password)
+    yag.send(
+        to=receiver_email,
+        subject=subject,
+        contents=content,
+        attachments=attachment_path
+    )
+    print(f"📧 Đã gửi báo cáo tới {receiver_email}")
 print(f"✅ Đã lưu báo cáo phân tích vào file {report_path}")
+
+# Gửi email báo cáo
+send_email_report(
+    receiver_email="vanheminhtan@gmail.com",
+    subject="Báo cáo phân tích chứng khoán tự động",
+    content=report_text,
+    attachment_path=report_path
+)
+
