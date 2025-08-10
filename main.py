@@ -171,10 +171,12 @@ def send_email_report(receiver_email, subject, content, attachment_path):
 print(f"✅ Đã lưu báo cáo phân tích vào file {report_path}")
 
 # Gửi email báo cáo
-send_email_report(
-    receiver_email="vanheminhtan@gmail.com",
-    subject="Báo cáo phân tích chứng khoán tự động",
-    content=report_text,
-    attachment_path=report_path
-)
-
+try: 
+   send_email_report(
+      receiver_email="vanheminhtan@gmail.com",
+      subject="Báo cáo phân tích chứng khoán tự động",
+      content=report_text,
+      attachment_path=report_path
+   )
+except Exception as e:
+    print(f"❌ Lỗi gửi email: {e}")
