@@ -6,7 +6,7 @@ import glob
 from docx import Document
 from groq import Groq
 import yagmail
-from vnstock import stock_list, stock_historical_data
+from vnstock import listing_companies, stock_historical_data
 
 # ==== Thiết lập biến môi trường ====
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -53,19 +53,21 @@ def AO(high, low, short=5, long=34):
 
 # ==== Lấy top 5 cổ phiếu tăng trưởng mạnh nhất VN30 trong 14 ngày ====
 def get_top_gainers_vnstock(days=14, top_n=5):
-    vn30_df = stock_list('VN30')
-    tickers = vn30_df['ticker'].tolist()
+    vn30_df = listing_companies()
+    vn30_tickers = vn30_df[vn30_df['group_code'] == 'VN30']['ticker'].tolist()
 
     end_date = datetime.now()
     start_date = end_date - timedelta(days=days)
     change_data = []
 
-    for ticker in tickers:
+    for ticker in vn30_tickers:
         try:
-            df = stock_historical_data(symbol=ticker,
-                                       start_date=start_date.strftime("%Y-%m-%d"),
-                                       end_date=end_date.strftime("%Y-%m-%d"),
-                                       resolution='1D')
+            df = stock_historical_data(
+                symbol=ticker,
+                start_date=start_date.strftime("%Y-%m-%d"),
+                end_date=end_date.strftime("%Y-%m-%d"),
+                resolution='1D'
+            )
             if df.empty:
                 continue
             start_price = df['close'].iloc[0]
@@ -79,7 +81,7 @@ def get_top_gainers_vnstock(days=14, top_n=5):
     df_change = df_change.sort_values(by="Change", ascending=False)
     return df_change.head(top_n)["Ticker"].tolist()
 
-tickers = get_top_gainers_vnstock(days=14, top_n=5)
+tickers = get_top_gainers_vnstock()
 print("📈 Top 5 cổ phiếu VN30 tăng mạnh nhất 14 ngày qua:", tickers)
 
 # ==== Thư mục lưu file ====
@@ -92,10 +94,12 @@ start_date = end_date - timedelta(days=28)
 
 # ==== Tải dữ liệu, tính chỉ báo, lưu JSON ====
 for ticker in tickers:
-    df = stock_historical_data(symbol=ticker,
-                               start_date=start_date.strftime("%Y-%m-%d"),
-                               end_date=end_date.strftime("%Y-%m-%d"),
-                               resolution='1D')
+    df = stock_historical_data(
+        symbol=ticker,
+        start_date=start_date.strftime("%Y-%m-%d"),
+        end_date=end_date.strftime("%Y-%m-%d"),
+        resolution='1D'
+    )
     if df.empty:
         continue
 
