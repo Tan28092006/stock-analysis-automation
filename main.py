@@ -16,7 +16,7 @@ if not GROQ_API_KEY:
 
 client = Groq(api_key=GROQ_API_KEY)
 
-# ==== Các hàm tính chỉ báo ====
+# ==== Hàm chỉ báo kỹ thuật ====
 def EMA(series, period):
     return series.ewm(span=period, adjust=False).mean()
 
@@ -57,37 +57,40 @@ save_path = "outputs"
 os.makedirs(save_path, exist_ok=True)
 
 # ==== Danh sách VN30 ====
-vn30_tickers = [
-    "ACB", "BCM", "BID", "BVH", "CTG", "FPT", "GAS", "GVR", "HDB", "HPG",
-    "KDH", "MBB", "MSN", "MWG", "NVL", "PDR", "PLX", "POW", "SAB", "SHB",
-    "SSI", "STB", "TCB", "TPB", "VCB", "VHM", "VIB", "VIC", "VJC", "VNM"
+VN30_TICKERS = [
+    "ACB","BCM","BID","BVH","CTG","FPT","GAS","GVR","HDB","HPG","KDH","LPB",
+    "MBB","MSN","MWG","NVL","PDR","PLX","POW","SAB","SHB","SSI","STB","TCB",
+    "TPB","VCB","VHM","VIC","VJC","VNM","VPB","VRE"
 ]
 
-# ==== Bước 1: Lọc top tăng trưởng 14 ngày ====
+# ==== Bước 1: Tính tăng trưởng 14 ngày ====
 growth_data = []
-two_weeks_ago = datetime.today() - timedelta(days=14)
+end_date_14 = datetime.today()
+start_date_14 = end_date_14 - timedelta(days=14)
 
-for ticker in vn30_tickers:
-    df_temp = yf.download(ticker + ".VN", start=two_weeks_ago, end=datetime.today())
+for ticker in VN30_TICKERS:
+    df_temp = yf.download(ticker + ".VN", start=start_date_14, end=end_date_14)
     if df_temp.empty:
         continue
-    start_price = df_temp["Close"].iloc[0]
-    end_price = df_temp["Close"].iloc[-1]
-    growth_pct = (end_price / start_price - 1) * 100
+    growth_pct = ((df_temp["Close"].iloc[-1] - df_temp["Close"].iloc[0]) / df_temp["Close"].iloc[0]) * 100
     growth_data.append((ticker, growth_pct))
 
+# Sắp xếp giảm dần theo % tăng trưởng
 growth_data.sort(key=lambda x: x[1], reverse=True)
-top_tickers = [x[0] for x in growth_data[:5]]
+top_5 = [x[0] for x in growth_data[:5]]
 
-print("📈 Top 5 VN30 tăng trưởng 14 ngày:", top_tickers)
+print("📈 Top 5 cổ phiếu VN30 tăng trưởng cao nhất 14 ngày gần đây:")
+for t, g in growth_data[:5]:
+    print(f"{t}: {g:.2f}%")
 
-# ==== Bước 2: Phân tích với dữ liệu 28 ngày ====
-end_date = datetime.today()
-start_date = end_date - timedelta(days=28)
+# ==== Bước 2: Lấy dữ liệu 28 ngày cho top 5 ====
+end_date_28 = datetime.today()
+start_date_28 = end_date_28 - timedelta(days=28)
 
-for ticker in top_tickers:
-    df = yf.download(ticker + ".VN", start=start_date, end=end_date)
-    df["Close"] = df["Close"].squeeze()
+for ticker in top_5:
+    df = yf.download(ticker + ".VN", start=start_date_28, end=end_date_28)
+    if df.empty:
+        continue
 
     df["EMA20"] = EMA(df["Close"], 20)
     df["EMA50"] = EMA(df["Close"], 50)
@@ -102,28 +105,26 @@ for ticker in top_tickers:
     df["BB_Mid"] = mid
     df["BB_Lower"] = lower
     df["AO"] = AO(df["High"], df["Low"])
-
     vol_mean = df["Volume"].rolling(window=20).mean()
     df["Breakout"] = df["Volume"] > vol_mean * 1.5
 
     df_reset = df.reset_index()
     df_reset["Date"] = df_reset["Date"].dt.strftime("%Y-%m-%d")
-    df_reset.columns = [str(col) if isinstance(col, tuple) else col for col in df_reset.columns]
     df_json_ready = df_reset.where(pd.notnull(df_reset), None)
 
     file_json = os.path.join(save_path, f"{ticker}.json")
     with open(file_json, "w") as f:
         json.dump(df_json_ready.to_dict(orient="records"), f, indent=2)
 
-print("✅ Đã lưu tất cả dữ liệu JSON vào thư mục outputs!")
+print("✅ Đã lưu dữ liệu 28 ngày cho top 5 vào thư mục outputs!")
 
-# ==== Hàm gọi API Groq ====
+# ==== Hàm phân tích bằng Groq ====
 def analyze_data_with_groq(json_data):
     prompt = (
         "Bạn là chuyên gia phân tích kỹ thuật chứng khoán top 0,1%.\n"
         "Dưới đây là dữ liệu kỹ thuật của cổ phiếu (28 ngày gần nhất), "
-        "hãy phân tích, nhận định xu hướng, điểm mua/bán, cảnh báo breakout, và chỉ sử dụng đoạn văn bản không dùng bảng khi trả lời "
-        "và đưa ra khuyến nghị ngắn gọn.\n\n"
+        "hãy phân tích, nhận định xu hướng, điểm mua/bán, cảnh báo breakout, "
+        "chỉ dùng đoạn văn bản, không dùng bảng.\n\n"
         f"Dữ liệu: {json_data}\n\n"
         "Phân tích chi tiết:"
     )
@@ -131,62 +132,60 @@ def analyze_data_with_groq(json_data):
         model="openai/gpt-oss-120b",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7,
-        max_completion_tokens=3000,
-        top_p=1,
-        reasoning_effort="medium",
-        stream=False,
-        stop=None
+        max_completion_tokens=3000
     )
     return completion.choices[0].message.content
 
-# ==== Phân tích từng file JSON ====
+# ==== Bước 3: Phân tích & gom báo cáo ====
 json_files = glob.glob(os.path.join(save_path, "*.json"))
-report_text = "Báo cáo phân tích kỹ thuật chứng khoán tự động:\n\n"
+report_text = "Báo cáo phân tích kỹ thuật cho top 5 cổ phiếu VN30 tăng trưởng mạnh nhất:\n\n"
 
 for file_path in json_files:
     with open(file_path, "r") as f:
         data_json = f.read()
 
     ticker_name = os.path.basename(file_path).replace(".json", "")
-    print(f"Đang phân tích {ticker_name} ...")
+    print(f"🔍 Đang phân tích {ticker_name} ...")
 
     try:
         analysis_text = analyze_data_with_groq(data_json)
     except Exception as e:
-        print(f"❌ Lỗi khi gọi API phân tích {ticker_name}: {e}")
+        print(f"❌ Lỗi phân tích {ticker_name}: {e}")
         analysis_text = "Không có dữ liệu phân tích do lỗi API."
 
     report_text += f"--- Phân tích {ticker_name} ---\n{analysis_text}\n\n"
-
     os.remove(file_path)
-    print(f"Đã xóa file {file_path}")
 
-# ==== Tạo file báo cáo ====
+# ==== Bước 4: Lưu báo cáo DOCX ====
 doc = Document()
-doc.add_heading("Báo cáo Phân tích Chỉ báo Kỹ thuật Cổ phiếu", level=1)
-
-for line in report_text.strip().split('\n'):
+doc.add_heading("Báo cáo Phân tích Top 5 VN30", level=1)
+for line in report_text.strip().split("\n"):
     doc.add_paragraph(line)
 
-report_path = os.path.join(save_path, "Bao_cao_phan_tich_co_phieu.docx")
+report_path = os.path.join(save_path, "Bao_cao_top5_VN30.docx")
 doc.save(report_path)
 
+print(f"✅ Đã lưu báo cáo vào {report_path}")
+
+# ==== Bước 5: Gửi email ====
 def send_email_report(receiver_email, subject, content, attachment_path):
     sender_email = os.getenv("EMAIL_USER")
     sender_password = os.getenv("EMAIL_PASS")
     if not sender_email or not sender_password:
-        raise Exception("Chưa set EMAIL_USER và EMAIL_PASS trong secrets")
+        raise Exception("Chưa set EMAIL_USER và EMAIL_PASS")
     yag = yagmail.SMTP(user=sender_email, password=sender_password)
-    yag.send(to=receiver_email, subject=subject, contents=content, attachments=attachment_path)
+    yag.send(
+        to=receiver_email,
+        subject=subject,
+        contents=content,
+        attachments=attachment_path
+    )
     print(f"📧 Đã gửi báo cáo tới {receiver_email}")
 
-print(f"✅ Đã lưu báo cáo phân tích vào file {report_path}")
-
-# ==== Gửi email ====
 try:
     send_email_report(
         receiver_email="vanheminhtan@gmail.com",
-        subject="Báo cáo phân tích chứng khoán tự động",
+        subject="Báo cáo phân tích Top 5 VN30",
         content=report_text,
         attachment_path=report_path
     )
