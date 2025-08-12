@@ -6,7 +6,7 @@ import glob
 from docx import Document
 from groq import Groq
 import yagmail
-from vnstock import stock_index_components, stock_historical_data
+from vnstock import Vnstock
 
 # ==== Thiết lập biến môi trường ====
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -14,6 +14,7 @@ if not GROQ_API_KEY:
     raise Exception("Bạn chưa set biến môi trường GROQ_API_KEY")
 
 client = Groq(api_key=GROQ_API_KEY)
+vn = Vnstock()
 
 # ==== Hàm tính chỉ báo ====
 def EMA(series, period):
@@ -53,8 +54,7 @@ def AO(high, low, short=5, long=34):
 
 # ==== Lấy top 5 cổ phiếu tăng trưởng mạnh nhất VN30 trong 14 ngày ====
 def get_top_gainers_vnstock(days=14, top_n=5):
-    # Lấy danh sách VN30
-    vn30_df = stock_index_components(symbol="VN30")
+    vn30_df = vn.index_components(index_code="VN30")
     vn30_tickers = vn30_df['ticker'].tolist()
 
     end_date = datetime.now()
@@ -63,11 +63,10 @@ def get_top_gainers_vnstock(days=14, top_n=5):
 
     for ticker in vn30_tickers:
         try:
-            df = stock_historical_data(
-                symbol=ticker,
-                start_date=start_date.strftime("%Y-%m-%d"),
-                end_date=end_date.strftime("%Y-%m-%d"),
-                resolution='1D'
+            df = vn.stock(symbol=ticker).quote.history(
+                start=start_date.strftime("%Y-%m-%d"),
+                end=end_date.strftime("%Y-%m-%d"),
+                interval="1d"
             )
             if df.empty:
                 continue
@@ -96,11 +95,10 @@ start_date = end_date - timedelta(days=28)
 
 # ==== Tải dữ liệu, tính chỉ báo, lưu JSON ====
 for ticker in tickers:
-    df = stock_historical_data(
-        symbol=ticker,
-        start_date=start_date.strftime("%Y-%m-%d"),
-        end_date=end_date.strftime("%Y-%m-%d"),
-        resolution='1D'
+    df = vn.stock(symbol=ticker).quote.history(
+        start=start_date.strftime("%Y-%m-%d"),
+        end=end_date.strftime("%Y-%m-%d"),
+        interval="1d"
     )
     if df.empty:
         continue
