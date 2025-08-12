@@ -6,7 +6,7 @@ import glob
 from docx import Document
 from groq import Groq
 import yagmail
-from vnstock import listing_companies, stock_historical_data
+from vnstock import stock_index_components, stock_historical_data
 
 # ==== Thiết lập biến môi trường ====
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -53,8 +53,9 @@ def AO(high, low, short=5, long=34):
 
 # ==== Lấy top 5 cổ phiếu tăng trưởng mạnh nhất VN30 trong 14 ngày ====
 def get_top_gainers_vnstock(days=14, top_n=5):
-    vn30_df = listing_companies()
-    vn30_tickers = vn30_df[vn30_df['group_code'] == 'VN30']['ticker'].tolist()
+    # Lấy danh sách VN30
+    vn30_df = stock_index_components(symbol="VN30")
+    vn30_tickers = vn30_df['ticker'].tolist()
 
     end_date = datetime.now()
     start_date = end_date - timedelta(days=days)
@@ -81,6 +82,7 @@ def get_top_gainers_vnstock(days=14, top_n=5):
     df_change = df_change.sort_values(by="Change", ascending=False)
     return df_change.head(top_n)["Ticker"].tolist()
 
+# ==== Chạy lấy danh sách top tăng ====
 tickers = get_top_gainers_vnstock()
 print("📈 Top 5 cổ phiếu VN30 tăng mạnh nhất 14 ngày qua:", tickers)
 
