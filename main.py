@@ -1,146 +1,194 @@
 import os
+import yfinance as yf
 import pandas as pd
+import numpy as np
 from datetime import datetime, timedelta
 import json
 import glob
 from docx import Document
 from groq import Groq
 import yagmail
-from vnstock import listing_companies, stock_historical_data
 
-# =======================
-# Cấu hình API & Email
-# =======================
+# ==== Thiết lập biến môi trường ====
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 if not GROQ_API_KEY:
-    raise Exception("Bạn chưa set GROQ_API_KEY trong môi trường")
+    raise Exception("Bạn chưa set biến môi trường GROQ_API_KEY")
 
 client = Groq(api_key=GROQ_API_KEY)
 
-EMAIL_USER = os.getenv("EMAIL_USER")
-EMAIL_PASS = os.getenv("EMAIL_PASS")
-EMAIL_TO = os.getenv("EMAIL_TO")
+# ==== Các hàm tính chỉ báo ====
+def EMA(series, period):
+    return series.ewm(span=period, adjust=False).mean()
 
-VN30_STATIC = [
-    "ACB","BCM","BID","BVH","CTG","FPT","GAS","GVR","HDB","HPG",
-    "KDH","MBB","MSN","MWG","NVL","PDR","PLX","POW","SAB","SHB",
-    "SSB","SSI","STB","TCB","TPB","VCB","VHM","VIB","VIC","VJC","VNM"
+def SMA(series, period):
+    return series.rolling(window=period).mean()
+
+def MACD(series, fast=12, slow=26, signal=9):
+    ema_fast = EMA(series, fast)
+    ema_slow = EMA(series, slow)
+    macd = ema_fast - ema_slow
+    signal_line = EMA(macd, signal)
+    hist = macd - signal_line
+    return macd, signal_line, hist
+
+def RSI(series, period=14):
+    delta = series.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.rolling(window=period).mean()
+    avg_loss = loss.rolling(window=period).mean()
+    rs = avg_gain / avg_loss
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
+
+def BollingerBands(series, period=20, num_std=2):
+    mid = SMA(series, period)
+    std = series.rolling(window=period).std()
+    upper = mid + num_std * std
+    lower = mid - num_std * std
+    return upper, mid, lower
+
+def AO(high, low, short=5, long=34):
+    median_price = (high + low) / 2
+    return SMA(median_price, short) - SMA(median_price, long)
+
+# ==== Thư mục lưu file ====
+save_path = "outputs"
+os.makedirs(save_path, exist_ok=True)
+
+# ==== Danh sách VN30 ====
+vn30_tickers = [
+    "ACB", "BCM", "BID", "BVH", "CTG", "FPT", "GAS", "GVR", "HDB", "HPG",
+    "KDH", "MBB", "MSN", "MWG", "NVL", "PDR", "PLX", "POW", "SAB", "SHB",
+    "SSI", "STB", "TCB", "TPB", "VCB", "VHM", "VIB", "VIC", "VJC", "VNM"
 ]
 
-# =======================
-# Lấy danh sách VN30
-# =======================
-def get_vn30_tickers():
-    try:
-        df = listing_companies()
-        print("Cột hiện có:", df.columns)
+# ==== Bước 1: Lọc top tăng trưởng 14 ngày ====
+growth_data = []
+two_weeks_ago = datetime.today() - timedelta(days=14)
 
-        if "group_code" in df.columns:
-            lst = df[df["group_code"] == "VN30"]["ticker"].tolist()
-            if lst:
-                return lst
+for ticker in vn30_tickers:
+    df_temp = yf.download(ticker + ".VN", start=two_weeks_ago, end=datetime.today())
+    if df_temp.empty:
+        continue
+    start_price = df_temp["Close"].iloc[0]
+    end_price = df_temp["Close"].iloc[-1]
+    growth_pct = (end_price / start_price - 1) * 100
+    growth_data.append((ticker, growth_pct))
 
-        print("Không thấy group_code → dùng danh sách tĩnh")
-    except Exception as e:
-        print(f"Lỗi listing_companies(): {e}")
-    return VN30_STATIC
+growth_data.sort(key=lambda x: x[1], reverse=True)
+top_tickers = [x[0] for x in growth_data[:5]]
 
-# =======================
-# Top cổ phiếu tăng mạnh
-# =======================
-def get_top_gainers(days=14, top_n=5):
-    tickers = get_vn30_tickers()
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
-    changes = []
-    for t in tickers:
-        try:
-            df = stock_historical_data(symbol=t,
-                                       start_date=start_date.strftime("%Y-%m-%d"),
-                                       end_date=end_date.strftime("%Y-%m-%d"))
-            if df.empty: 
-                continue
-            pct = (df['close'].iloc[-1] - df['close'].iloc[0]) / df['close'].iloc[0] * 100
-            changes.append((t, pct))
-        except Exception as e:
-            print(f"Lỗi {t}: {e}")
-    df2 = pd.DataFrame(changes, columns=["Ticker", "Change"]).sort_values(by="Change", ascending=False)
-    return df2.head(top_n)["Ticker"].tolist()
+print("📈 Top 5 VN30 tăng trưởng 14 ngày:", top_tickers)
 
-# =======================
-# Phân tích kỹ thuật
-# =======================
-def analyze_stock(ticker):
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=90)
-    df = stock_historical_data(symbol=ticker,
-                               start_date=start_date.strftime("%Y-%m-%d"),
-                               end_date=end_date.strftime("%Y-%m-%d"))
-    if df.empty:
-        return {"ticker": ticker, "error": "No data"}
-    
-    df["MA20"] = df["close"].rolling(window=20).mean()
-    df["MA50"] = df["close"].rolling(window=50).mean()
-    
-    ma_signal = "Bullish" if df["MA20"].iloc[-1] > df["MA50"].iloc[-1] else "Bearish"
-    pct_change = (df["close"].iloc[-1] - df["close"].iloc[0]) / df["close"].iloc[0] * 100
+# ==== Bước 2: Phân tích với dữ liệu 28 ngày ====
+end_date = datetime.today()
+start_date = end_date - timedelta(days=28)
 
-    return {
-        "ticker": ticker,
-        "pct_change": round(pct_change, 2),
-        "MA20": round(df["MA20"].iloc[-1], 2),
-        "MA50": round(df["MA50"].iloc[-1], 2),
-        "signal": ma_signal
-    }
+for ticker in top_tickers:
+    df = yf.download(ticker + ".VN", start=start_date, end=end_date)
+    df["Close"] = df["Close"].squeeze()
 
-# =======================
-# Lưu kết quả JSON
-# =======================
-def save_to_json(data, filename):
-    with open(filename, "w") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
+    df["EMA20"] = EMA(df["Close"], 20)
+    df["EMA50"] = EMA(df["Close"], 50)
+    df["EMA100"] = EMA(df["Close"], 100)
+    macd, signal, hist = MACD(df["Close"])
+    df["MACD"] = macd
+    df["Signal"] = signal
+    df["MACD_Hist"] = hist
+    df["RSI"] = RSI(df["Close"])
+    upper, mid, lower = BollingerBands(df["Close"])
+    df["BB_Upper"] = upper
+    df["BB_Mid"] = mid
+    df["BB_Lower"] = lower
+    df["AO"] = AO(df["High"], df["Low"])
 
-# =======================
-# Gọi Groq AI tạo nhận định
-# =======================
-def generate_ai_summary(data):
-    prompt = f"Phân tích và nhận định các cổ phiếu sau dựa trên dữ liệu:\n{json.dumps(data, ensure_ascii=False)}"
-    response = client.chat.completions.create(
-        model="llama3-70b-8192",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.5
+    vol_mean = df["Volume"].rolling(window=20).mean()
+    df["Breakout"] = df["Volume"] > vol_mean * 1.5
+
+    df_reset = df.reset_index()
+    df_reset["Date"] = df_reset["Date"].dt.strftime("%Y-%m-%d")
+    df_reset.columns = [str(col) if isinstance(col, tuple) else col for col in df_reset.columns]
+    df_json_ready = df_reset.where(pd.notnull(df_reset), None)
+
+    file_json = os.path.join(save_path, f"{ticker}.json")
+    with open(file_json, "w") as f:
+        json.dump(df_json_ready.to_dict(orient="records"), f, indent=2)
+
+print("✅ Đã lưu tất cả dữ liệu JSON vào thư mục outputs!")
+
+# ==== Hàm gọi API Groq ====
+def analyze_data_with_groq(json_data):
+    prompt = (
+        "Bạn là chuyên gia phân tích kỹ thuật chứng khoán top 0,1%.\n"
+        "Dưới đây là dữ liệu kỹ thuật của cổ phiếu (28 ngày gần nhất), "
+        "hãy phân tích, nhận định xu hướng, điểm mua/bán, cảnh báo breakout, và chỉ sử dụng đoạn văn bản không dùng bảng khi trả lời "
+        "và đưa ra khuyến nghị ngắn gọn.\n\n"
+        f"Dữ liệu: {json_data}\n\n"
+        "Phân tích chi tiết:"
     )
-    return response.choices[0].message.content
+    completion = client.chat.completions.create(
+        model="openai/gpt-oss-120b",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7,
+        max_completion_tokens=3000,
+        top_p=1,
+        reasoning_effort="medium",
+        stream=False,
+        stop=None
+    )
+    return completion.choices[0].message.content
 
-# =======================
-# Xuất DOCX
-# =======================
-def export_to_docx(summary, filename):
-    doc = Document()
-    doc.add_heading("Báo cáo phân tích cổ phiếu", level=1)
-    doc.add_paragraph(summary)
-    doc.save(filename)
+# ==== Phân tích từng file JSON ====
+json_files = glob.glob(os.path.join(save_path, "*.json"))
+report_text = "Báo cáo phân tích kỹ thuật chứng khoán tự động:\n\n"
 
-# =======================
-# Gửi email
-# =======================
-def send_email(subject, body, attachments=None):
-    yag = yagmail.SMTP(EMAIL_USER, EMAIL_PASS)
-    yag.send(to=EMAIL_TO, subject=subject, contents=body, attachments=attachments)
+for file_path in json_files:
+    with open(file_path, "r") as f:
+        data_json = f.read()
 
-# =======================
-# Main workflow
-# =======================
-if __name__ == "__main__":
-    top_tickers = get_top_gainers()
-    analysis = [analyze_stock(t) for t in top_tickers]
-    
-    json_file = "analysis.json"
-    save_to_json(analysis, json_file)
-    
-    summary = generate_ai_summary(analysis)
-    docx_file = "report.docx"
-    export_to_docx(summary, docx_file)
-    
-    send_email("Báo cáo phân tích cổ phiếu", summary, attachments=[json_file, docx_file])
-    print("Báo cáo đã gửi thành công!")
+    ticker_name = os.path.basename(file_path).replace(".json", "")
+    print(f"Đang phân tích {ticker_name} ...")
+
+    try:
+        analysis_text = analyze_data_with_groq(data_json)
+    except Exception as e:
+        print(f"❌ Lỗi khi gọi API phân tích {ticker_name}: {e}")
+        analysis_text = "Không có dữ liệu phân tích do lỗi API."
+
+    report_text += f"--- Phân tích {ticker_name} ---\n{analysis_text}\n\n"
+
+    os.remove(file_path)
+    print(f"Đã xóa file {file_path}")
+
+# ==== Tạo file báo cáo ====
+doc = Document()
+doc.add_heading("Báo cáo Phân tích Chỉ báo Kỹ thuật Cổ phiếu", level=1)
+
+for line in report_text.strip().split('\n'):
+    doc.add_paragraph(line)
+
+report_path = os.path.join(save_path, "Bao_cao_phan_tich_co_phieu.docx")
+doc.save(report_path)
+
+def send_email_report(receiver_email, subject, content, attachment_path):
+    sender_email = os.getenv("EMAIL_USER")
+    sender_password = os.getenv("EMAIL_PASS")
+    if not sender_email or not sender_password:
+        raise Exception("Chưa set EMAIL_USER và EMAIL_PASS trong secrets")
+    yag = yagmail.SMTP(user=sender_email, password=sender_password)
+    yag.send(to=receiver_email, subject=subject, contents=content, attachments=attachment_path)
+    print(f"📧 Đã gửi báo cáo tới {receiver_email}")
+
+print(f"✅ Đã lưu báo cáo phân tích vào file {report_path}")
+
+# ==== Gửi email ====
+try:
+    send_email_report(
+        receiver_email="vanheminhtan@gmail.com",
+        subject="Báo cáo phân tích chứng khoán tự động",
+        content=report_text,
+        attachment_path=report_path
+    )
+except Exception as e:
+    print(f"❌ Lỗi gửi email: {e}")
