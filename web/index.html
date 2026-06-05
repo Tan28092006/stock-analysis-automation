@@ -1,0 +1,1490 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VN30 T+2 Stock Agent</title>
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0f19;
+      --bg-gradient: radial-gradient(circle at 50% 0%, #151e36 0%, #0b0f19 100%);
+      --panel: rgba(17, 24, 43, 0.75);
+      --panel-hover: rgba(22, 32, 57, 0.85);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(99, 102, 241, 0.6);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dark: #6b7280;
+      
+      /* Accent Colors */
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-gradient: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+      --accent-glow: 0 0 20px rgba(99, 102, 241, 0.3);
+      
+      --green: #10b981;
+      --green-bg: rgba(16, 185, 129, 0.15);
+      --green-border: rgba(16, 185, 129, 0.3);
+      
+      --amber: #f59e0b;
+      --amber-bg: rgba(245, 158, 11, 0.15);
+      --amber-border: rgba(245, 158, 11, 0.3);
+      
+      --red: #ef4444;
+      --red-bg: rgba(239, 68, 68, 0.15);
+      --red-border: rgba(239, 68, 68, 0.3);
+      
+      --teal: #14b8a6;
+      --teal-bg: rgba(20, 184, 166, 0.15);
+    }
+    
+    * {
+      box-sizing: border-box;
+      transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    }
+    
+    body {
+      margin: 0;
+      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      background-image: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text-main);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 16px 32px;
+      background: rgba(11, 15, 25, 0.6);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .brand svg {
+      width: 28px;
+      height: 28px;
+      fill: none;
+      stroke: url(#accentGradient);
+      stroke-width: 2.5;
+      filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.5));
+    }
+    
+    h1 {
+      margin: 0;
+      font-family: 'Outfit', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff 30%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.02em;
+    }
+    
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    button {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      min-height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-main);
+      padding: 0 16px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    button:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    button.primary {
+      background: var(--primary-gradient);
+      border-color: transparent;
+      color: #fff;
+      box-shadow: var(--accent-glow);
+    }
+    
+    button.primary:hover {
+      background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+      box-shadow: 0 0 25px rgba(99, 102, 241, 0.5);
+    }
+    
+    button.danger {
+      color: var(--red);
+      border-color: var(--red-border);
+      background: var(--red-bg);
+    }
+    
+    button.danger:hover {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: var(--red);
+    }
+    
+    input {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      background: rgba(0, 0, 0, 0.2);
+      color: var(--text-main);
+      min-height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0 12px;
+      width: 100%;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+      background: rgba(0, 0, 0, 0.3);
+    }
+    
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) minmax(360px, 0.95fr);
+      gap: 24px;
+      padding: 24px 32px 48px;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+    
+    section {
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+    
+    section:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3);
+    }
+    
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.02);
+    }
+    
+    h2 {
+      margin: 0;
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: #fff;
+    }
+    
+    .status {
+      font-family: 'Fira Code', monospace;
+      color: var(--teal);
+      font-size: 11px;
+      background: var(--teal-bg);
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(20, 184, 166, 0.2);
+    }
+    
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+    }
+    
+    .metric {
+      background: rgba(255, 255, 255, 0.01);
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .metric span {
+      color: var(--text-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    
+    .metric strong {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 13px;
+    }
+    
+    th, td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: middle;
+    }
+    
+    th {
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    
+    tr:last-child td {
+      border-bottom: none;
+    }
+    
+    tbody tr {
+      cursor: pointer;
+    }
+    
+    tbody tr:hover td {
+      background: rgba(255, 255, 255, 0.03) !important;
+    }
+    
+    tbody tr.selected td {
+      background: rgba(99, 102, 241, 0.12) !important;
+      border-bottom-color: rgba(99, 102, 241, 0.4);
+    }
+    
+    .num {
+      text-align: right;
+      font-family: 'Fira Code', monospace;
+      font-size: 13px;
+    }
+    
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 24px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    
+    .BUY_SETUP {
+      background: var(--green-bg);
+      color: var(--green);
+      border: 1px solid var(--green-border);
+    }
+    
+    .WATCH {
+      background: var(--amber-bg);
+      color: var(--amber);
+      border: 1px solid var(--amber-border);
+    }
+    
+    .REJECT {
+      background: var(--red-bg);
+      color: var(--red);
+      border: 1px solid var(--red-border);
+    }
+    
+    /* Cross check status styling */
+    .data-status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .data-status-chip::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    
+    .passed {
+      color: var(--green);
+    }
+    .passed::before {
+      background-color: var(--green);
+      box-shadow: 0 0 8px var(--green);
+    }
+    
+    .failed, .conflict {
+      color: var(--red);
+    }
+    .failed::before, .conflict::before {
+      background-color: var(--red);
+      box-shadow: 0 0 8px var(--red);
+    }
+    
+    .degraded, .single_source {
+      color: var(--amber);
+    }
+    .degraded::before, .single_source::before {
+      background-color: var(--amber);
+      box-shadow: 0 0 8px var(--amber);
+    }
+    
+    .portfolio-form {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr 1fr auto;
+      gap: 10px;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.15);
+    }
+    
+    .side-stack {
+      display: grid;
+      gap: 24px;
+      align-content: start;
+    }
+    
+    pre {
+      margin: 0;
+      padding: 16px 20px;
+      max-height: 480px;
+      overflow: auto;
+      white-space: pre-wrap;
+      font-family: 'Fira Code', monospace;
+      font-size: 11.5px;
+      line-height: 1.6;
+      background: rgba(0, 0, 0, 0.3);
+      color: #a5b4fc;
+    }
+    
+    /* Custom Scrollbar for modern look */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.1);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
+    /* Dynamic P&L coloring rules */
+    .pnl-pos {
+      color: var(--green) !important;
+      font-weight: 600;
+    }
+    
+    .pnl-neg {
+      color: var(--red) !important;
+      font-weight: 600;
+    }
+    
+    .pnl-neutral {
+      color: var(--text-muted);
+    }
+    
+    /* Filter Tabs Styling */
+    .filter-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 10px 16px;
+      background: rgba(0, 0, 0, 0.1);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    
+    .filter-btn {
+      min-height: 28px;
+      padding: 0 12px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 6px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .filter-btn:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: #fff;
+    }
+    
+    .filter-btn.active {
+      background: rgba(99, 102, 241, 0.15);
+      border-color: rgba(99, 102, 241, 0.3);
+      color: #fff;
+    }
+    
+    .filter-btn .count {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 1px 6px;
+      border-radius: 99px;
+      font-size: 10px;
+    }
+    
+    .filter-btn.active .count {
+      background: rgba(99, 102, 241, 0.3);
+    }
+    
+    /* Details view layout styling */
+    .detail-section-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-top: 18px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 4px;
+    }
+    
+    .detail-section-title:first-child {
+      margin-top: 0;
+    }
+    
+    .detail-grid-cards {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    
+    .detail-card {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .detail-card span {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    
+    .detail-card strong {
+      font-family: 'Fira Code', monospace;
+      font-size: 13px;
+      color: #fff;
+    }
+    
+    .evidence-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+    
+    .evidence-item:last-child {
+      border-bottom: none;
+    }
+    
+    .evidence-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    
+    .evidence-icon.passed {
+      background: var(--green-bg);
+      color: var(--green);
+      border: 1px solid var(--green-border);
+    }
+    
+    .evidence-icon.failed {
+      background: var(--red-bg);
+      color: var(--red);
+      border: 1px solid var(--red-border);
+    }
+    
+    .evidence-content {
+      flex-grow: 1;
+    }
+    
+    .evidence-name {
+      font-weight: 600;
+      font-size: 12px;
+      color: #fff;
+    }
+    
+    .evidence-detail {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    
+    .evidence-pts {
+      font-family: 'Fira Code', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    
+    .evidence-pts.plus {
+      color: var(--green);
+      background: rgba(16, 185, 129, 0.08);
+    }
+    
+    .evidence-pts.zero {
+      color: var(--text-dark);
+      background: rgba(255, 255, 255, 0.02);
+    }
+    
+    .warning-box {
+      background: var(--amber-bg);
+      border: 1px solid var(--amber-border);
+      color: var(--amber);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    
+    .warning-box strong {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+    
+    .warning-box ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+    
+    .audit-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .audit-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      background: rgba(255,255,255,0.01);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 11px;
+    }
+    
+    .audit-row .prov-name {
+      font-weight: 600;
+      color: #fff;
+    }
+    
+    .audit-row .prov-val {
+      font-family: 'Fira Code', monospace;
+    }
+    
+    .audit-row.missing {
+      opacity: 0.55;
+    }
+    
+    @media (max-width: 1024px) {
+      main {
+        grid-template-columns: 1fr;
+        padding: 16px;
+      }
+      header {
+        padding: 16px 20px;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .toolbar {
+        width: 100%;
+        margin-top: 10px;
+      }
+      .portfolio-form {
+        grid-template-columns: 1fr 1fr;
+      }
+      .portfolio-form button {
+        grid-column: span 2;
+      }
+    }
+  </style>
+</head>
+<body>
+  
+  <!-- Gradients definitions for SVG -->
+  <svg style="width:0; height:0; position:absolute;">
+    <defs>
+      <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#6366f1" />
+        <stop offset="100%" stop-color="#3b82f6" />
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <header>
+    <div class="brand">
+      <!-- High-tech stock chart icon -->
+      <svg viewBox="0 0 24 24">
+        <path d="M3 3v18h18" stroke-linecap="round"/>
+        <path d="M18.5 7.5L14 12l-3-3-6 6" stroke-linecap="round"/>
+        <circle cx="18.5" cy="7.5" r="1.5" fill="#3b82f6"/>
+      </svg>
+      <h1>VN30 T+2 Stock Agent</h1>
+    </div>
+    <div class="toolbar">
+      <button class="primary" id="demoScan">
+        <svg style="width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2" viewBox="0 0 24 24">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+        </svg>
+        Run demo scan
+      </button>
+      <button id="realScan">
+        <svg style="width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2" viewBox="0 0 24 24">
+          <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 0 1 9-9"/>
+        </svg>
+        Run real scan
+      </button>
+      <button id="refresh">
+        <svg style="width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2" viewBox="0 0 24 24">
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.57.57" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </header>
+  
+  <main>
+    <!-- Left Column: Scan results -->
+    <section>
+      <div class="section-head">
+        <h2>Scan Candidates</h2>
+        <div class="status" id="scanStatus">Ready</div>
+      </div>
+      <div class="summary">
+        <div class="metric">
+          <span>Scan ID</span>
+          <strong id="scanId">-</strong>
+        </div>
+        <div class="metric">
+          <span>Source Mode</span>
+          <strong id="scanMode">-</strong>
+        </div>
+        <div class="metric">
+          <span>Total Scanned</span>
+          <strong id="rejected">-</strong>
+        </div>
+      </div>
+      
+      <!-- Filter Tabs -->
+      <div class="filter-tabs" id="filterTabs">
+        <button class="filter-btn active" data-filter="all">All <span class="count" id="count-all">0</span></button>
+        <button class="filter-btn" data-filter="BUY_SETUP">Buy Setup <span class="count" id="count-buy">0</span></button>
+        <button class="filter-btn" data-filter="WATCH">Watch <span class="count" id="count-watch">0</span></button>
+        <button class="filter-btn" data-filter="REJECT">Rejected <span class="count" id="count-reject">0</span></button>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:80px">Symbol</th>
+              <th style="width:125px">Decision</th>
+              <th class="num" style="width:75px">Score</th>
+              <th style="width:105px">ML</th>
+              <th class="num" style="width:95px">Price (VND)</th>
+              <th class="num" style="width:85px">Weight</th>
+              <th style="width:170px">Data Audit</th>
+              <th>Risk Targets</th>
+            </tr>
+          </thead>
+          <tbody id="scanBody">
+            <tr>
+              <td colspan="8" style="text-align:center; color:var(--text-muted); padding:30px;">
+                No scan executed. Click "Run demo scan" or "Run real scan" to start.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    
+    <!-- Right Column: Portfolio & Detailed Reports -->
+    <div class="side-stack">
+      
+      <!-- Detailed Technical Evidence Report Section -->
+      <section id="detailsCard">
+        <div class="section-head">
+          <h2 id="detailsTitle">Stock Details Report</h2>
+          <div id="detailsBadgeHeader"></div>
+        </div>
+        <div id="detailsBody" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+          <div style="text-align: center; color: var(--text-dark); padding: 40px 10px;">
+            <svg style="width: 48px; height: 48px; fill: none; stroke: var(--text-dark); stroke-width: 1.5; margin-bottom: 12px; display: inline-block;" viewBox="0 0 24 24">
+              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div style="font-size: 13px; font-weight: 500;">Select a stock from the scan candidates list on the left to see its comprehensive rule-by-rule Swing trading report.</div>
+          </div>
+        </div>
+        <pre id="evidence" style="display: none;">{}</pre>
+      </section>
+
+      <!-- Research Console -->
+      <section>
+        <div class="section-head">
+          <h2>Research Console</h2>
+          <div class="status" id="researchStatus">Idle</div>
+        </div>
+        <div class="filter-tabs" id="researchTabs">
+          <button class="filter-btn active" data-research="ml">ML</button>
+          <button class="filter-btn" data-research="backtest">Backtest</button>
+          <button class="filter-btn" data-research="robustness">Robustness</button>
+          <button class="filter-btn" data-research="optimizer">Optimizer</button>
+          <button class="filter-btn" data-research="evidence">Evidence</button>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; padding:0 20px 12px;">
+          <button id="trainModel">Train ML</button>
+          <button id="runBacktest">Run backtest</button>
+          <button id="runRobustness">Run robustness</button>
+          <button id="runOptimizer">Optimize rules</button>
+        </div>
+        <div id="researchBody" style="padding:0 20px 18px; display:flex; flex-direction:column; gap:12px;">
+          <div style="font-size:12px; color:var(--text-muted);">No research payload loaded.</div>
+        </div>
+      </section>
+
+      <!-- Portfolio P&L Card -->
+      <section>
+        <div class="section-head">
+          <h2>Portfolio Manager</h2>
+          <button class="danger" id="clearPortfolio">
+            <svg style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2" viewBox="0 0 24 24">
+              <path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Clear
+          </button>
+        </div>
+        <form class="portfolio-form" id="positionForm">
+          <input name="symbol" placeholder="e.g. FPT" required style="text-transform: uppercase;">
+          <input name="buy_price" type="number" step="0.01" placeholder="Price (VND)" required>
+          <input name="quantity" type="number" step="1" placeholder="Qty" required>
+          <button class="primary" type="submit">Add</button>
+        </form>
+        <div class="summary">
+          <div class="metric">
+            <span>Total Cost</span>
+            <strong id="totalCost">0</strong>
+          </div>
+          <div class="metric">
+            <span>Market Value</span>
+            <strong id="totalValue">0</strong>
+          </div>
+          <div class="metric">
+            <span>Unrealized P&amp;L</span>
+            <strong id="totalPnl">0</strong>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th class="num">Buy Price</th>
+              <th class="num">Current</th>
+              <th class="num">P&amp;L</th>
+            </tr>
+          </thead>
+          <tbody id="pnlBody">
+            <tr>
+              <td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">
+                No open positions. Use the form above to add a stock position.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+  
+  <script>
+    const fmt = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 });
+    const pct = value => `${(Number(value || 0) * 100).toFixed(2)}%`;
+    const money = value => value === null || value === undefined ? "-" : fmt.format(value);
+    
+    let globalScanData = null;
+    let activeFilter = "all";
+    let selectedSymbol = null;
+    let activeResearch = "ml";
+    let modelStatusData = null;
+    let backtestData = null;
+    let robustnessData = null;
+    let optimizerData = null;
+
+    // Auto colorize P&L cells and metrics
+    function getPnlClass(val) {
+      if (val > 0) return "pnl-pos";
+      if (val < 0) return "pnl-neg";
+      return "pnl-neutral";
+    }
+
+    async function requestJson(url, options) {
+      const res = await fetch(url, options);
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      return await res.json();
+    }
+
+    // Render detailed stock report
+    function showStockDetail(symbol) {
+      if (!globalScanData || !globalScanData.candidates) return;
+      const row = globalScanData.candidates.find(c => c.symbol === symbol);
+      if (!row) return;
+
+      selectedSymbol = symbol;
+      
+      // Update selected row in the table
+      const rows = document.querySelectorAll("#scanBody tr");
+      rows.forEach(tr => {
+        if (tr.getAttribute("data-symbol") === symbol) {
+          tr.classList.add("selected");
+        } else {
+          tr.classList.remove("selected");
+        }
+      });
+
+      // Update badge header
+      document.getElementById("detailsTitle").textContent = `${row.symbol} Trading Report`;
+      document.getElementById("detailsBadgeHeader").innerHTML = `
+        <span class="badge ${row.decision}" style="margin-right: 6px;">${row.decision.replace(/_/g, " ")}</span>
+        <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.3)">SCORE ${money(row.score)}</span>
+      `;
+
+      let html = "";
+
+      // 1. Risk Plan Section
+      if (row.risk_plan) {
+        html += `<div class="detail-section-title">Risk setup targets</div>`;
+        html += `<div class="detail-grid-cards">
+          <div class="detail-card">
+            <span>Entry Reference</span>
+            <strong>${money(row.risk_plan.entry_reference)}</strong>
+          </div>
+          <div class="detail-card">
+            <span>Stop Loss (SL)</span>
+            <strong style="color: var(--red);">${money(row.risk_plan.stop_loss)} (${row.risk_plan.stop_loss_pct ? row.risk_plan.stop_loss_pct.toFixed(2) : "" }%)</strong>
+          </div>
+          <div class="detail-card">
+            <span>Take Profit 1 (TP1)</span>
+            <strong style="color: var(--green);">${money(row.risk_plan.take_profit_1)}</strong>
+          </div>
+          <div class="detail-card">
+            <span>Reward / Risk (R:R)</span>
+            <strong style="color: var(--teal);">${row.risk_plan.reward_risk || "1.45"}</strong>
+          </div>
+        </div>`;
+      } else {
+        html += `<div class="detail-section-title">Risk setup targets</div>`;
+        html += `<div style="background:rgba(255,255,255,0.02); padding:12px; border-radius:8px; font-size:12px; color:var(--text-muted); border: 1px solid var(--border);">No risk plan generated for REJECTED candidates. Entry triggers not satisfied.</div>`;
+      }
+
+      // 1b. Hybrid ML and recent backtest trace
+      html += `<div class="detail-section-title">Hybrid ML & Backtest Trace</div>`;
+      const ml = row.model_signal || {};
+      const bt = row.backtest_summary || {};
+      const hybrid = row.hybrid_trace || {};
+      html += `<div class="detail-grid-cards">
+        <div class="detail-card">
+          <span>ML Status</span>
+          <strong>${ml.status || "unavailable"}</strong>
+        </div>
+        <div class="detail-card">
+          <span>ML Probability</span>
+          <strong style="color:var(--teal)">${ml.probability !== null && ml.probability !== undefined ? (ml.probability * 100).toFixed(1) + "%" : "-"}</strong>
+        </div>
+        <div class="detail-card">
+          <span>Rule Decision</span>
+          <strong>${hybrid.rule_decision || row.decision}</strong>
+        </div>
+        <div class="detail-card">
+          <span>Recent Win Rate</span>
+          <strong>${bt.win_rate !== undefined ? bt.win_rate.toFixed(1) + "%" : "-"}</strong>
+        </div>
+      </div>`;
+      if (hybrid.guardrails && hybrid.guardrails.length > 0) {
+        html += `<div style="font-size:11px; color:var(--text-muted);">Guardrails: ${hybrid.guardrails.join(", ")}</div>`;
+      }
+
+      // 2. Rules breakdown
+      html += `<div class="detail-section-title">Technical Strategy Rule Audit</div>`;
+      if (row.evidence && row.evidence.length > 0) {
+        html += `<div style="background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;">`;
+        row.evidence.forEach(ev => {
+          const isPassed = ev.passed;
+          const icon = isPassed ? "✓" : "✗";
+          const iconClass = isPassed ? "passed" : "failed";
+          const ptsClass = ev.points > 0 ? "plus" : "zero";
+          const ptsText = ev.points > 0 ? `+${ev.points} pts` : `0 pts`;
+          let valStr = "";
+          if (ev.value !== null && ev.value !== undefined) {
+            if (typeof ev.value === 'object') {
+              valStr = `<div style="font-family:'Fira Code', monospace; font-size:10px; color: var(--teal); margin-top:2px;">Value: ${JSON.stringify(ev.value)}</div>`;
+            } else {
+              valStr = `<div style="font-family:'Fira Code', monospace; font-size:10px; color: var(--teal); margin-top:2px;">Value: ${ev.value}</div>`;
+            }
+          }
+          html += `
+            <div class="evidence-item">
+              <div class="evidence-icon ${iconClass}">${icon}</div>
+              <div class="evidence-content">
+                <div class="evidence-name">${ev.name}</div>
+                <div class="evidence-detail">${ev.detail}</div>
+                ${valStr}
+              </div>
+              <div class="evidence-pts ${ptsClass}">${ptsText}</div>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      } else {
+        html += `<div style="font-size:12px; color:var(--text-muted); padding:10px 0;">No technical checks generated for data-failed candidates.</div>`;
+      }
+
+      // 3. Provider Data Auditing
+      if (row.data_quality) {
+        html += `<div class="detail-section-title">Data Audits & Providers</div>`;
+        const qStatus = row.data_quality.status || "";
+        const qCross = row.data_quality.cross_check_status || "";
+        html += `<div style="background:rgba(0,0,0,0.15); border: 1px solid var(--border); border-radius:8px; padding:12px; display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; justify-content:space-between; font-size:12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom:6px;">
+            <span>Integrity Status</span>
+            <strong class="${qStatus}">${qStatus.toUpperCase()} (${qCross.replace(/_/g, " ")})</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:12px;">
+            <span>Confidence Index</span>
+            <strong style="color:var(--teal)">${(row.data_quality.confidence * 100).toFixed(1)}%</strong>
+          </div>
+        </div>`;
+
+        if (row.data_quality.provider_audits && row.data_quality.provider_audits.length > 0) {
+          html += `<div style="margin-top:8px;" class="audit-grid">`;
+          row.data_quality.provider_audits.forEach(aud => {
+            const isOk = aud.status === "ok";
+            const rowClass = isOk ? "" : "missing";
+            const rightText = isOk ? `${aud.rows} rows, close ${money(aud.latest_close)} (${aud.latest_date})` : `No data (${aud.status})`;
+            html += `<div class="audit-row ${rowClass}">
+              <div class="prov-name">${aud.provider.toUpperCase()} (${aud.source_type})</div>
+              <div class="prov-val" style="color: ${isOk ? 'var(--text-main)' : 'var(--text-dark)'};">${rightText}</div>
+            </div>`;
+          });
+          html += `</div>`;
+        }
+      }
+
+      // 4. Warnings list
+      if (row.warnings && row.warnings.length > 0) {
+        html += `<div class="detail-section-title">System warnings & anomalies</div>`;
+        html += `<div class="warning-box">
+          <strong>Scanner warnings detected:</strong>
+          <ul>
+            ${row.warnings.map(w => `<li>${w}</li>`).join("")}
+          </ul>
+        </div>`;
+      }
+
+      document.getElementById("detailsBody").innerHTML = html;
+    }
+
+    function filterCandidates(filterType) {
+      activeFilter = filterType;
+      
+      // Update tabs style
+      const tabBtns = document.querySelectorAll("#filterTabs .filter-btn");
+      tabBtns.forEach(btn => {
+        if (btn.getAttribute("data-filter") === filterType) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+
+      if (!globalScanData || !globalScanData.candidates) return;
+      
+      let filtered = globalScanData.candidates;
+      if (filterType !== "all") {
+        filtered = globalScanData.candidates.filter(c => c.decision === filterType);
+      }
+
+      const tbody = document.getElementById("scanBody");
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr>
+          <td colspan="8" style="text-align:center; color:var(--text-muted); padding:30px;">
+            No candidates match active filter: ${filterType}.
+          </td>
+        </tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map((row, index) => {
+        const risk = row.risk_plan
+          ? `<div style="font-weight:600; color:var(--green)">TP1 ${money(row.risk_plan.take_profit_1)}</div>
+             <div style="font-weight:600; color:var(--red)">SL ${money(row.risk_plan.stop_loss)}</div>`
+          : `<span style="color:var(--text-dark)">-</span>`;
+        
+        const statusVal = row.data_quality?.status || "";
+        const crossVal = row.data_quality?.cross_check_status || "";
+        
+        const dataText = `<div class="data-status-chip ${statusVal}">${statusVal.toUpperCase()}</div>
+                          <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${crossVal.replace(/_/g, " ")}</div>`;
+        const ml = row.model_signal || {};
+        const mlText = ml.status === "available"
+          ? `<div style="font-size:12px; font-weight:700; color:${ml.passed ? 'var(--green)' : 'var(--amber)'};">${(ml.probability * 100).toFixed(1)}%</div>
+             <div style="font-size:10px; color:var(--text-muted);">${ml.model_family}</div>`
+          : `<div style="font-size:11px; color:var(--text-dark);">${ml.status || "off"}</div>`;
+        
+        const isSelected = row.symbol === selectedSymbol ? "selected" : "";
+        
+        // Staggered loading animations
+        return `<tr class="${isSelected}" data-symbol="${row.symbol}" style="animation-delay: ${index * 0.04}s">
+          <td><strong style="color:#fff; font-size:14px; font-family:'Outfit'">${row.symbol}</strong></td>
+          <td><span class="badge ${row.decision}">${row.decision.replace(/_/g, " ")}</span></td>
+          <td class="num" style="font-weight:600; color:#a5b4fc">${money(row.score)}</td>
+          <td>${mlText}</td>
+          <td class="num">${money(row.latest_close)}</td>
+          <td class="num" style="color:var(--teal); font-weight:600;">${pct(row.allocation_weight)}</td>
+          <td>${dataText}</td>
+          <td>${risk}</td>
+        </tr>`;
+      }).join("");
+
+      // Bind click triggers for details view
+      const trs = tbody.querySelectorAll("tr[data-symbol]");
+      trs.forEach(tr => {
+        tr.addEventListener("click", () => {
+          const sym = tr.getAttribute("data-symbol");
+          showStockDetail(sym);
+        });
+      });
+    }
+
+    function renderScan(scan) {
+      globalScanData = scan;
+      
+      document.getElementById("scanId").textContent = scan.scan_id ? scan.scan_id.replace("scan-", "") : "-";
+      document.getElementById("scanMode").textContent = scan.mode ? scan.mode.toUpperCase() : "-";
+      
+      // Update totals scanned in the metric
+      document.getElementById("rejected").textContent = scan.candidates ? scan.candidates.length : "-";
+      
+      // Clean ISO timestamp to local string
+      let dateText = "-";
+      if (scan.created_at) {
+        try {
+          const dateObj = new Date(scan.created_at);
+          dateText = dateObj.toLocaleTimeString("vi-VN") + " " + dateObj.toLocaleDateString("vi-VN");
+        } catch(e) {
+          dateText = scan.created_at;
+        }
+      }
+      document.getElementById("scanStatus").textContent = dateText;
+      
+      // Calculate filter counts
+      const candidates = scan.candidates || [];
+      const countAll = candidates.length;
+      const countBuy = candidates.filter(c => c.decision === "BUY_SETUP").length;
+      const countWatch = candidates.filter(c => c.decision === "WATCH").length;
+      const countReject = candidates.filter(c => c.decision === "REJECT").length;
+
+      document.getElementById("count-all").textContent = countAll;
+      document.getElementById("count-buy").textContent = countBuy;
+      document.getElementById("count-watch").textContent = countWatch;
+      document.getElementById("count-reject").textContent = countReject;
+
+      // Apply initial filter rendering
+      filterCandidates(activeFilter);
+
+      // Auto select the first symbol if there are candidates and none selected
+      if (candidates.length > 0) {
+        const topCandidate = candidates.find(c => c.decision === "BUY_SETUP") || candidates[0];
+        showStockDetail(topCandidate.symbol);
+      } else {
+        // Reset details panel
+        document.getElementById("detailsTitle").textContent = "Stock Details Report";
+        document.getElementById("detailsBadgeHeader").innerHTML = "";
+        document.getElementById("detailsBody").innerHTML = `
+          <div style="text-align: center; color: var(--text-dark); padding: 40px 10px;">
+            <svg style="width: 48px; height: 48px; fill: none; stroke: var(--text-dark); stroke-width: 1.5; margin-bottom: 12px; display: inline-block;" viewBox="0 0 24 24">
+              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div style="font-size: 13px; font-weight: 500;">No scan candidates available. Run a scan to fetch data.</div>
+          </div>
+        `;
+      }
+      
+      document.getElementById("evidence").textContent = JSON.stringify({
+        warnings: scan.warnings || [],
+        candidates: candidates.map(row => ({
+          symbol: row.symbol,
+          decision: row.decision,
+          evidence: row.evidence,
+          model_signal: row.model_signal,
+          hybrid_trace: row.hybrid_trace,
+          backtest_summary: row.backtest_summary,
+          robustness_summary: row.robustness_summary,
+          warnings: row.warnings
+        }))
+      }, null, 2);
+    }
+
+    function setResearchTab(tab) {
+      activeResearch = tab;
+      document.querySelectorAll("#researchTabs .filter-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("data-research") === tab);
+      });
+      renderResearch();
+    }
+
+    function metricCards(items) {
+      return `<div class="detail-grid-cards">${items.map(item => `
+        <div class="detail-card">
+          <span>${item.label}</span>
+          <strong>${item.value}</strong>
+        </div>`).join("")}</div>`;
+    }
+
+    function renderResearch() {
+      const body = document.getElementById("researchBody");
+      if (activeResearch === "ml") {
+        const data = modelStatusData || {};
+        const models = data.models || {};
+        const rows = Object.values(models);
+        body.innerHTML = `
+          ${metricCards([
+            { label: "Registry", value: data.status || "empty" },
+            { label: "Selected", value: data.selected_model || "-" },
+            { label: "Rows", value: data.dataset?.rows ?? "-" },
+            { label: "Rules", value: data.rules_version || "-" }
+          ])}
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>Model</th><th>Status</th><th class="num">Precision</th><th class="num">Recall</th><th class="num">Trades</th></tr></thead>
+              <tbody>${rows.length ? rows.map(row => `
+                <tr>
+                  <td>${row.model_family}</td>
+                  <td>${row.status}</td>
+                  <td class="num">${row.metrics?.precision !== undefined ? (row.metrics.precision * 100).toFixed(1) + "%" : "-"}</td>
+                  <td class="num">${row.metrics?.recall !== undefined ? (row.metrics.recall * 100).toFixed(1) + "%" : "-"}</td>
+                  <td class="num">${row.metrics?.test?.selected_trades ?? "-"}</td>
+                </tr>`).join("") : `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:14px;">No trained model registry.</td></tr>`}</tbody>
+            </table>
+          </div>`;
+        return;
+      }
+      if (activeResearch === "backtest") {
+        const data = backtestData || {};
+        body.innerHTML = data.total_trades !== undefined ? `
+          ${metricCards([
+            { label: "Return", value: (data.total_return_pct || 0).toFixed(2) + "%" },
+            { label: "Win Rate", value: (data.win_rate || 0).toFixed(1) + "%" },
+            { label: "Expectancy", value: (data.expectancy_pct || 0).toFixed(3) + "%" },
+            { label: "Max DD", value: (data.max_drawdown_pct || 0).toFixed(2) + "%" }
+          ])}
+          <pre style="white-space:pre-wrap; font-size:11px; color:var(--text-muted); background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:8px; padding:12px; max-height:240px; overflow:auto;">${JSON.stringify({ summary: data.summary, trades: (data.trades || []).slice(-8) }, null, 2)}</pre>
+        ` : `<div style="font-size:12px; color:var(--text-muted);">Run backtest to load portfolio metrics.</div>`;
+        return;
+      }
+      if (activeResearch === "robustness") {
+        const data = robustnessData || {};
+        body.innerHTML = data.baseline ? `
+          ${metricCards([
+            { label: "Baseline", value: (data.baseline.total_return_pct || 0).toFixed(2) + "%" },
+            { label: "MC P05", value: data.monte_carlo?.total_return_pct_p05 !== undefined ? data.monte_carlo.total_return_pct_p05.toFixed(2) + "%" : "-" },
+            { label: "MC DD P95", value: data.monte_carlo?.max_drawdown_pct_p95 !== undefined ? data.monte_carlo.max_drawdown_pct_p95.toFixed(2) + "%" : "-" },
+            { label: "Scenarios", value: (data.stress_scenarios || []).length }
+          ])}
+          <pre style="white-space:pre-wrap; font-size:11px; color:var(--text-muted); background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:8px; padding:12px; max-height:260px; overflow:auto;">${JSON.stringify({
+            parameter_sensitivity: (data.parameter_sensitivity || []).slice(0, 8),
+            out_of_sample_windows: data.out_of_sample_windows,
+            stress_scenarios: data.stress_scenarios
+          }, null, 2)}</pre>
+        ` : `<div style="font-size:12px; color:var(--text-muted);">Run robustness to load sensitivity, Monte Carlo, and stress metrics.</div>`;
+        return;
+      }
+      if (activeResearch === "optimizer") {
+        const data = optimizerData || {};
+        const selected = data.selected_candidate || {};
+        const test = selected.final_test || {};
+        body.innerHTML = data.status ? `
+          ${metricCards([
+            { label: "Status", value: data.status },
+            { label: "Test Return", value: test.total_return_pct !== undefined ? test.total_return_pct.toFixed(2) + "%" : "-" },
+            { label: "Test Win", value: test.win_rate !== undefined ? test.win_rate.toFixed(1) + "%" : "-" },
+            { label: "Trials", value: data.trials_completed ?? "-" }
+          ])}
+          <pre style="white-space:pre-wrap; font-size:11px; color:var(--text-muted); background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:8px; padding:12px; max-height:280px; overflow:auto;">${JSON.stringify({
+            baseline: data.baseline,
+            selected_candidate: data.selected_candidate,
+            target_reached: data.target_reached,
+            apply_result: data.apply_result,
+            report_path: data.report_path
+          }, null, 2)}</pre>
+        ` : `<div style="font-size:12px; color:var(--text-muted);">Run optimizer to tune technical rules on local OHLCV data.</div>`;
+        return;
+      }
+      body.innerHTML = `<pre style="white-space:pre-wrap; font-size:11px; color:var(--text-muted); background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:8px; padding:12px; max-height:320px; overflow:auto;">${document.getElementById("evidence").textContent || "{}"}</pre>`;
+    }
+
+    function renderPortfolio(payload) {
+      const pnl = payload.pnl || {};
+      
+      const totalCostVal = pnl.total_cost || 0;
+      const totalValueVal = pnl.total_market_value || 0;
+      const unrealizedPnlVal = pnl.total_unrealized_pnl || 0;
+      const unrealizedPnlPctVal = pnl.total_unrealized_pnl_pct || 0;
+      
+      document.getElementById("totalCost").textContent = money(totalCostVal);
+      document.getElementById("totalValue").textContent = money(totalValueVal);
+      
+      const pnlEl = document.getElementById("totalPnl");
+      pnlEl.textContent = `${money(unrealizedPnlVal)} (${unrealizedPnlPctVal.toFixed(2)}%)`;
+      pnlEl.className = getPnlClass(unrealizedPnlVal);
+      
+      const rows = pnl.rows || [];
+      if (rows.length === 0) {
+        document.getElementById("pnlBody").innerHTML = `<tr>
+          <td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">
+            No open positions. Use the form above to add a stock position.
+          </td>
+        </tr>`;
+      } else {
+        document.getElementById("pnlBody").innerHTML = rows.map((row, index) => {
+          const rowPnl = row.unrealized_pnl || 0;
+          return `<tr style="animation-delay: ${index * 0.05}s">
+            <td><strong style="color:#fff; font-family:'Outfit'">${row.symbol}</strong></td>
+            <td class="num">${money(row.buy_price)}</td>
+            <td class="num">${money(row.current_price)}</td>
+            <td class="num ${getPnlClass(rowPnl)}">${money(rowPnl)}</td>
+          </tr>`;
+        }).join("");
+      }
+    }
+
+    async function refreshAll() {
+      const [scan, portfolio, model] = await Promise.all([
+        requestJson("/api/scan/latest"),
+        requestJson("/api/portfolio"),
+        requestJson("/api/model/status")
+      ]);
+      modelStatusData = model;
+      renderScan(scan);
+      renderPortfolio(portfolio);
+      renderResearch();
+    }
+
+    // Filter Buttons binding
+    document.querySelectorAll("#filterTabs .filter-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        filterCandidates(btn.getAttribute("data-filter"));
+      });
+    });
+
+    document.querySelectorAll("#researchTabs .filter-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        setResearchTab(btn.getAttribute("data-research"));
+      });
+    });
+
+    document.getElementById("trainModel").addEventListener("click", async () => {
+      document.getElementById("researchStatus").textContent = "Training...";
+      setResearchTab("ml");
+      try {
+        modelStatusData = await requestJson("/api/model/train", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({})
+        });
+        document.getElementById("researchStatus").textContent = "ML ready";
+        renderResearch();
+      } catch (err) {
+        document.getElementById("researchStatus").textContent = "Error: " + err.message;
+      }
+    });
+
+    document.getElementById("runBacktest").addEventListener("click", async () => {
+      document.getElementById("researchStatus").textContent = "Backtesting...";
+      setResearchTab("backtest");
+      try {
+        backtestData = await requestJson("/api/backtest/portfolio");
+        document.getElementById("researchStatus").textContent = "Backtest ready";
+        renderResearch();
+      } catch (err) {
+        document.getElementById("researchStatus").textContent = "Error: " + err.message;
+      }
+    });
+
+    document.getElementById("runRobustness").addEventListener("click", async () => {
+      document.getElementById("researchStatus").textContent = "Testing...";
+      setResearchTab("robustness");
+      try {
+        robustnessData = await requestJson("/api/robustness");
+        document.getElementById("researchStatus").textContent = "Robustness ready";
+        renderResearch();
+      } catch (err) {
+        document.getElementById("researchStatus").textContent = "Error: " + err.message;
+      }
+    });
+
+    document.getElementById("runOptimizer").addEventListener("click", async () => {
+      document.getElementById("researchStatus").textContent = "Optimizing...";
+      setResearchTab("optimizer");
+      try {
+        optimizerData = await requestJson("/api/optimize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ years: 3, n_trials: 40, apply: false })
+        });
+        document.getElementById("researchStatus").textContent = optimizerData.target_reached ? "Target reached" : "Best candidate ready";
+        renderResearch();
+      } catch (err) {
+        document.getElementById("researchStatus").textContent = "Error: " + err.message;
+      }
+    });
+
+    document.getElementById("demoScan").addEventListener("click", async () => {
+      document.getElementById("scanStatus").textContent = "Running demo scan...";
+      try {
+        const scan = await requestJson("/api/scan/trigger", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ demo: true })
+        });
+        renderScan(scan);
+        renderResearch();
+        const portfolio = await requestJson("/api/portfolio");
+        renderPortfolio(portfolio);
+      } catch (err) {
+        document.getElementById("scanStatus").textContent = "Error: " + err.message;
+      }
+    });
+
+    document.getElementById("realScan").addEventListener("click", async () => {
+      document.getElementById("scanStatus").textContent = "Running real scan...";
+      try {
+        const scan = await requestJson("/api/scan/trigger", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ demo: false })
+        });
+        renderScan(scan);
+        renderResearch();
+        const portfolio = await requestJson("/api/portfolio");
+        renderPortfolio(portfolio);
+      } catch (err) {
+        document.getElementById("scanStatus").textContent = "Error: " + err.message;
+      }
+    });
+
+    document.getElementById("refresh").addEventListener("click", refreshAll);
+
+    document.getElementById("positionForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const data = new FormData(event.target);
+      const payload = Object.fromEntries(data.entries());
+      
+      // Ensure uppercase symbol
+      payload.symbol = payload.symbol.toUpperCase();
+      
+      try {
+        await requestJson("/api/portfolio/positions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        event.target.reset();
+        const portfolio = await requestJson("/api/portfolio");
+        renderPortfolio(portfolio);
+      } catch (err) {
+        alert("Failed to add position: " + err.message);
+      }
+    });
+
+    document.getElementById("clearPortfolio").addEventListener("click", async () => {
+      if (confirm("Are you sure you want to clear all portfolio positions?")) {
+        try {
+          await requestJson("/api/portfolio/positions", { method: "DELETE" });
+          const portfolio = await requestJson("/api/portfolio");
+          renderPortfolio(portfolio);
+        } catch (err) {
+          alert("Failed to clear portfolio: " + err.message);
+        }
+      }
+    });
+
+    // Initial load
+    refreshAll().catch(err => {
+      document.getElementById("scanStatus").textContent = "Error loading latest: " + err.message;
+    });
+  </script>
+</body>
+</html>

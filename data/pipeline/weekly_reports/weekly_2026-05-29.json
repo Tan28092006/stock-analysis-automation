@@ -1,0 +1,14 @@
+{
+  "generated_at": "2026-05-29T12:23:51.973994+00:00",
+  "weekly_metrics": {
+    "status": "no_data"
+  },
+  "monthly_metrics": {
+    "status": "no_data"
+  },
+  "total_predictions_all_time": 0,
+  "model_health": "unknown",
+  "recommendations": [
+    "Chưa có đủ dữ liệu prediction outcomes. Tiếp tục thu thập."
+  ]
+}

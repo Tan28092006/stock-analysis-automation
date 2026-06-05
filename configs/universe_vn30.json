@@ -1,0 +1,52 @@
+{
+  "name": "VN30_MVP",
+  "as_of": "2026-05-26",
+  "notes": [
+    "Seeded for MVP and should be refreshed from HOSE before live trading.",
+    "Public ETF notes in May 2026 report BSR replacing DGC effective 2026-05-13.",
+    "Public January 2026 review notes VPL replacing BCM effective 2026-02-02."
+  ],
+  "symbols": [
+    "ACB",
+    "BID",
+    "BSR",
+    "CTG",
+    "FPT",
+    "GAS",
+    "GVR",
+    "HDB",
+    "HPG",
+    "LPB",
+    "MBB",
+    "MSN",
+    "MWG",
+    "PLX",
+    "SAB",
+    "SHB",
+    "SSB",
+    "SSI",
+    "STB",
+    "TCB",
+    "TPB",
+    "VCB",
+    "VHM",
+    "VIB",
+    "VIC",
+    "VJC",
+    "VNM",
+    "VPB",
+    "VPL",
+    "VRE"
+  ],
+  "reserve_symbols": [
+    "EIB",
+    "GEE",
+    "MSB",
+    "REE"
+  ],
+  "sources": [
+    "https://www.ssi.com.vn/khach-hang-ca-nhan/ban-tin-etf",
+    "https://vietnamfinance.vn/vn30-co-cau-danh-muc-bcm-bi-loai-ho-nha-vin-them-mot-suat-d139176.html"
+  ]
+}
+
