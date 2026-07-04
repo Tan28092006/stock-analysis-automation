@@ -5,11 +5,15 @@ Techniques: 12-1 momentum (rank by return t-252 -> t-21, skip last month), inver
 target_vol / market_vol -> auto de-risk when vol is high), buffering (a held name stays
 until it drops out of the top 2N -> low turnover). VN100 universe for breadth.
 
-Backtest (VN30, next-open fills, cost 0.4%): FULL +157%, OOS 2024-26 +70% (Sharpe 1.20),
-H2-2025 bull +32% (Sharpe 2.43) — beats VNINDEX, robust to cost/params. HONEST caveats:
-still < equal-weight buy&hold in a super-bull (timing sits partly in cash); DD ~37%;
-momentum-crash risk in fast crashes (a hard kill-switch was tested and REJECTED — it
-whipsaws and destroys recent OOS returns). No RISK_ON gate: vol-targeting handles risk.
+Backtest on the fixed current-30-VN30 basket (next-open fills, cost 0.4%): FULL +157-190%,
+Sharpe ~0.9. But this is HEAVILY SURVIVORSHIP-INFLATED: on a point-in-time universe
+(top-30 by trailing traded value, membership rotating) it drops to ~+33% / Sharpe ~0.31 /
+DD ~-56% — roughly index-like. Treat the fixed-basket numbers as an optimistic upper bound.
+Other honest caveats: momentum-crash risk in fast crashes (hard kill-switch, %-drop
+circuit-breaker, per-position stops, and an excess-momentum gate were ALL tested and
+REJECTED — kill-switches/stops whipsaw; the excess gate only "worked" on the exact survivor
+basket and vanished on point-in-time / VN100 / random-subset). No RISK_ON gate: vol-targeting
+handles risk. See memory: momentum-excess-gate, crash-response-by-shape.
 """
 from __future__ import annotations
 

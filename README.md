@@ -21,7 +21,7 @@ Quant-grade momentum, ưu tiên khi RISK_ON:
 - **Trọng số nghịch-vol** (risk parity) — mã vol thấp tỷ trọng cao hơn.
 - **Vol-targeting** — exposure = target_vol / vol thị trường → tự giảm khi vol cao.
 - **Buffering** — giữ tới khi rớt khỏi top-2N (giảm turnover/phí).
-- Backtest VN30 (fill mở-cửa, phí 0.4%): FULL +157%, **OOS 2024-26 +70% (Sharpe 1.20)**, H2-2025 bull +32%.
+- Backtest VN30 (fill mở-cửa, phí 0.4%): trên rổ **30 mã VN30 hiện tại áp ngược** cho FULL +157–190%, Sharpe ~0.9. **⚠️ Đây là số survivorship-inflated** — kiểm bằng rổ *point-in-time* (top-30 theo giá trị giao dịch, membership xoay theo thời gian) thì thực tế chỉ **~+33%, Sharpe ~0.3, DD ~−56%**, xấp xỉ index. Coi các số cố định-rổ là **cận trên lạc quan**, không phải kỳ vọng thực.
 
 ### 🎯 SATELLITE — Bắt đáy / Mean-Reversion (crash alpha)
 "Thợ săn kèo béo" — chỉ bắn khi có capitulation + đảo chiều, thoát nhanh:
@@ -54,7 +54,9 @@ Dashboard hiện banner khuyến nghị + **làm mờ engine không phù hợp**
 | **2025** bull mạnh | RISK_ON 59% | +40% | +24% | −0.6% |
 | **2026** crash+choppy | PANIC 31% | +4% | −11% | +6.7% ✅ |
 
-**Sự thật đã chấp nhận:** không timing nào thắng buy-and-hold trong siêu bull. Giá trị của hệ là **tham gia bull + cứu vốn/thêm alpha trong crash + kiểm soát drawdown**. Nhiều "cải tiến" hào nhoáng đã bị backtest chặt **loại bỏ** vì overfit: kill-switch EMA200, filter bear, factor high52w, "follow khối ngoại".
+> ⚠️ **Cột Momentum tính trên rổ VN30 hiện tại áp ngược → survivorship-inflated.** Trên rổ point-in-time (membership xoay) các con số này yếu hơn đáng kể và momentum chỉ xấp xỉ index. Đọc cùng §6.
+
+**Sự thật đã chấp nhận:** không timing nào thắng buy-and-hold trong siêu bull. Giá trị của hệ là **tham gia bull + cứu vốn/thêm alpha trong crash + kiểm soát drawdown**. Nhiều "cải tiến" hào nhoáng đã bị backtest chặt **loại bỏ** vì overfit: kill-switch EMA200, filter bear, factor high52w, "follow khối ngoại", **circuit-breaker %-giảm-nhanh** (whipsaw), và **excess-momentum gate** (chỉ thắng trên đúng rổ survivor, biến mất khi test point-in-time/VN100/random-subset).
 
 ---
 
@@ -120,7 +122,8 @@ python -m stock_agent.app --host 127.0.0.1 --port 8000   # -> http://127.0.0.1:8
 ## 6. Lưu ý trung thực
 
 - **EOD, không real-time** — giá đóng cửa; cảnh báo stop theo phiên, không theo tick.
-- **Survivorship** — VN100 là danh sách *hiện tại* áp ngược → số quá khứ (nhất là VN100) bị thổi phồng; tin mức VN30 hơn.
+- **Survivorship (nặng, cả VN30)** — mọi rổ (VN30 lẫn VN100) đều là danh sách *hiện tại* áp ngược → số backtest bị thổi phồng. Đã đo trực tiếp: momentum VN30 cố-định-rổ +190%/Sharpe 0.88 nhưng rổ **point-in-time** (membership xoay theo giá trị giao dịch) chỉ **+33%/Sharpe 0.31/DD −56%**. **Đừng tin "VN30 chuẩn hơn"** — nó cũng inflated; coi số backtest là cận trên lạc quan, kỳ vọng thực xấp xỉ index.
 - **Edge nhỏ & theo regime** — P(win) tối đa ~57% (không phải phép màu); thắng nhờ *R:R bất đối xứng × tilt xác suất nhỏ*.
+- **Không phòng được flash-crash** — sập nhanh vài phiên: vol-target (60 ngày) + cảnh báo top-2N (12-1 bỏ 21 phiên gần nhất) đều quá chậm; đây là giới hạn cấu trúc của EOD, không phải bug. Sập từ-từ thì bắt đáy mới ăn.
 - **Khối ngoại** — đã dựng hạ tầng thu thập; gác lại làm tín hiệu (dữ liệu nói "follow khối ngoại" là sai; manh mối contrarian chưa đủ mẫu).
-- **Tests:** `python -m pytest tests/ -q` (85 pass).
+- **Tests:** `python -m pytest tests/ -q` (91 pass).
