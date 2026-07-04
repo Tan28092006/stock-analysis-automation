@@ -17,6 +17,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # are excluded via .dockerignore; the P(win) model is retrained on first run if absent.
 COPY . .
 
+# Snapshot the baked data so we can seed a persistent volume on first boot. When a
+# platform mounts a disk at /app/data it SHADOWS the baked data/, leaving it empty — the
+# entrypoint below restores the price history from this snapshot if the volume is bare.
+RUN cp -a /app/data /app/data_seed
+
 # Accept external connections; PaaS platforms inject PORT (Render/Railway/Fly).
 ENV HOST=0.0.0.0 \
     PORT=8000 \
@@ -27,5 +32,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD curl -fsS "http://127.0.0.1:${PORT}/api/health" || exit 1
 
-# Shell form so ${PORT} is expanded from the environment at runtime.
-CMD python -m stock_agent.app --host "$HOST" --port "$PORT"
+# Seed an empty data volume (VNINDEX.csv is the marker for "history present"), then serve.
+# Shell form so ${HOST}/${PORT} expand at runtime.
+CMD sh -c 'if [ ! -e /app/data/raw/prices_hist/VNINDEX.csv ]; then echo "[seed] data volume is empty — restoring price history from image snapshot"; mkdir -p /app/data && cp -a /app/data_seed/. /app/data/; fi; exec python -m stock_agent.app --host "$HOST" --port "$PORT"'
