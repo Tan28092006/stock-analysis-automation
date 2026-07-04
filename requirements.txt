@@ -1,10 +1,26 @@
-pandas>=2.0
-numpy>=1.24
+# Core data / numerics
+pandas>=2.2,<3
+numpy>=1.26,<2
 scipy>=1.10
-scikit-learn>=1.3
+python-dotenv>=1.0
+
+# ML — win-probability (LightGBM + isotonic) + legacy ensemble
+scikit-learn>=1.4
+lightgbm>=4.6
+xgboost>=3.2
+catboost>=1.2
+shap>=0.51
+
+# Optimizer / schemas (legacy pipeline)
 optuna>=4.0
 pydantic>=2.0
+
+# Market data
 vnstock>=4.0.4
 yfinance>=1.4.0
-fastapi>=0.136.3
-uvicorn>=0.48.0
+requests>=2.31
+
+# The dashboard/API uses the Python stdlib http.server (no FastAPI/uvicorn needed).
+# Optional — foreign-flow harvest (Vietstock, headless browser). Not required to run
+# the dashboard; install only if you re-enable the foreign accumulator scrapers:
+#   playwright>=1.40   ; then: python -m playwright install chromium

@@ -293,7 +293,8 @@ def _predict_ensemble(symbol: str, signal: Any, rules: dict, ml_rules: dict) -> 
 
     try:
         row = _feature_row_from_signal(signal)
-        probability, details = trainer.predict_single(row)
+        return_shap = bool(ml_rules.get("return_shap", False))
+        probability, details = trainer.predict_single(row, return_shap=return_shap)
     except Exception as exc:
         return ModelSignal(
             status="error",
@@ -302,16 +303,51 @@ def _predict_ensemble(symbol: str, signal: Any, rules: dict, ml_rules: dict) -> 
             warnings=[str(exc)],
         )
 
-    threshold = float(ml_rules.get("probability_threshold", 0.55))
+    # Dynamic threshold adjustment (Symbol-specific + Volatility + Market Regime adjustment)
+    base_threshold = float(ml_rules.get("probability_threshold", 0.55))
+    
+    # Check for static symbol override in config file
+    from pathlib import Path
+    symbol_thresholds_path = Path("configs/ml_symbol_thresholds.json")
+    if symbol_thresholds_path.exists():
+        try:
+            import json
+            with symbol_thresholds_path.open("r") as f:
+                thresholds_map = json.load(f)
+                if symbol.upper() in thresholds_map:
+                    base_threshold = float(thresholds_map[symbol.upper()])
+        except Exception:
+            pass
+            
+    # Volatility adjustment (higher volatility -> higher threshold)
+    atr_pct = row.get("feature_atr_pct", 0.025)
+    vol_adjust = max(-0.04, min(0.04, (atr_pct - 0.025) * 1.5))
+    
+    # Market Regime adjustment
+    regime_trend = row.get("feature_regime_trend", 0.0)
+    regime_vol = row.get("feature_regime_vol_class", 1.0)
+    
+    regime_adjust = 0.0
+    if regime_trend == -1.0:     # Bear market
+        regime_adjust += 0.08    # Penalty for bear market
+    elif regime_trend == 0.0:   # Sideways
+        regime_adjust += 0.02
+        
+    if regime_vol == 2.0:       # High volatility
+        regime_adjust += 0.04    # Penalty for high volatility
+        
+    threshold = base_threshold + vol_adjust + regime_adjust
+    threshold = max(0.45, min(0.75, threshold))  # Clamp to sensible bounds
+    
     passed = probability >= threshold
     confidence_delta = max(-0.10, min(0.08, (probability - threshold) * 0.15))
 
     override_enabled = bool(ml_rules.get("override_enabled", False))
     override_detail = ""
     if override_enabled:
-        override_detail = "ML override active: can downgrade BUY_SETUP → WATCH"
+        override_detail = f"ML override active (Thresh: {round(threshold, 3)}): can downgrade BUY_SETUP → WATCH"
     else:
-        override_detail = "ML advisory only: no override"
+        override_detail = f"ML advisory only (Thresh: {round(threshold, 3)}): no override"
 
     return ModelSignal(
         status="available",
@@ -516,7 +552,9 @@ def _training_result_payload(result: TrainingResult) -> dict[str, Any]:
 
 
 def _feature_frame(frame: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
-    return frame[cols].replace([np.inf, -np.inf], np.nan).fillna(0.0)
+    from .calibration import preprocess_features_robust
+    processed, _ = preprocess_features_robust(frame, cols)
+    return processed
 
 
 def _time_split(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:

@@ -21,3 +21,19 @@ data/reports/*
 !data/features/
 !data/models/
 !data/reports/
+
+# Vietstock login session (auth cookies) - never commit
+data/raw/foreign/vietstock_session.json
+
+# Foreign AI-tooling config (not part of this project)
+.agents/
+.codex-plugin/
+
+# Throwaway experiment outputs / logs at repo root
+/backtest_results.json
+/bt_30.json
+/bt_report.json
+/opt_all.json
+/optimize_test.json
+/optimize_test_widen.json
+data/pipeline/eod_update.log

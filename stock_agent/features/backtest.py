@@ -136,6 +136,28 @@ def round_trip_cost_pct(config: BacktestConfig) -> float:
     return config.commission_pct * 2 + config.sell_tax_pct + config.slippage_pct * 2
 
 
+def get_hose_tick_size(price: float) -> float:
+    if price < 1000.0:
+        return 0.1
+    elif price < 10000.0:
+        return 10.0
+    elif price < 50000.0:
+        return 50.0
+    else:
+        return 100.0
+
+
+def apply_slippage(price: float, is_buy: bool, ticks: int = 1) -> float:
+    current_price = price
+    for _ in range(ticks):
+        tick_size = get_hose_tick_size(current_price)
+        if is_buy:
+            current_price += tick_size
+        else:
+            current_price -= tick_size
+    return current_price
+
+
 def enforce_price_limit(price: float, reference_price: float, limit_pct: float) -> float:
     if reference_price <= 0:
         return float(price)
@@ -213,7 +235,7 @@ def trade_metric_summary(returns_pct: list[float], selected_count: int | None = 
     opportunities = opportunity_count if opportunity_count is not None else selected
     return {
         "total_trades": total,
-        "win_rate": round(len(wins) / total * 100, 3) if total else 0.0,
+        "win_rate": round(len(wins) / total, 3) if total else 0.0,
         "avg_return_pct": round(float(np.mean(returns_pct)), 4) if returns_pct else 0.0,
         "expectancy_pct": round(_expectancy(returns_pct), 4),
         "max_drawdown_pct": round(_max_drawdown(returns_pct), 4),
@@ -272,6 +294,20 @@ def run_backtest(
             i += 1
             continue
 
+        # ML override
+        ml_rules = rules.get("ml", {})
+        if ml_rules.get("enabled", False) and ml_rules.get("override_enabled", False):
+            from .ml_models import predict_model_signal
+            model_signal = predict_model_signal(symbol, signal, rules)
+            if model_signal.status == "available" and model_signal.probability is not None:
+                override_loss_threshold = float(ml_rules.get("override_loss_threshold", 0.60))
+                if model_signal.probability < (1.0 - override_loss_threshold):
+                    signal.decision = "WATCH"
+
+        if signal.decision != "BUY_SETUP" or signal.risk_plan is None:
+            i += 1
+            continue
+
         entry_idx = i + 1
         entry_row = data.loc[entry_idx]
         entry_date = entry_row["date"]
@@ -309,8 +345,16 @@ def run_backtest(
         exit_reference_idx = max(actual_exit_idx - 1, 0)
         exit_reference = float(data.loc[exit_reference_idx, "close"])
         exit_price = enforce_price_limit(exit_price, exit_reference, cfg.price_limit_pct)
-        gross_return_pct = (exit_price - entry_price) / entry_price * 100.0 if entry_price else 0.0
-        net_return_pct = gross_return_pct - cost_pct
+        
+        # Apply tick-size-aware slippage to prices for return calculations:
+        entry_price_slipped = apply_slippage(entry_price, is_buy=True, ticks=1)
+        entry_price_slipped = enforce_price_limit(entry_price_slipped, entry_reference, cfg.price_limit_pct)
+        
+        exit_price_slipped = apply_slippage(exit_price, is_buy=False, ticks=1)
+        exit_price_slipped = enforce_price_limit(exit_price_slipped, exit_reference, cfg.price_limit_pct)
+        
+        gross_return_pct = (exit_price_slipped - entry_price_slipped) / entry_price_slipped * 100.0 if entry_price_slipped else 0.0
+        net_return_pct = gross_return_pct - (cfg.commission_pct * 2 + cfg.sell_tax_pct)
         trades.append(
             TradeRecord(
                 symbol=symbol.upper(),
@@ -475,13 +519,71 @@ def run_portfolio_backtest_from_csvs(
     end: date | None = None,
     price_dir=PRICE_CACHE_DIR,
 ) -> PortfolioBacktestResult:
+    import sys
+    import hashlib
+    from datetime import timezone, datetime
+    from ..data.repository import write_json
+    from ..schemas import to_plain_dict
+    from ..pipeline.performance_tracker import create_and_log_manifest
+    from ..constants import REPORT_DIR
+
+    requested_symbols = [symbol.upper() for symbol in symbols]
     frames: dict[str, pd.DataFrame] = {}
-    for symbol in [item.upper() for item in symbols]:
+    excluded_symbols: list[str] = []
+    
+    for symbol in requested_symbols:
         path = price_dir / f"{symbol}.csv"
         if not path.exists():
+            excluded_symbols.append(symbol)
             continue
-        frames[symbol] = normalize_ohlcv(pd.read_csv(path))
-    return run_portfolio_backtest(frames, rules, config=config, start=start, end=end)
+        try:
+            frames[symbol] = normalize_ohlcv(pd.read_csv(path))
+        except Exception:
+            excluded_symbols.append(symbol)
+            
+    result = run_portfolio_backtest(frames, rules, config=config, start=start, end=end)
+    
+    # Check if we are running under pytest or unittest
+    if "pytest" not in sys.modules and "unittest" not in sys.modules:
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        REPORT_DIR.mkdir(parents=True, exist_ok=True)
+        report_path = REPORT_DIR / f"backtest_{timestamp}.json"
+        
+        # Save the backtest report
+        write_json(report_path, to_plain_dict(result))
+        
+        # Compute SHA-256 data hashes
+        data_hashes: dict[str, str] = {}
+        for symbol in frames:
+            csv_path = price_dir / f"{symbol}.csv"
+            if csv_path.exists():
+                hasher = hashlib.sha256()
+                with csv_path.open("rb") as f:
+                    for chunk in iter(lambda: f.read(65536), b""):
+                        hasher.update(chunk)
+                data_hashes[symbol] = hasher.hexdigest()
+                
+        # Combined hash
+        combined_hasher = hashlib.sha256()
+        for symbol in sorted(data_hashes):
+            combined_hasher.update(data_hashes[symbol].encode("utf-8"))
+        combined_data_hash = combined_hasher.hexdigest()
+        
+        # Log the manifest
+        command = " ".join(sys.argv)
+        create_and_log_manifest(
+            command=command,
+            rules=rules,
+            data_start=result.start,
+            data_end=result.end,
+            symbols=list(frames.keys()),
+            report_links={"backtest_report": str(report_path)},
+            symbols_excluded=excluded_symbols,
+            data_hash=combined_data_hash,
+            data_hashes=data_hashes,
+        )
+        
+    return result
 
 
 def _empty_portfolio_result(cfg: BacktestConfig, start: date | None, end: date | None, reason: str) -> PortfolioBacktestResult:
@@ -563,7 +665,7 @@ def _record_exit(
     trades: list[PortfolioTradeRecord],
     cfg: BacktestConfig,
 ) -> float:
-    effective_exit = exit_price * (1 - cfg.slippage_pct / 100.0)
+    effective_exit = apply_slippage(exit_price, is_buy=False, ticks=1)
     gross_return_pct = (effective_exit - position["entry_price"]) / position["entry_price"] * 100.0
     sell_cost = (cfg.commission_pct + cfg.sell_tax_pct) / 100.0 * effective_exit * position["quantity"]
     exit_value = effective_exit * position["quantity"]
@@ -615,13 +717,26 @@ def _open_new_positions(
         signal = score_precomputed_at(symbol, frame, signal_idx, rules)
         if signal.decision != "BUY_SETUP" or signal.risk_plan is None:
             continue
+
+        # ML override
+        ml_rules = rules.get("ml", {})
+        if ml_rules.get("enabled", False) and ml_rules.get("override_enabled", False):
+            from .ml_models import predict_model_signal
+            model_signal = predict_model_signal(symbol, signal, rules)
+            if model_signal.status == "available" and model_signal.probability is not None:
+                override_loss_threshold = float(ml_rules.get("override_loss_threshold", 0.60))
+                if model_signal.probability < (1.0 - override_loss_threshold):
+                    signal.decision = "WATCH"
+
+        if signal.decision != "BUY_SETUP" or signal.risk_plan is None:
+            continue
         candidates.append((signal.score, symbol, signal, frame.loc[entry_idx], signal_idx))
 
     for _, symbol, signal, entry_row, signal_idx in sorted(candidates, reverse=True):
         if cash <= 0 or exposure >= equity * cfg.max_gross_exposure:
             break
         entry_reference = float(frames[symbol].loc[signal_idx, "close"])
-        raw_entry = float(entry_row["open"]) * (1 + cfg.slippage_pct / 100.0)
+        raw_entry = apply_slippage(float(entry_row["open"]), is_buy=True, ticks=1)
         entry_price = enforce_price_limit(raw_entry, entry_reference, cfg.price_limit_pct)
         stop_loss = min(float(signal.risk_plan.stop_loss), entry_price * 0.995)
         risk_per_share = max(entry_price - stop_loss, entry_price * 0.005)

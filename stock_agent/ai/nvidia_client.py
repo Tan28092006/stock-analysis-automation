@@ -35,6 +35,10 @@ class NvidiaChatClient:
     def __init__(self, config: NvidiaConfig | None = None):
         self.config = config or NvidiaConfig.from_env()
 
+    def is_available(self) -> bool:
+        """Check if NVIDIA API key is configured."""
+        return bool(self.config.api_key)
+
     def chat_json(
         self,
         system: str,
@@ -61,6 +65,32 @@ class NvidiaChatClient:
         response = self._post("/chat/completions", payload)
         content = response["choices"][0]["message"]["content"]
         return _parse_json_content(content)
+
+    def chat_text(
+        self,
+        system: str,
+        user: str,
+        temperature: float = 0.3,
+        max_tokens: int = 1800,
+    ) -> str:
+        payload = {
+            "model": self.config.model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": (
+                        "System instructions:\n"
+                        f"{system}\n\n"
+                        "User payload:\n"
+                        f"{user}"
+                    ),
+                },
+            ],
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        response = self._post("/chat/completions", payload)
+        return response["choices"][0]["message"]["content"]
 
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         url = f"{self.config.base_url}{path}"

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -18,6 +19,33 @@ from .features.robustness import run_robustness
 from .portfolio.pnl import PortfolioStore, calculate_pnl, latest_prices_from_scan, log_portfolio_features
 from .schemas import to_plain_dict
 from .ai.reporting import synthesize_latest_report
+from .ai.chat import handle_chat
+
+
+import threading
+
+# Background data-update state (fetch fresh EOD prices -> rebuild scans). Separate from
+# "re-scan" which only recomputes on the data already on disk.
+_DATA_UPDATE = {"running": False, "message": "idle", "last_result": None}
+
+
+def _do_data_update() -> None:
+    from .pipeline.eod_update import refresh_prices, rebuild_mr_cache, rebuild_momentum_cache, check_sell_alerts
+    try:
+        _DATA_UPDATE["running"] = True
+        _DATA_UPDATE["message"] = "Đang tải giá EOD mới nhất (vnstock, có thể vài phút)..."
+        pr = refresh_prices()
+        _DATA_UPDATE["message"] = f"Đã tải {pr.get('updated', 0)} mã tới {pr.get('end')}; rebuild scan..."
+        rebuild_mr_cache()
+        rebuild_momentum_cache()
+        check_sell_alerts()
+        _DATA_UPDATE["last_result"] = pr
+        _DATA_UPDATE["message"] = (f"Xong · cập nhật {pr.get('updated', 0)} mã, "
+                                   f"{pr.get('skipped_fresh', 0)} đã mới, {pr.get('failed', 0)} lỗi · tới {pr.get('end')}")
+    except BaseException as exc:  # vnstock rate limiter can raise SystemExit
+        _DATA_UPDATE["message"] = f"Lỗi cập nhật: {repr(exc)[:140]}"
+    finally:
+        _DATA_UPDATE["running"] = False
 
 
 def _json_response(handler: BaseHTTPRequestHandler, payload, status=HTTPStatus.OK) -> None:
@@ -80,6 +108,32 @@ class StockAgentHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/model/status":
             _json_response(self, model_status())
+            return
+        if parsed.path == "/api/data/update":
+            _json_response(self, _DATA_UPDATE)
+            return
+        if parsed.path == "/api/mr/scan":
+            params = parse_qs(parsed.query)
+            from .features.mr_scan import mr_scan
+            try:
+                payload = mr_scan(
+                    recent_days=int(params.get("recent_days", ["120"])[0]),
+                    force=params.get("force", ["false"])[0] == "true",
+                    min_win_prob=float(params.get("min_win_prob", ["0.55"])[0]),
+                )
+                _json_response(self, payload)
+            except Exception as exc:
+                _json_response(self, {"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+        if parsed.path == "/api/momentum/scan":
+            params = parse_qs(parsed.query)
+            from .features.momentum_scan import momentum_scan
+            try:
+                _json_response(self, momentum_scan(
+                    top_n=int(params.get("top_n", ["10"])[0]),
+                    force=params.get("force", ["false"])[0] == "true"))
+            except Exception as exc:
+                _json_response(self, {"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
             return
         if parsed.path == "/api/backtest/portfolio":
             params = parse_qs(parsed.query)
@@ -186,6 +240,51 @@ class StockAgentHandler(BaseHTTPRequestHandler):
             )
             _json_response(self, payload, status=HTTPStatus.CREATED)
             return
+        if parsed.path == "/api/mr/positions":
+            body = _read_body(self)
+            from .features.position_manager import PositionStore
+            try:
+                pos = PositionStore().add(
+                    symbol=body["symbol"], entry_date=body.get("entry_date") or str(__import__("datetime").date.today()),
+                    entry_price=float(body["entry_price"]), stop=float(body["stop"]),
+                    target=float(body["target"]), max_hold_days=int(body.get("max_hold_days", 8)),
+                    qty=int(body["qty"]),
+                )
+                _json_response(self, {"position": pos}, status=HTTPStatus.CREATED)
+            except Exception as exc:
+                _json_response(self, {"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+            return
+        if parsed.path == "/api/data/update":
+            if not _DATA_UPDATE["running"]:
+                threading.Thread(target=_do_data_update, daemon=True).start()
+            _json_response(self, _DATA_UPDATE, status=HTTPStatus.ACCEPTED)
+            return
+        if parsed.path == "/api/momentum/positions":
+            body = _read_body(self)
+            from .features.position_manager import PositionStore
+            try:
+                pos = PositionStore().add(
+                    symbol=body["symbol"], entry_date=body.get("entry_date") or str(__import__("datetime").date.today()),
+                    entry_price=float(body["entry_price"]), stop=0.0, target=0.0,
+                    max_hold_days=0, qty=int(body["qty"]), kind="momentum",
+                )
+                _json_response(self, {"position": pos}, status=HTTPStatus.CREATED)
+            except Exception as exc:
+                _json_response(self, {"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+            return
+        if parsed.path == "/api/chat":
+            body = _read_body(self)
+            message = body.get("message", "").strip()
+            symbol = body.get("symbol")
+            if not message:
+                _json_response(self, {"error": "Message is required"}, status=HTTPStatus.BAD_REQUEST)
+                return
+            try:
+                response = handle_chat(message, symbol=symbol)
+                _json_response(self, {"response": response})
+            except Exception as exc:
+                _json_response(self, {"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
         self.send_error(HTTPStatus.NOT_FOUND, "Not found")
 
     def do_DELETE(self) -> None:  # noqa: N802
@@ -193,6 +292,13 @@ class StockAgentHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/portfolio/positions":
             PortfolioStore().clear()
             _json_response(self, {"status": "cleared"})
+            return
+        if parsed.path == "/api/mr/positions":
+            params = parse_qs(parsed.query)
+            pid = params.get("id", [None])[0]
+            from .features.position_manager import PositionStore as MRStore
+            ok = MRStore().close(pid, reason=params.get("reason", ["manual"])[0]) if pid else False
+            _json_response(self, {"closed": ok, "id": pid})
             return
         self.send_error(HTTPStatus.NOT_FOUND, "Not found")
 
@@ -212,9 +318,11 @@ class StockAgentHandler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
+    # Env-aware defaults so containers / PaaS (Render, Railway, Fly) work without flags:
+    # HOST=0.0.0.0 to accept external connections, PORT injected by the platform.
     parser = argparse.ArgumentParser()
-    parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     args = parser.parse_args()
     server = ThreadingHTTPServer((args.host, args.port), StockAgentHandler)
     print(f"Serving VN30 T+2 MVP at http://{args.host}:{args.port}")

@@ -139,3 +139,18 @@ def to_plain_dict(obj: Any) -> Any:
     if isinstance(obj, dict):
         return {key: to_plain_dict(value) for key, value in obj.items()}
     return obj
+
+
+@dataclass
+class ExperimentManifest:
+    command: str
+    timestamp: str
+    rules_hash: str
+    data_start: str
+    data_end: str
+    symbols: list[str]
+    symbols_excluded: list[str] = field(default_factory=list)
+    report_links: dict[str, str] = field(default_factory=dict)
+    data_hash: str = ""
+    data_hashes: dict[str, str] = field(default_factory=dict)
+

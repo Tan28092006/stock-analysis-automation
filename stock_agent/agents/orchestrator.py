@@ -7,16 +7,14 @@ import pandas as pd
 
 from ..config import compute_rules_hash, load_rules, load_universe
 from ..constants import LATEST_SCAN_PATH, TRAINING_EVENTS_PATH
-from ..data.exchange_calendar import is_trading_day
-from ..data.providers import build_providers
 from ..data.repository import append_jsonl, write_json
-from ..data.validation import pick_cross_checked_frame, validate_ohlcv
 from ..features.backtest import BacktestConfig, run_backtest
 from ..features.feature_store import save_feature_snapshot
 from ..features.ml_models import predict_model_signal
 from ..features.signal_engine import score_symbol
-from ..schemas import HybridDecisionTrace, RuleEvidence, ScanCandidate, ScanResult, to_plain_dict
+from ..schemas import DataQuality, HybridDecisionTrace, RuleEvidence, ScanCandidate, ScanResult, to_plain_dict
 from .fundamental_filter import pass_basic_filter
+from .parallel_engine import parallel_fetch_symbols
 from .risk_guard import equal_score_weights, hrp_weights
 
 
@@ -25,10 +23,16 @@ def _candidate_backtest_summary(symbol: str, frame: pd.DataFrame, rules: dict) -
         if frame.empty:
             return {"status": "insufficient_data"}
         start_idx = max(0, len(frame) - 160)
+        # Display-only recent-performance snapshot: run the rule engine WITHOUT the
+        # ML override. Running the ensemble per BUY_SETUP bar inside this mini-backtest
+        # meant ~1200 ML predictions per scan (the dominant cost); the summary reflects
+        # rule performance, so ML is disabled here for speed.
+        summary_rules = dict(rules)
+        summary_rules["ml"] = {**rules.get("ml", {}), "enabled": False, "override_enabled": False}
         result = run_backtest(
             symbol=symbol,
             df=frame,
-            rules=rules,
+            rules=summary_rules,
             config=BacktestConfig.from_rules(rules),
             start=frame["date"].iloc[start_idx],
             end=frame["date"].iloc[-1],
@@ -50,6 +54,58 @@ def _candidate_backtest_summary(symbol: str, frame: pd.DataFrame, rules: dict) -
         return {"status": "error", "error": str(exc)}
 
 
+def _load_index_frame(start, end, rules, demo):
+    """Load VNINDEX for the market-regime filter: expanded historical cache first,
+    then a live provider fetch. Returns a DataFrame or None (caller fails open)."""
+    from pathlib import Path
+
+    p = Path("data/raw/prices_hist/VNINDEX.csv")
+    if p.exists():
+        try:
+            df = pd.read_csv(p)
+            df["date"] = pd.to_datetime(df["date"]).dt.date
+            return df
+        except Exception:
+            pass
+    try:
+        res = parallel_fetch_symbols(["VNINDEX"], start, end, rules, demo=demo, max_workers=1)
+        frame, _ = res.get("VNINDEX", (None, None))
+        return frame
+    except Exception:
+        return None
+
+
+def _apply_market_regime(fetched: dict, start, end, rules, demo, warnings: list) -> None:
+    """Attach a ``market_regime`` column to fetched frames in place when the filter is
+    enabled. Date-keyed by ISO string to avoid date/Timestamp type mismatches. Fail-open."""
+    mf = rules.get("market_filter", {})
+    if not mf.get("enabled", False):
+        return
+    try:
+        from ..features.market_regime import market_regime_map
+
+        index_frame = _load_index_frame(start, end, rules, demo)
+        if index_frame is None or index_frame.empty:
+            warnings.append("market_filter enabled but VNINDEX unavailable; filter skipped (fail-open)")
+            return
+        universe = {s: f for s, (f, q) in fetched.items() if f is not None}
+        regime = market_regime_map(
+            index_frame, universe,
+            ema_period=int(mf.get("ema_period", 50)),
+            breadth_ma=int(mf.get("breadth_ma", 20)),
+            breadth_min=float(mf.get("breadth_min", 0.4)),
+        )
+        regime_str = {str(k)[:10]: float(v) for k, v in regime.items()}
+        for s, (f, q) in list(fetched.items()):
+            if f is None:
+                continue
+            f = f.copy()
+            f["market_regime"] = f["date"].astype(str).str.slice(0, 10).map(regime_str).fillna(1.0)
+            fetched[s] = (f, q)
+    except Exception as exc:
+        warnings.append(f"market_filter skipped: {exc}")
+
+
 def run_scan(
     demo: bool = False,
     symbols: list[str] | None = None,
@@ -59,7 +115,6 @@ def run_scan(
     rules_version = compute_rules_hash(rules)
     universe = load_universe()
     selected_symbols = [item.upper() for item in (symbols or universe["symbols"])]
-    providers = build_providers(demo=demo)
     end = date.today()
     start = end - timedelta(days=260)
     scan_id = f"scan-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
@@ -69,62 +124,24 @@ def run_scan(
     warnings: list[str] = []
     selected_price_frames: dict[str, pd.Series] = {}
     feature_events: list[dict] = []
-    for symbol in selected_symbols:
-        # Lazy provider fetching
-        provider_frames = []
-        pf0 = providers[0].history(symbol, start, end)
-        provider_frames.append(pf0)
-        
-        pf0_fresh = False
-        if pf0.frame is not None and not pf0.frame.empty:
-            warns = validate_ohlcv(
-                pf0.frame,
-                min_rows=rules["min_history_rows"],
-                today=end,
-                max_age_days=rules["max_price_age_days"],
-            )
-            latest_date = pf0.frame["date"].iloc[-1]
-            if latest_date < end and is_trading_day(end):
-                # Cache does not have today's session yet on a weekday, so force online query
-                pass
-            elif not warns:
-                pf0_fresh = True
-                
-        if len(providers) > 1:
-            pf1 = providers[1].history(symbol, start, end)
-            provider_frames.append(pf1)
-            
-            pf1_fresh = False
-            if pf1.frame is not None and not pf1.frame.empty:
-                warns = validate_ohlcv(
-                    pf1.frame,
-                    min_rows=rules["min_history_rows"],
-                    today=end,
-                    max_age_days=rules["max_price_age_days"],
-                )
-                if not warns:
-                    pf1_fresh = True
-            
-            if len(providers) > 2:
-                need_third = False
-                if not pf0_fresh or not pf1_fresh:
-                    need_third = True
-                else:
-                    tolerance = rules["cross_check"]["latest_close_tolerance_pct"] / 100.0
-                    close0 = float(pf0.frame["close"].iloc[-1])
-                    close1 = float(pf1.frame["close"].iloc[-1])
-                    date0 = pf0.frame["date"].iloc[-1]
-                    date1 = pf1.frame["date"].iloc[-1]
-                    pct_diff = abs(close0 - close1) / max(close0, 1e-9)
-                    date_gap = abs((date0 - date1).days)
-                    if pct_diff > tolerance or date_gap > 3:
-                        need_third = True
-                
-                if need_third:
-                    pf2 = providers[2].history(symbol, start, end)
-                    provider_frames.append(pf2)
 
-        frame, quality = pick_cross_checked_frame(provider_frames, rules)
+    # Fetch all symbols concurrently (I/O-bound). Replaces the previous
+    # one-symbol-at-a-time provider loop; ~5-10x faster on a full VN30 scan.
+    # Cross-check + freshest-source selection is handled inside parallel_fetch_symbols
+    # via pick_cross_checked_frame.
+    fetched = parallel_fetch_symbols(selected_symbols, start, end, rules, demo=demo, max_workers=8)
+    _apply_market_regime(fetched, start, end, rules, demo, warnings)
+
+    for symbol in selected_symbols:
+        frame, quality = fetched.get(symbol, (None, None))
+        if quality is None:
+            quality = DataQuality(
+                status="failed",
+                confidence=0.0,
+                primary_provider=None,
+                cross_check_status="fetch_error",
+                warnings=["provider fetch raised an exception"],
+            )
         if frame is None or quality.status == "failed":
             rejected += 1
             warnings.append(f"{symbol}: data quality failed ({quality.cross_check_status})")

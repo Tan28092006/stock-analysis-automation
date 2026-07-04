@@ -1,0 +1,20 @@
+{
+  "command": "D:\\Chungkhoan\\stock_agent\\cli.py refresh-data --symbols FPT,HPG --years 1",
+  "timestamp": "2026-06-24T02:39:21.704992+00:00",
+  "rules_hash": "c3c62afd",
+  "data_start": "2025-06-14",
+  "data_end": "2026-06-24",
+  "symbols": [
+    "FPT",
+    "HPG"
+  ],
+  "symbols_excluded": [],
+  "report_links": {
+    "refresh_report": "D:\\Chungkhoan\\data\\reports\\refresh_20260624T023921Z.json"
+  },
+  "data_hash": "861022a128f5ddd9127dff713d3dc22a80fcad5f89d8144ffa43a449551ef292",
+  "data_hashes": {
+    "FPT": "a6ff8e4bdc57ec5a330c3cee8f8af007e02c5c8bb5f9c07f102519f76376914a",
+    "HPG": "e1207cf66e37a8ca85da5a7e5bcda3566efe1a022895ea11765bb63a4eee70dd"
+  }
+}

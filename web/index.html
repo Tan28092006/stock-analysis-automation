@@ -651,6 +651,80 @@
       opacity: 0.55;
     }
     
+    /* Chat bubbles & Typing indicator */
+    .chat-bubble {
+      max-width: 85%;
+      word-wrap: break-word;
+      animation: fadeIn 0.25s ease-out;
+      margin-bottom: 2px;
+    }
+    .chat-bubble.assistant {
+      align-self: flex-start;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px 12px 12px 0px;
+      color: var(--text-main);
+    }
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 12px 12px 0px 12px;
+      color: #fff;
+    }
+    .chat-bubble pre {
+      background: rgba(0,0,0,0.4) !important;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin: 8px 0;
+      max-height: 250px;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+    }
+    .chat-bubble code {
+      font-family: 'Fira Code', monospace;
+      font-size: 11px;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    .chat-bubble p {
+      margin: 0 0 8px 0;
+    }
+    .chat-bubble p:last-child {
+      margin-bottom: 0;
+    }
+    .chat-bubble ul, .chat-bubble ol {
+      margin: 0;
+      padding-left: 20px;
+      margin-bottom: 8px;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .typing-loader {
+      display: flex;
+      gap: 4px;
+      padding: 4px 6px;
+      align-items: center;
+    }
+    .typing-dot {
+      width: 6px;
+      height: 6px;
+      background-color: var(--text-muted);
+      border-radius: 50%;
+      animation: typingBounce 1.4s infinite ease-in-out;
+    }
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes typingBounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+    
     @media (max-width: 1024px) {
       main {
         grid-template-columns: 1fr;
@@ -715,10 +789,154 @@
         </svg>
         Refresh
       </button>
+      <button class="primary" id="updateData" title="Tải giá EOD mới nhất từ vnstock rồi quét lại (khác Re-scan: Re-scan chỉ tính trên data đang có)">
+        <svg style="width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2" viewBox="0 0 24 24">
+          <path d="M12 3v12m0 0l-4-4m4 4l4-4M3 17v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Cập nhật dữ liệu
+      </button>
+      <span id="updateStatus" style="font-size:11px; color:var(--text-muted); align-self:center; max-width:280px;"></span>
     </div>
   </header>
   
   <main>
+    <!-- Regime Orchestrator: recommends which engine to use now -->
+    <section id="regimeBanner" style="grid-column: 1 / -1; padding:16px 22px; border-radius:12px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; border:1px solid var(--border);">
+      <div style="font-size:13px; color:var(--text-muted)">Đang tải chế độ thị trường…</div>
+    </section>
+
+    <!-- Fat-Pitch Hunter: Mean-Reversion (Bat day) panel -->
+    <section id="mrCard" style="grid-column: 1 / -1;">
+      <div class="section-head">
+        <h2>🎯 Bắt đáy — Mean-Reversion Hunter (VN100)</h2>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="status" id="mrStatus">Loading…</div>
+          <button id="mrRefresh" style="min-height:28px; padding:0 12px; font-size:11px;">Re-scan</button>
+        </div>
+      </div>
+      <div id="mrMarket" style="display:flex; flex-wrap:wrap; gap:18px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--border); background:rgba(0,0,0,0.15); font-size:12px;">
+        <span style="color:var(--text-muted)">Đang tải trạng thái thị trường…</span>
+      </div>
+      <div id="mrSellBanner" style="display:none; padding:10px 20px; background:rgba(239,68,68,0.14); border-bottom:1px solid var(--red-border,#7f1d1d); color:var(--red,#ef4444); font-weight:700; font-size:12px;"></div>
+      <!-- Open positions -->
+      <div style="padding:12px 20px 4px; font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:var(--teal,#2dd4bf);">
+        Vị thế đang giữ (bắt đáy) — <span id="mrPosCount">0</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th>Mã</th><th class="num">KL</th><th class="num">Vào</th><th class="num">Giá nay</th>
+            <th class="num">Lãi/Lỗ</th><th class="num">Giữ</th><th>Trạng thái</th><th></th>
+          </tr></thead>
+          <tbody id="mrPosBody">
+            <tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:14px;">Chưa ghi vị thế nào. Bấm "Ghi" ở một kèo bên dưới.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display:grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); gap:0;">
+        <div style="border-right:1px solid var(--border);">
+          <div style="padding:10px 20px 4px; font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:var(--text-muted);">
+            Kèo mua hôm nay (BUY_SETUP, cổng cứng) — <span id="mrBuyCount">0</span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr>
+                <th>Mã</th><th class="num">RSI</th><th>Xác nhận</th><th class="num">P(win)</th>
+                <th class="num">Entry~</th><th class="num">Stop</th><th class="num">Target</th>
+                <th class="num">R:R</th><th class="num">KL gợi ý</th><th></th>
+              </tr></thead>
+              <tbody id="mrBuyBody">
+                <tr><td colspan="10" style="text-align:center; color:var(--text-muted); padding:18px;">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="padding:10px 20px 4px; font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:var(--purple, #a78bfa);">
+            Kèo theo xác suất thắng (P ≥ <span id="mrThresh">55</span>%, nới cổng + ML lọc) — <span id="mrProbCount">0</span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr>
+                <th>Mã</th><th class="num">P(win)</th><th class="num">RSI</th><th>Xác nhận</th>
+                <th class="num">Entry~</th><th class="num">Stop</th><th class="num">Target</th><th class="num">R:R</th>
+                <th class="num">KL</th><th></th>
+              </tr></thead>
+              <tbody id="mrProbBody">
+                <tr><td colspan="10" style="text-align:center; color:var(--text-muted); padding:18px;">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="padding:10px 20px 4px; font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:var(--text-muted);">
+            Đang rình (WATCH — quá bán tại dải dưới, chờ xác nhận) — <span id="mrWatchCount">0</span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>Mã</th><th class="num">Giá</th><th class="num">RSI</th><th>Thiếu điều kiện</th></tr></thead>
+              <tbody id="mrWatchBody">
+                <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:18px;">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div style="padding:10px 20px 4px; font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:var(--text-muted);">
+            Kèo đã bắn 120 ngày qua — <span id="mrRecentCount">0</span>
+          </div>
+          <div style="overflow-x:auto; max-height:340px; overflow-y:auto;">
+            <table>
+              <thead><tr>
+                <th>Ngày</th><th>Mã</th><th class="num">P(win)</th><th class="num">RSI</th><th>Xác nhận</th>
+                <th class="num">Entry~</th><th class="num">Target</th><th class="num">R:R</th>
+              </tr></thead>
+              <tbody id="mrRecentBody">
+                <tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:18px;">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CORE: Momentum rotation (bull-catcher) -->
+    <section id="momCard" style="grid-column: 1 / -1;">
+      <div class="section-head">
+        <h2>🚀 Momentum Rotation (CORE — ăn bull)</h2>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="status" id="momStatus">Loading…</div>
+          <button id="momRefresh" style="min-height:28px; padding:0 12px; font-size:11px;">Re-scan</button>
+        </div>
+      </div>
+      <div id="momNote" style="padding:12px 20px; border-bottom:1px solid var(--border); background:rgba(0,0,0,0.15); font-size:12px; color:var(--text-muted);">Đang tải…</div>
+      <div id="momSellBanner" style="display:none; padding:10px 20px; background:rgba(239,68,68,0.14); border-bottom:1px solid var(--red-border,#7f1d1d); color:var(--red,#ef4444); font-weight:700; font-size:12px;"></div>
+      <div style="padding:12px 20px 4px; font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:var(--teal,#2dd4bf);">
+        Vị thế Momentum đang giữ — <span id="momPosCount">0</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th>Mã</th><th class="num">KL</th><th class="num">Vào</th><th class="num">Giá nay</th>
+            <th class="num">Lãi/Lỗ</th><th>Trạng thái</th><th></th>
+          </tr></thead>
+          <tbody id="momPosBody">
+            <tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:14px;">Chưa ghi vị thế. Bấm "Ghi" ở một mã bên dưới.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="padding:12px 20px 4px; font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:var(--text-muted);">
+        Top momentum nên giữ
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th>Mã</th><th></th><th class="num">Mom 12-1</th><th class="num">Vol/năm</th><th class="num">Giá</th>
+            <th class="num">Trọng số</th><th class="num">KL</th><th></th>
+          </tr></thead>
+          <tbody id="momBody">
+            <tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:16px;">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <!-- Left Column: Scan results -->
     <section>
       <div class="section-head">
@@ -817,6 +1035,37 @@
         </div>
       </section>
 
+      <!-- AI Chat Assistant -->
+      <section id="chatCard">
+        <div class="section-head">
+          <h2>AI Trading Assistant</h2>
+          <div class="status" id="chatConnection">Online</div>
+        </div>
+        <div style="padding: 10px 20px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between;">
+          <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.02em;">
+            Selected Context: <span id="chatContextTicker" style="color: var(--teal); font-weight: 700;">NONE</span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button id="clearChatHistory" style="min-height: 24px; padding: 0 8px; font-size: 10px; border-radius: 4px; background: rgba(255, 255, 255, 0.05); border-color: var(--border); color: var(--text);">Clear Chat</button>
+            <button id="clearChatContext" style="min-height: 24px; padding: 0 8px; font-size: 10px; border-radius: 4px; background: rgba(239, 68, 68, 0.1); border-color: var(--red-border); color: var(--red);">Reset Context</button>
+          </div>
+        </div>
+        <div id="chatHistory" style="padding: 16px; max-height: 350px; min-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: rgba(0, 0, 0, 0.2);">
+          <div class="chat-bubble assistant" style="padding: 10px 14px; font-size: 12.5px; line-height: 1.5;">
+            <p>Xin chào! Tôi là trợ lý phân tích T+2.</p>
+            <p>Chọn một mã cổ phiếu ở danh sách bên trái hoặc nhập mã để hỏi trực tiếp. Tôi sẽ tự động phân tích điểm vào lệnh dựa trên các chỉ báo kỹ thuật thực tế.</p>
+          </div>
+        </div>
+        <!-- Suggestion Chips -->
+        <div id="chatSuggestions" style="padding: 10px 16px; display: flex; gap: 6px; overflow-x: auto; white-space: nowrap; border-top: 1px solid var(--border); background: rgba(0,0,0,0.05); -webkit-overflow-scrolling: touch;">
+          <!-- Dynamically populated -->
+        </div>
+        <div style="display: flex; padding: 12px 16px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.15); gap: 8px;">
+          <input id="chatInput" placeholder="Nhập câu hỏi... (Ví dụ: Phân tích điểm mua FPT)" style="flex-grow: 1; min-height: 38px;">
+          <button class="primary" id="chatSend" style="min-height: 38px; padding: 0 16px;">Gửi</button>
+        </div>
+      </section>
+
       <!-- Portfolio P&L Card -->
       <section>
         <div class="section-head">
@@ -903,6 +1152,10 @@
       if (!row) return;
 
       selectedSymbol = symbol;
+      document.getElementById("chatContextTicker").textContent = symbol;
+      if (typeof updateChatSuggestions === 'function') {
+        updateChatSuggestions();
+      }
       
       // Update selected row in the table
       const rows = document.querySelectorAll("#scanBody tr");
@@ -1342,6 +1595,236 @@
       renderResearch();
     }
 
+    // Chatbot Helper & Event Handlers
+    function parseMarkdown(text) {
+      let html = text;
+      // Escape HTML tags to prevent XSS
+      html = html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      
+      // Fenced code blocks
+      html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+        return `<pre><code class="language-${lang}">${code.trim()}</code></pre>`;
+      });
+      
+      // Inline code
+      html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+      
+      // Bold text
+      html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      
+      // Bullet points (split by newline and process)
+      let inList = false;
+      const lines = html.split("\n");
+      const processedLines = lines.map(line => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+          let li = `<li>${trimmed.substring(2)}</li>`;
+          if (!inList) {
+            inList = true;
+            return `<ul>${li}`;
+          }
+          return li;
+        } else {
+          if (inList) {
+            inList = false;
+            return `</ul>${line}`;
+          }
+          return line;
+        }
+      });
+      if (inList) {
+        processedLines.push("</ul>");
+      }
+      html = processedLines.join("\n");
+      
+      // Wrap paragraphs (double newlines)
+      html = html.split("\n\n").map(p => {
+        const trimmed = p.trim();
+        if (trimmed.startsWith("<pre>") || trimmed.startsWith("<ul>") || trimmed.startsWith("</ul>") || trimmed === "") {
+          return p;
+        }
+        return `<p>${p.replace(/\n/g, "<br>")}</p>`;
+      }).join("");
+      
+      return html;
+    }
+
+    function updateChatSuggestions() {
+      const suggestionsEl = document.getElementById("chatSuggestions");
+      if (!selectedSymbol) {
+        suggestionsEl.innerHTML = `
+          <button class="filter-btn" onclick="sendQuickMessage('Tổng quan kỹ thuật VN30 hiện tại thế nào?')">Tổng quan VN30</button>
+          <button class="filter-btn" onclick="sendQuickMessage('Liệt kê các mã BUY_SETUP trong scan gần nhất')">Mã BUY_SETUP</button>
+          <button class="filter-btn" onclick="sendQuickMessage('Mã nào có điểm mua tốt nhất?')">Mã tốt nhất</button>
+        `;
+      } else {
+        suggestionsEl.innerHTML = `
+          <button class="filter-btn" onclick="sendQuickMessage('Phân tích điểm vào lệnh của mã ${selectedSymbol}')">Phân tích ${selectedSymbol}</button>
+          <button class="filter-btn" onclick="sendQuickMessage('Đánh giá các chỉ báo kỹ thuật của ${selectedSymbol}')">Chỉ báo ${selectedSymbol}</button>
+          <button class="filter-btn" onclick="sendQuickMessage('Xem kế hoạch cắt lỗ, chốt lời của ${selectedSymbol}')">Cắt lỗ/Chốt lời ${selectedSymbol}</button>
+        `;
+      }
+    }
+
+    const DEFAULT_WELCOME = `<p>Xin chào! Tôi là trợ lý phân tích T+2.</p><p>Chọn một mã cổ phiếu ở danh sách bên trái hoặc nhập mã để hỏi trực tiếp. Tôi sẽ tự động phân tích điểm vào lệnh dựa trên các chỉ báo kỹ thuật thực tế.</p>`;
+
+    function getChatHistory() {
+      try {
+        const stored = localStorage.getItem("stock_agent_chat_history");
+        return stored ? JSON.parse(stored) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveChatMessage(role, text) {
+      const history = getChatHistory();
+      history.push({ role, text });
+      if (history.length > 50) {
+        history.shift();
+      }
+      try {
+        localStorage.setItem("stock_agent_chat_history", JSON.stringify(history));
+      } catch (e) {
+        console.error("Failed to save chat history to localStorage:", e);
+      }
+    }
+
+    function renderChatHistory() {
+      const chatHistory = document.getElementById("chatHistory");
+      const history = getChatHistory();
+      if (history.length === 0) {
+        chatHistory.innerHTML = `
+          <div class="chat-bubble assistant" style="padding: 10px 14px; font-size: 12.5px; line-height: 1.5;">
+            ${DEFAULT_WELCOME}
+          </div>
+        `;
+        return;
+      }
+      chatHistory.innerHTML = "";
+      history.forEach(msg => {
+        const bubble = document.createElement("div");
+        bubble.className = `chat-bubble ${msg.role}`;
+        bubble.style.padding = "10px 14px";
+        bubble.style.fontSize = "12.5px";
+        bubble.style.lineHeight = "1.5";
+        if (msg.role === "assistant") {
+          bubble.innerHTML = parseMarkdown(msg.text);
+        } else {
+          bubble.textContent = msg.text;
+        }
+        chatHistory.appendChild(bubble);
+      });
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+    async function sendChatMessage(text) {
+      if (!text || !text.trim()) return;
+      
+      const chatHistory = document.getElementById("chatHistory");
+      
+      // Save and add user message
+      saveChatMessage("user", text);
+      const userBubble = document.createElement("div");
+      userBubble.className = "chat-bubble user";
+      userBubble.style.padding = "10px 14px";
+      userBubble.style.fontSize = "12.5px";
+      userBubble.style.lineHeight = "1.5";
+      userBubble.textContent = text;
+      
+      // If history was empty, clear the welcome bubble first
+      if (getChatHistory().length === 1) {
+        chatHistory.innerHTML = "";
+      }
+      chatHistory.appendChild(userBubble);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+      
+      // Add typing loader
+      const loaderBubble = document.createElement("div");
+      loaderBubble.className = "chat-bubble assistant";
+      loaderBubble.style.padding = "10px 14px";
+      loaderBubble.innerHTML = `
+        <div class="typing-loader">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+      `;
+      chatHistory.appendChild(loaderBubble);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+      
+      try {
+        const payload = {
+          message: text,
+          symbol: selectedSymbol
+        };
+        const response = await requestJson("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        
+        chatHistory.removeChild(loaderBubble);
+        
+        const replyText = response.response || "Không nhận được phản hồi từ AI";
+        saveChatMessage("assistant", replyText);
+        
+        const assistantBubble = document.createElement("div");
+        assistantBubble.className = "chat-bubble assistant";
+        assistantBubble.style.padding = "10px 14px";
+        assistantBubble.style.fontSize = "12.5px";
+        assistantBubble.style.lineHeight = "1.5";
+        assistantBubble.innerHTML = parseMarkdown(replyText);
+        chatHistory.appendChild(assistantBubble);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+      } catch (err) {
+        chatHistory.removeChild(loaderBubble);
+        
+        const errorBubble = document.createElement("div");
+        errorBubble.className = "chat-bubble assistant";
+        errorBubble.style.padding = "10px 14px";
+        errorBubble.style.fontSize = "12.5px";
+        errorBubble.style.color = "var(--red)";
+        errorBubble.style.background = "var(--red-bg)";
+        errorBubble.style.borderColor = "var(--red-border)";
+        errorBubble.textContent = "Lỗi kết nối chatbot: " + err.message;
+        chatHistory.appendChild(errorBubble);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+      }
+    }
+
+    // Global helper for suggestions onclick
+    window.sendQuickMessage = function(text) {
+      sendChatMessage(text);
+    };
+
+    // Bind chat events
+    document.getElementById("chatSend").addEventListener("click", () => {
+      const input = document.getElementById("chatInput");
+      sendChatMessage(input.value);
+      input.value = "";
+    });
+
+    document.getElementById("chatInput").addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        const input = document.getElementById("chatInput");
+        sendChatMessage(input.value);
+        input.value = "";
+      }
+    });
+
+    document.getElementById("clearChatContext").addEventListener("click", () => {
+      selectedSymbol = null;
+      document.getElementById("chatContextTicker").textContent = "NONE";
+      document.querySelectorAll("#scanBody tr").forEach(tr => tr.classList.remove("selected"));
+      updateChatSuggestions();
+    });
+
+    document.getElementById("clearChatHistory").addEventListener("click", () => {
+      localStorage.removeItem("stock_agent_chat_history");
+      renderChatHistory();
+    });
+
     // Filter Buttons binding
     document.querySelectorAll("#filterTabs .filter-btn").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -1481,7 +1964,309 @@
       }
     });
 
+    // ---- Mean-Reversion (Bat day) panel ----
+    const mrFmt = (v) => (v === null || v === undefined) ? "-" : Number(v).toLocaleString("vi-VN");
+    const MR_STATES = {
+      RISK_ON:   { label: "RISK-ON — không có mồi, giữ tiền", color: "var(--teal, #2dd4bf)" },
+      GRIND:     { label: "GRIND — index xanh nhưng breadth yếu: CẤM ĐÁNH", color: "#eab308" },
+      PANIC_BEAR:{ label: "PANIC/BEAR — lên đạn, rình capitulation", color: "var(--red, #ef4444)" },
+      UNKNOWN:   { label: "Không xác định", color: "var(--text-muted)" },
+    };
+
+    // ---- Regime Orchestrator: which engine to use now ----
+    const REGIME_ADVICE = {
+      RISK_ON: { emoji: "🟢", color: "rgba(45,212,191,0.12)", border: "var(--teal,#2dd4bf)",
+        head: "TĂNG KHỎE → ưu tiên 🚀 MOMENTUM (ăn bull)", rec: "momentum",
+        mom: "Giữ / mở nhóm dẫn dắt.", mr: "Bắt đáy nghỉ — không có đáy để bắt (0 kèo là bình thường)." },
+      GRIND: { emoji: "🟡", color: "rgba(234,179,8,0.10)", border: "#eab308",
+        head: "CHỢ HẸP (index xanh nhưng breadth yếu) → THẬN TRỌNG, ưu tiên tiền mặt", rec: "cash",
+        mom: "Giảm tỷ trọng — dễ whipsaw.", mr: "Chỉ đánh kèo P(win) cao." },
+      PANIC_BEAR: { emoji: "🔴", color: "rgba(239,68,68,0.12)", border: "var(--red,#ef4444)",
+        head: "GIẢM (dưới EMA50) → ưu tiên 🎯 BẮT ĐÁY", rec: "mr",
+        mom: "KHÔNG mở momentum mới — dễ dính momentum-crash (như 2026). Giữ vị thế cũ theo buffer.",
+        mr: "Săn kèo capitulation + đảo chiều." },
+    };
+    function renderRegimeBanner(mkt) {
+      const st = mkt?.state || "GRIND";
+      const a = REGIME_ADVICE[st] || REGIME_ADVICE.GRIND;
+      const banner = document.getElementById("regimeBanner");
+      banner.style.background = a.color; banner.style.borderColor = a.border;
+      banner.innerHTML = `
+        <div style="font-size:24px">${a.emoji}</div>
+        <div style="flex:1; min-width:280px">
+          <div style="font-weight:800; font-size:14px; color:${a.border}">CHẾ ĐỘ: ${a.head}</div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:3px">
+            🚀 Momentum: ${a.mom} &nbsp;·&nbsp; 🎯 Bắt đáy: ${a.mr}</div>
+        </div>
+        <div style="font-size:11px; color:var(--text-muted); text-align:right">
+          VNINDEX ${mrFmt(mkt?.index_close)} vs EMA50 ${mrFmt(mkt?.index_ema50)} · breadth ${mkt?.breadth_pct ?? "-"}%</div>`;
+      // emphasize the recommended engine, dim the other
+      const mom = document.getElementById("momCard"), mr = document.getElementById("mrCard");
+      if (mom && mr) {
+        const tag = (el, on, label) => {
+          el.style.opacity = on ? "1" : "0.5";
+          el.style.outline = on ? `2px solid ${a.border}` : "none";
+          el.style.outlineOffset = "-1px";
+        };
+        tag(mom, a.rec === "momentum");
+        tag(mr, a.rec === "mr");
+        if (a.rec === "cash") { mom.style.opacity = "0.6"; mr.style.opacity = "0.75"; }
+      }
+    }
+
+    const pWinCell = (p) => {
+      if (p === null || p === undefined) return `<td class="num" style="color:var(--text-muted)">-</td>`;
+      const pct = (p * 100).toFixed(0);
+      const color = p >= 0.60 ? "var(--teal,#2dd4bf)" : p >= 0.55 ? "#a78bfa" : "var(--text-muted)";
+      return `<td class="num" style="color:${color}; font-weight:700">${pct}%</td>`;
+    };
+    // encode a signal into a data-attr so the "Ghi" button can open a position
+    const ghiBtn = (b) => {
+      const sz = b.size || {};
+      const payload = encodeURIComponent(JSON.stringify({
+        symbol: b.symbol, entry_price: b.entry_reference, stop: b.stop_loss,
+        target: b.take_profit, max_hold_days: b.max_hold_days, qty: sz.qty || 0 }));
+      if (!sz.qty) return `<td class="num" style="color:var(--text-muted)">-</td>`;
+      return `<td><button onclick="openPosition('${payload}')" style="min-height:22px;padding:0 8px;font-size:10px;border-radius:4px;">Ghi</button></td>`;
+    };
+    const qtyCell = (b) => {
+      const q = (b.size && b.size.qty) || 0;
+      return q ? `<td class="num" title="${(b.size.weight_pct)||0}% NAV, risk ${new Intl.NumberFormat('vi-VN').format(b.size.risk_amount||0)}đ">${new Intl.NumberFormat('vi-VN').format(q)}</td>`
+               : `<td class="num" style="color:var(--text-muted)">-</td>`;
+    };
+
+    async function openPosition(enc) {
+      try {
+        const body = JSON.parse(decodeURIComponent(enc));
+        await requestJson("/api/mr/positions", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(body) });
+        loadMrScan(false);
+      } catch (err) { alert("Ghi vị thế lỗi: " + err.message); }
+    }
+    async function closePosition(id) {
+      if (!confirm("Đóng vị thế " + id + "?")) return;
+      try {
+        await requestJson("/api/mr/positions?id=" + encodeURIComponent(id), { method: "DELETE" });
+        loadMrScan(false); if (typeof loadMom === "function") loadMom(false);
+      } catch (err) { alert("Đóng lỗi: " + err.message); }
+    }
+
+    function renderPositions(data) {
+      const pos = data.positions || [];
+      document.getElementById("mrPosCount").textContent = pos.length;
+      const sells = data.sell_alerts || [];
+      const banner = document.getElementById("mrSellBanner");
+      if (sells.length) {
+        banner.style.display = "block";
+        banner.innerHTML = "🔔 CẢNH BÁO BÁN: " + sells.map(s => `${s.symbol} (${s.sell_reason})`).join(" · ");
+      } else { banner.style.display = "none"; }
+      document.getElementById("mrPosBody").innerHTML = pos.length
+        ? pos.map(p => {
+            const pnlColor = (p.unrealized_pct||0) >= 0 ? "var(--teal,#2dd4bf)" : "var(--red,#ef4444)";
+            const sell = p.live_status === "SELL";
+            const stTxt = sell ? `🔴 BÁN — ${p.sell_reason}` : "🟢 GIỮ";
+            return `<tr style="${sell?'background:rgba(239,68,68,0.08)':''}">
+              <td><strong>${p.symbol}</strong></td>
+              <td class="num">${new Intl.NumberFormat('vi-VN').format(p.qty)}</td>
+              <td class="num">${mrFmt(p.entry_price)}</td>
+              <td class="num">${mrFmt(p.current_price)}</td>
+              <td class="num" style="color:${pnlColor};font-weight:700">${(p.unrealized_pct>=0?'+':'')}${p.unrealized_pct}%</td>
+              <td class="num">${p.held_days}d</td>
+              <td style="font-weight:${sell?700:400};color:${sell?'var(--red,#ef4444)':'var(--teal,#2dd4bf)'}">${stTxt}</td>
+              <td><button onclick="closePosition('${p.id}')" style="min-height:22px;padding:0 8px;font-size:10px;border-radius:4px;">Đóng</button></td>
+            </tr>`;
+          }).join("")
+        : `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:14px;">Chưa ghi vị thế nào. Bấm "Ghi" ở một kèo bên dưới.</td></tr>`;
+    }
+
+    function renderMr(data) {
+      renderRegimeBanner(data.market);
+      const st = MR_STATES[data.market?.state] || MR_STATES.UNKNOWN;
+      const m = data.model || {};
+      const modelInfo = m.available
+        ? `<span style="color:var(--purple,#a78bfa)">ML P(win): AUC ${(m.calib_auc||0).toFixed(3)} · base ${(m.base_win_rate*100||0).toFixed(0)}% · ${m.n_candidates} mẫu</span>`
+        : `<span style="color:var(--text-muted)">ML P(win): chưa train</span>`;
+      document.getElementById("mrMarket").innerHTML = `
+        <span style="font-weight:700; color:${st.color};">● ${st.label}</span>
+        <span>VNINDEX <strong>${mrFmt(data.market?.index_close)}</strong> vs EMA50 <strong>${mrFmt(data.market?.index_ema50)}</strong></span>
+        <span>Breadth <strong>${data.market?.breadth_pct ?? "-"}%</strong> mã trên SMA20</span>
+        ${modelInfo}
+        <span style="color:var(--text-muted)">Dữ liệu EOD: <strong>${data.data_date || "-"}</strong> · ${data.symbols_scanned} mã</span>`;
+      document.getElementById("mrThresh").textContent = Math.round((data.min_win_prob ?? 0.55) * 100);
+
+      const buys = data.buys || [];
+      document.getElementById("mrBuyCount").textContent = buys.length;
+      document.getElementById("mrBuyBody").innerHTML = buys.length
+        ? buys.map(b => `<tr>
+            <td><strong>${b.symbol}</strong></td>
+            <td class="num">${b.rsi14 ?? "-"}</td>
+            <td>${b.confirm}</td>
+            ${pWinCell(b.win_prob)}
+            <td class="num">${mrFmt(b.entry_reference)}</td>
+            <td class="num" style="color:var(--red,#ef4444)">${mrFmt(b.stop_loss)}</td>
+            <td class="num" style="color:var(--teal,#2dd4bf)">${mrFmt(b.take_profit)}</td>
+            <td class="num">${b.reward_risk ?? "-"}</td>
+            ${qtyCell(b)}
+            ${ghiBtn(b)}
+          </tr>`).join("")
+        : `<tr><td colspan="10" style="text-align:center; color:var(--text-muted); padding:18px;">
+             Không có kèo — đúng thiết kế: bắt đáy chỉ bắn khi có capitulation.</td></tr>`;
+
+      const probs = data.prob_buys || [];
+      document.getElementById("mrProbCount").textContent = probs.length;
+      document.getElementById("mrProbBody").innerHTML = probs.length
+        ? probs.map(b => `<tr>
+            <td><strong>${b.symbol}</strong></td>
+            ${pWinCell(b.win_prob)}
+            <td class="num">${b.rsi14 ?? "-"}</td>
+            <td>${b.confirm}</td>
+            <td class="num">${mrFmt(b.entry_reference)}</td>
+            <td class="num" style="color:var(--red,#ef4444)">${mrFmt(b.stop_loss)}</td>
+            <td class="num" style="color:var(--teal,#2dd4bf)">${mrFmt(b.take_profit)}</td>
+            <td class="num">${b.reward_risk ?? "-"}</td>
+            ${qtyCell(b)}
+            ${ghiBtn(b)}
+          </tr>`).join("")
+        : `<tr><td colspan="10" style="text-align:center; color:var(--text-muted); padding:18px;">
+             Chưa mã nào đạt ngưỡng xác suất (regime hiện tại model floor ~48% — đúng: chợ đi ngang không có edge).</td></tr>`;
+
+      const watches = data.watches || [];
+      document.getElementById("mrWatchCount").textContent = watches.length;
+      document.getElementById("mrWatchBody").innerHTML = watches.length
+        ? watches.map(w => `<tr>
+            <td><strong>${w.symbol}</strong></td>
+            <td class="num">${mrFmt(w.close)}</td>
+            <td class="num">${w.rsi14 ?? "-"}</td>
+            <td style="font-size:11px; color:var(--text-muted)">${(w.missing || []).join(", ") || "-"}</td>
+          </tr>`).join("")
+        : `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:18px;">—</td></tr>`;
+
+      const recent = data.recent_signals || [];
+      document.getElementById("mrRecentCount").textContent = recent.length;
+      document.getElementById("mrRecentBody").innerHTML = recent.length
+        ? recent.map(r => `<tr>
+            <td>${r.date}</td><td><strong>${r.symbol}</strong></td>
+            ${pWinCell(r.win_prob)}
+            <td class="num">${r.rsi14 ?? "-"}</td><td>${r.confirm}</td>
+            <td class="num">${mrFmt(r.entry_reference)}</td>
+            <td class="num">${mrFmt(r.take_profit)}</td>
+            <td class="num">${r.reward_risk ?? "-"}</td>
+          </tr>`).join("")
+        : `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:18px;">Không có kèo nào trong 120 ngày.</td></tr>`;
+
+      renderPositions(data);
+    }
+
+    async function loadMrScan(force = false) {
+      const status = document.getElementById("mrStatus");
+      status.textContent = force ? "Scanning… (~20-30s)" : "Loading…";
+      try {
+        const data = await requestJson("/api/mr/scan" + (force ? "?force=true" : ""));
+        if (data.error) throw new Error(data.error);
+        renderMr(data);
+        status.textContent = "OK · " + (data.data_date || "");
+      } catch (err) {
+        status.textContent = "Error: " + err.message;
+      }
+    }
+    document.getElementById("mrRefresh").addEventListener("click", () => loadMrScan(true));
+
+    // ---- Cập nhật dữ liệu (fetch fresh EOD prices) — tách khỏi Re-scan ----
+    let _updPoll = null;
+    async function pollUpdate() {
+      try {
+        const s = await requestJson("/api/data/update");
+        document.getElementById("updateStatus").textContent = s.message || "";
+        if (!s.running) {
+          clearInterval(_updPoll); _updPoll = null;
+          document.getElementById("updateData").disabled = false;
+          loadMrScan(true); loadMom(true);   // refresh both engines on fresh data
+        }
+      } catch (e) { /* keep polling */ }
+    }
+    document.getElementById("updateData").addEventListener("click", async () => {
+      const btn = document.getElementById("updateData");
+      btn.disabled = true;
+      document.getElementById("updateStatus").textContent = "Đang bắt đầu cập nhật...";
+      try {
+        await requestJson("/api/data/update", { method: "POST" });
+        if (!_updPoll) _updPoll = setInterval(pollUpdate, 3000);
+        pollUpdate();
+      } catch (e) { btn.disabled = false; document.getElementById("updateStatus").textContent = "Lỗi: " + e.message; }
+    });
+
+    // ---- CORE momentum rotation panel ----
+    function renderMom(d) {
+      const on = d.active;
+      const expo = d.exposure_pct ?? 100;
+      const expoCol = expo >= 90 ? 'var(--teal,#2dd4bf)' : expo >= 60 ? '#eab308' : 'var(--red,#ef4444)';
+      document.getElementById("momNote").innerHTML =
+        `<span style="font-weight:700;color:${expoCol}">● Exposure ${expo}%</span> ` +
+        `<span style="color:var(--text-muted)">(vol thị trường ${d.market_vol_pct}%/năm, target 20% — vol cao thì tự giảm tỷ trọng)</span> &nbsp; ` +
+        `<span style="color:var(--text-muted)">${d.note || ''} · EOD ${d.data_date||'-'}</span>`;
+      const picks = d.picks || [];
+      const momGhi = (p) => {
+        const body = encodeURIComponent(JSON.stringify({symbol:p.symbol, entry_price:p.close, qty:p.qty}));
+        return `<td><button onclick="openMomPosition('${body}')" style="min-height:22px;padding:0 8px;font-size:10px;border-radius:4px;">Ghi</button></td>`;
+      };
+      document.getElementById("momBody").innerHTML = picks.length
+        ? picks.map(p => `<tr>
+            <td><strong>${p.symbol}</strong></td>
+            <td>${p.vn30?'<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(59,130,246,0.15);color:#3b82f6">VN30</span>':''}</td>
+            <td class="num" style="color:var(--teal,#2dd4bf);font-weight:700">+${p.momentum_12_1_pct}%</td>
+            <td class="num" style="color:var(--text-muted)">${p.vol_ann_pct}%</td>
+            <td class="num">${mrFmt(p.close)}</td>
+            <td class="num" style="font-weight:600">${p.weight_pct}%</td>
+            <td class="num">${new Intl.NumberFormat('vi-VN').format(p.qty)}</td>
+            ${momGhi(p)}
+          </tr>`).join("")
+        : `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:16px;">Chưa đủ lịch sử 12 tháng để xếp hạng.</td></tr>`;
+
+      // momentum positions + sell banner
+      const pos = d.positions || [], sells = d.sell_alerts || [];
+      document.getElementById("momPosCount").textContent = pos.length;
+      const mb = document.getElementById("momSellBanner");
+      if (sells.length) { mb.style.display="block"; mb.innerHTML = "🔔 CẢNH BÁO BÁN (Momentum): " + sells.map(s=>`${s.symbol} (${s.sell_reason})`).join(" · "); }
+      else mb.style.display="none";
+      document.getElementById("momPosBody").innerHTML = pos.length
+        ? pos.map(p => {
+            const sell = p.live_status === "SELL", rot = p.live_status === "ROTATE";
+            const col = (p.unrealized_pct||0)>=0 ? "var(--teal,#2dd4bf)" : "var(--red,#ef4444)";
+            const stTxt = sell ? '🔴 BÁN — '+p.sell_reason : rot ? '🟡 '+p.sell_reason : '🟢 GIỮ';
+            const stCol = sell ? 'var(--red,#ef4444)' : rot ? '#eab308' : 'var(--teal,#2dd4bf)';
+            const bg = sell ? 'rgba(239,68,68,0.08)' : rot ? 'rgba(234,179,8,0.07)' : '';
+            return `<tr style="${bg?'background:'+bg:''}">
+              <td><strong>${p.symbol}</strong></td>
+              <td class="num">${new Intl.NumberFormat('vi-VN').format(p.qty)}</td>
+              <td class="num">${mrFmt(p.entry_price)}</td>
+              <td class="num">${mrFmt(p.current_price)}</td>
+              <td class="num" style="color:${col};font-weight:700">${(p.unrealized_pct>=0?'+':'')}${p.unrealized_pct}%</td>
+              <td style="font-weight:${(sell||rot)?700:400};color:${stCol}">${stTxt}</td>
+              <td><button onclick="closePosition('${p.id}')" style="min-height:22px;padding:0 8px;font-size:10px;border-radius:4px;">Đóng</button></td>
+            </tr>`;
+          }).join("")
+        : `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:14px;">Chưa ghi vị thế. Bấm "Ghi" ở một mã bên dưới.</td></tr>`;
+    }
+    async function openMomPosition(enc) {
+      try {
+        await requestJson("/api/momentum/positions", {method:"POST", headers:{"Content-Type":"application/json"}, body: decodeURIComponent(enc)});
+        loadMom(false);
+      } catch(e){ alert("Ghi lỗi: "+e.message); }
+    }
+    async function loadMom(force=false) {
+      const s = document.getElementById("momStatus"); s.textContent = force?"Scanning…":"Loading…";
+      try {
+        const d = await requestJson("/api/momentum/scan" + (force?"?force=true":""));
+        if (d.error) throw new Error(d.error);
+        renderMom(d); s.textContent = "OK · " + (d.data_date||"");
+      } catch(e) { s.textContent = "Error: " + e.message; }
+    }
+    document.getElementById("momRefresh").addEventListener("click", () => loadMom(true));
+
     // Initial load
+    updateChatSuggestions();
+    renderChatHistory();
+    loadMrScan().catch(() => {});
+    loadMom().catch(() => {});
     refreshAll().catch(err => {
       document.getElementById("scanStatus").textContent = "Error loading latest: " + err.message;
     });

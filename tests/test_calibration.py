@@ -46,6 +46,7 @@ def _write_price_csv(root: Path, symbol: str, df: pd.DataFrame):
 def _fixture_rules():
     rules = load_rules().copy()
     rules["min_history_rows"] = 90
+    rules["time_horizon_days"] = 2
     return rules
 
 

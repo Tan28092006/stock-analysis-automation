@@ -70,6 +70,18 @@ class DailyRunner:
         }
 
         try:
+            # Stage 0: Snapshot today's foreign flows (forward accumulator — history for
+            # khoi ngoai features builds itself daily; failure must never block the run)
+            if not self.demo:
+                self.on_progress("FLOWS", "Snapshotting foreign flows (khoi ngoai)...")
+                try:
+                    from ..config import load_universe
+                    from ..data.foreign_flows import snapshot_today
+                    n_flows = snapshot_today([s.upper() for s in load_universe()["symbols"]])
+                    result["stages"]["foreign_flows"] = {"rows": n_flows}
+                except Exception as exc:
+                    result["stages"]["foreign_flows"] = {"status": "error", "error": str(exc)}
+
             # Stage 1: Resolve pending labels from T-2
             self.on_progress("LABEL", "Resolving T+2 outcomes for past predictions...")
             label_result = self._resolve_labels()

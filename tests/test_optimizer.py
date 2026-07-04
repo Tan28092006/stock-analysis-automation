@@ -31,6 +31,21 @@ class FakeTrial:
 
 
 class OptimizerTests(unittest.TestCase):
+    def setUp(self):
+        import tests.test_optimizer as test_mod
+        self.original_load_rules = test_mod.load_rules
+        def patched_load_rules():
+            rules = self.original_load_rules()
+            if "ml" in rules:
+                rules["ml"]["enabled"] = False
+                rules["ml"]["override_enabled"] = False
+            return rules
+        test_mod.load_rules = patched_load_rules
+
+    def tearDown(self):
+        import tests.test_optimizer as test_mod
+        test_mod.load_rules = self.original_load_rules
+
     def test_search_space_sampling_writes_only_allowed_paths_and_no_news(self):
         rules = copy.deepcopy(load_rules())
         rules["news"] = {"rss_sources": ["bad"]}
@@ -108,6 +123,9 @@ class OptimizerTests(unittest.TestCase):
     def test_optimize_smoke_without_mutating_config(self):
         rules = copy.deepcopy(load_rules())
         rules["min_history_rows"] = 60
+        if "ml" in rules:
+            rules["ml"]["enabled"] = False
+            rules["ml"]["override_enabled"] = False
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             for symbol in ("FPT", "HPG"):

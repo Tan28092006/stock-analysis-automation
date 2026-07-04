@@ -1,0 +1,81 @@
+{
+  "strategy": "VN100_MeanReversion_BottomFish",
+  "strategy_mode": "mean_reversion",
+  "time_horizon_days": 15,
+  "min_history_rows": 90,
+  "max_price_age_days": 7,
+  "cross_check": {
+    "enabled": true,
+    "latest_close_tolerance_pct": 5.0,
+    "allow_single_source": true,
+    "single_source_confidence_cap": 0.65
+  },
+  "fundamental_filter": {
+    "min_avg_volume_20": 100000,
+    "restricted_symbols": []
+  },
+  "mean_reversion": {
+    "rsi_max": 30.0,
+    "band_touch_pct": 1.01,
+    "vol_climax_min": 1.5,
+    "stop_atr_multiple": 3.0,
+    "min_take_profit_pct": 1.0,
+    "max_hold_days": 15,
+    "target_anchor": "kijun",
+    "allow_vsa_confirm": true,
+    "min_rr": 0.5,
+    "require_cloud_clear": true
+  },
+  "vn30_mean_reversion": {
+    "rsi_max": 35.0,
+    "band_touch_pct": 1.02
+  },
+  "signal_thresholds": {
+    "buy_setup": 100,
+    "watch": 55,
+    "volume_surge_min": 1.5,
+    "adx_min": 16,
+    "obv_lookback": 5,
+    "vwap_period": 20,
+    "rsi_min": 0,
+    "rsi_max": 100,
+    "max_one_day_gain_pct": 100,
+    "min_rr": 0,
+    "max_stop_loss_pct": 100
+  },
+  "risk": {
+    "atr_period": 14,
+    "stop_atr_multiple": 1.5,
+    "stop_support_buffer_pct": 1.0,
+    "target_rr": 2.0,
+    "max_position_weight": 0.25
+  },
+  "ml": {
+    "enabled": false,
+    "model_family": "ensemble",
+    "override_enabled": false
+  },
+  "backtest": {
+    "initial_capital": 1000000000,
+    "commission_pct": 0.15,
+    "sell_tax_pct": 0.1,
+    "slippage_pct": 0.1,
+    "price_limit_pct": 6.9,
+    "lot_size": 100
+  },
+  "portfolio": {
+    "max_symbol_weight": 0.25,
+    "max_gross_exposure": 0.5,
+    "risk_per_trade_pct": 1.5
+  },
+  "money": {
+    "account_nav": 1000000000,
+    "risk_per_trade_pct": 1.5,
+    "max_positions": 4,
+    "max_weight_pct": 25.0,
+    "max_exposure_pct": 60.0,
+    "lot_size": 100,
+    "buy_cost_pct": 0.15,
+    "sell_cost_pct": 0.25
+  }
+}

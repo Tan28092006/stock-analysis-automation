@@ -1,207 +1,126 @@
-# 📈 VN30 T+2 Stock Agent & Algo-Trading Intelligence Platform
+# 📈 VN Swing-Trading System — Dual-Engine, Regime-Orchestrated
 
-[![Python Version](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![Machine Learning](https://img.shields.io/badge/ML%20Stack-Scikit--Learn%20%7C%20XGBoost%20%7C%20LightGBM-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
-[![Hyperparameter Optimization](https://img.shields.io/badge/Optimization-Optuna%20%7C%20Bayesian-4B0082?style=for-the-badge&logo=opsgenie&logoColor=white)](https://optuna.org/)
-[![Data APIs](https://img.shields.io/badge/Data-vnstock%20%7C%20yfinance-00C4CC?style=for-the-badge&logo=databricks&logoColor=white)](https://github.com/thinh-vu/vnstock)
-[![AI Agent](https://img.shields.io/badge/AI--Agent-Evidence--First%20LLM-6366F1?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![ML](https://img.shields.io/badge/ML-LightGBM%20%7C%20Isotonic%20Calibration-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
+[![Data](https://img.shields.io/badge/Data-vnstock%20%7C%20yfinance-00C4CC?style=for-the-badge)](https://github.com/thinh-vu/vnstock)
 
-An advanced, end-to-end algorithmic swing trading platform focused on the **VN30 index** (Vietnam's top 30 blue-chip stocks). Designed specifically for a **T+2 holding horizon**, this platform integrates a data validation pipeline, multi-indicator scoring engine, machine learning classifiers, Bayesian optimizer, walk-forward simulator, and an evidence-based LLM summary report engine, all managed through a premium web dashboard and command-line interface.
+Hệ thống hỗ trợ **lướt sóng T+ cho thị trường Việt Nam (VN100)**, xây theo tư duy **định lượng cá nhân**: đọc chế độ thị trường (regime), rồi tự khuyến nghị đúng "động cơ" cho từng chế độ. Tín hiệu chạy **cuối phiên (EOD)**, không real-time, và **mọi thành phần đều được backtest chặt** (kiểm out-of-sample, chống leak, chống overfit).
 
 > [!IMPORTANT]
-> **Financial Disclaimer:** This platform is an educational MVP designed to produce auditable, evidence-backed trade candidates. It is **not** financial advice, nor does it place automatic live orders.
+> Công cụ nghiên cứu cá nhân, **không phải lời khuyên đầu tư**, không tự đặt lệnh.
+
+> **Triết lý:** không một tín hiệu đơn nào thắng mọi chế độ. Bull → đi theo đà (momentum); crash → bắt đáy (mean-reversion); chợ hẹp → cầm tiền. Hệ đọc regime và **chỉ đúng công cụ**, thay vì gom mọi đề xuất lại (dễ đánh momentum ngay đợt sập).
 
 ---
 
-## 🏛️ System Architecture
+## 1. Hai động cơ + một điều phối
 
-The system operates on an **Evidence-First design pattern**, separating decision-making rules (deterministic and immutable) from machine learning (advisory and probabilistic) and natural language generation (strictly summaries of structured evidence).
+### 🚀 CORE — Momentum (ăn bull)
+Quant-grade momentum, ưu tiên khi RISK_ON:
+- **12-1 momentum** (return t-252 → t-21, bỏ tháng gần nhất vì đảo chiều ngắn hạn).
+- **Trọng số nghịch-vol** (risk parity) — mã vol thấp tỷ trọng cao hơn.
+- **Vol-targeting** — exposure = target_vol / vol thị trường → tự giảm khi vol cao.
+- **Buffering** — giữ tới khi rớt khỏi top-2N (giảm turnover/phí).
+- Backtest VN30 (fill mở-cửa, phí 0.4%): FULL +157%, **OOS 2024-26 +70% (Sharpe 1.20)**, H2-2025 bull +32%.
 
-```
-               [ Data Sources: vnstock / yfinance / CSV / Demo ]
-                                      │
-                                      ▼
-                        [ Data Validation & Cross-Check ]
-                                      │
-                                      ▼
-                      [ Feature & Signal Scoring Engine ]
-                   ┌──────────────────┴──────────────────┐
-                   ▼                                     ▼
-      [ ML Advisory Ensemble ]               [ Deterministic Rule Guards ]
-      - Logistic / Random Forest             - Trend, Momentum, Support
-      - XGBoost / LightGBM                   - Vol, Liquidity, Stop-Loss Limits
-                   └──────────────────┬──────────────────┘
-                                      ▼
-                        [ Evidence Bundle & Consensus ]
-                                      │
-                   ┌──────────────────┼──────────────────┐
-                   ▼                  ▼                  ▼
-          [ HRP Allocation ]  [ Web Dashboard UI ]  [ LLM Post-Validator ]
-```
+### 🎯 SATELLITE — Bắt đáy / Mean-Reversion (crash alpha)
+"Thợ săn kèo béo" — chỉ bắn khi có capitulation + đảo chiều, thoát nhanh:
+- **Cổng cứng**: RSI14<30 (VN30: <35) + chạm dải BB dưới + (nến đảo chiều & climax volume | VSA stopping-volume) + RR≥0.5 (room về Kijun) + mây Ichimoku không chặn.
+- **Rủi ro**: stop 3×ATR (bảo hiểm dao rơi), target Kijun, giữ ≤15 phiên, khóa T+2.
+- **Lớp ML — P(win)**: meta-labeling (LightGBM + isotonic calibration) gán xác suất thắng *ex-ante* (không leak); calibrate thật (P≥55% → thắng ~56%).
+- Backtest: 2022 crash **hòa vốn** khi VNINDEX −34%; YTD-2026 **+6.7%** khi index +4.1%.
 
----
+### 🧭 Regime Orchestrator
+Đọc chế độ từ **VNINDEX vs EMA50 + breadth** (% cổ phiếu trên SMA20):
 
-## ✨ Key Capabilities
+| Chế độ | Điều kiện | Khuyến nghị |
+|---|---|---|
+| 🟢 RISK_ON | index > EMA50 & breadth ≥ 40% | ưu tiên Momentum |
+| 🔴 PANIC | index < EMA50 | ưu tiên Bắt đáy (momentum tạm dừng) |
+| 🟡 GRIND | index > EMA50 nhưng breadth yếu | thận trọng, ưu tiên tiền mặt |
 
-### 1. Robust Data & Audit Layer
-* **Source Chain & Fallback:** Seamlessly resolves price/volume data across local CSV, `vnstock`, and `yfinance`.
-* **Auditable Provenance:** Every OHLCV row goes through duplicate, validation, and freshness checks.
-* **Cross-Source Tolerance Checks:** Ensures data consistency across multiple APIs before trading.
-
-### 2. Multi-Indicator T+2 Signal Engine
-* **Indicators:** Compiles technical features including Ichimoku Kinko Hyo, EMA crossovers, MACD momentum, RSI, Bollinger Bands, Average True Range (ATR), Volume Breakouts, OBV, and VWAP.
-* **Point-Based Rules:** Generates a structured points table from technical indicators. Stocks with scores `≥ 55` trigger a `BUY_SETUP`, while scores `≥ 39` are placed on the `WATCH` list.
-
-### 3. Machine Learning Advisory Ensemble
-* **Algorithms:** Employs Logistic Regression, Random Forest, XGBoost, and LightGBM to estimate transition probabilities (T+2 positive returns).
-* **Consensus Voting:** Uses out-of-sample probability thresholds to filter out low-conviction technical setups.
-
-### 4. Bayesian Optimizer (Optuna)
-* Fine-tunes rule scoring configurations, thresholds, and stop-loss boundaries via Bayesian hyperparameter search.
-* Optimizes for Sharpe ratio, Win Rate, and Drawdown constraints over historical backtests.
-
-### 5. Walk-Forward Backtest & Robustness Checks
-* **Simulation Layer:** Emulates realistic Vietnamese market constraints: commissions (0.15%), sell taxes (0.1%), slippage (0.1%), strict T+2 settlement cycles, lot sizes (100 shares), and daily price bands (±7%).
-* **Robustness Suite:** Integrates parameter sensitivity analysis, out-of-sample window verification, Monte Carlo path simulations, and adversarial stress testing.
-
-### 6. Evidence-First LLM Summarizer
-* Passes the structured JSON evidence directly to NVIDIA/Groq LLM models.
-* **Post-Validation Guardrail:** Parses and validates the generated LLM text. If the model hallucinations or contradicts the deterministic rules (e.g., changes a "Reject" to "Buy" or cites fake evidence IDs), the report is immediately discarded.
+Dashboard hiện banner khuyến nghị + **làm mờ engine không phù hợp** — bạn phán quyết cuối.
 
 ---
 
-## 📂 Project Directory Structure
+## 2. Kết quả backtest (trung thực, đã kiểm chứng out-of-sample)
+
+Đọc regime đúng mọi năm, hai engine bù nhau:
+
+| Năm | Regime hệ phát hiện | VNINDEX | 🚀 Momentum | 🎯 Bắt đáy |
+|---|---|---|---|---|
+| **2022** crash | PANIC 66% | −34% | −40% (bẫy) | ~0% (cứu vốn) |
+| **2024** hồi phục | RISK_ON 63% | +12% | +19% ✅ | +0.1% |
+| **2025** bull mạnh | RISK_ON 59% | +40% | +24% | −0.6% |
+| **2026** crash+choppy | PANIC 31% | +4% | −11% | +6.7% ✅ |
+
+**Sự thật đã chấp nhận:** không timing nào thắng buy-and-hold trong siêu bull. Giá trị của hệ là **tham gia bull + cứu vốn/thêm alpha trong crash + kiểm soát drawdown**. Nhiều "cải tiến" hào nhoáng đã bị backtest chặt **loại bỏ** vì overfit: kill-switch EMA200, filter bear, factor high52w, "follow khối ngoại".
+
+---
+
+## 3. Dashboard
+
+Mở `http://127.0.0.1:8000` (chạy từ `stock_agent/app.py`):
+- 🧭 Banner điều phối regime (tự khuyến nghị engine + làm mờ engine không hợp).
+- 🚀 Panel Momentum: top mã + trọng số nghịch-vol + exposure + nút "Ghi" vị thế.
+- 🎯 Panel Bắt đáy: kèo BUY_SETUP / prob-buy (P≥55%) + KL gợi ý + P(win) + kèo 120 ngày qua.
+- 💰 Theo dõi vị thế cả 2 engine + **cảnh báo BÁN** tự động (stop/target/rớt-nhóm).
+- 🔄 Nút **"Cập nhật dữ liệu"** (tải giá EOD mới) tách khỏi Re-scan.
+
+API chính: `GET /api/mr/scan`, `GET /api/momentum/scan`, `POST /api/data/update`, `POST/DELETE /api/mr|momentum/positions`.
+
+---
+
+## 4. Kiến trúc
 
 ```
-chungkhoan/
-├── configs/                     # System configs
-│   ├── universe_vn30.json       # Stock list & tickers
-│   └── rules_t2.json            # Technical & ML scoring config
-├── data/                        # Project data (ignored from Git, except templates)
-│   ├── raw/prices/              # Local raw OHLCV CSV cache
-│   ├── interim/                 # Cleaned data
-│   ├── features/                # ML feature snapshots
-│   ├── processed/               # scan and portfolio cache files
-│   ├── models/                  # Trained classifier binaries
-│   └── reports/                 # PDF and text advisory files
-├── logs/                        # Diagnostics and errors logs
-├── stock_agent/                 # Main source package
-│   ├── agents/                  # Scanning & reporting orchestrators
-│   ├── ai/                      # LLM reporting & post-validators
-│   ├── data/                    # Storage and validation repository
-│   ├── features/                # Signal engine, Backtesting, Optuna & ML
-│   ├── portfolio/               # Portfolio store & P&L tracker
-│   ├── app.py                   # Custom Web API & HTTP server
-│   ├── cli.py                   # Command-line interface
-│   ├── config.py                # Config parser
-│   ├── constants.py             # System paths
-│   └── schemas.py               # Data types and models
-├── tests/                       # Automated unit/smoke tests
-├── web/                         # Dashboard Frontend
-│   └── index.html               # Single-page glassmorphic UI
-├── .env.example                 # API Keys template
-├── requirements.txt             # Python packages
-└── run_pipeline.bat             # Shortcut running script
+stock_agent/
+  features/
+    momentum_scan.py     # CORE: quant momentum (12-1, inv-vol, vol-target, buffer)
+    mr_scan.py           # SATELLITE: bottom-fishing scan + P(win) + sizing + positions
+    signal_engine.py     # rule scorers (momentum scorecard + mean_reversion mode)
+    win_probability.py   # meta-labeling P(win): train + calibrate + predict
+    market_regime.py     # regime classifier (VNINDEX EMA50 + breadth)
+    position_manager.py  # sizing + vòng đời vị thế + cảnh báo BÁN
+    indicators.py        # RSI, Bollinger, Ichimoku, ADX, VSA, ATR...
+    backtest.py          # backtest engine (T+2, tick slippage, price-limit)
+  agents/orchestrator.py # run_scan (parallel fetch, regime filter)
+  pipeline/eod_update.py # job EOD 17:05: giá + khối ngoại + scan + alert bán
+  data/providers.py      # vnstock VCI + yfinance fallback + local CSV
+  data/foreign_flows.py  # khối ngoại (accumulator, chờ đủ dữ liệu)
+  app.py                 # HTTP server + JSON API + serve dashboard
+  cli.py                 # CLI cũ (scan/backtest/train/portfolio — vẫn dùng được)
+web/index.html           # dashboard 1 file
+configs/rules_mr.json    # config mean-reversion (baseline)
+scratch/                 # toàn bộ script backtest/nghiên cứu (bằng chứng)
+docs/DEPLOY.md           # hướng dẫn deploy web
 ```
 
 ---
 
-## ⚡ Quick Start
+## 5. Chạy nhanh
 
-### 1. Installation
-Clone the repository and install the dependencies:
 ```bash
 pip install -r requirements.txt
+
+# 1) Lấy/cập nhật dữ liệu giá VN100 (vnstock, có resume). Cũng là job EOD.
+python -m stock_agent.pipeline.eod_update
+
+# 2) (tùy chọn) train model P(win)
+python -c "from stock_agent.features.win_probability import train_and_save; print(train_and_save())"
+
+# 3) Bật dashboard
+python -m stock_agent.app --host 127.0.0.1 --port 8000   # -> http://127.0.0.1:8000
 ```
 
-### 2. Environment Variables
-Copy `.env.example` to `.env` and configure your API keys:
-```bash
-cp .env.example .env
-```
-*Specify your API endpoint keys (e.g. `NVIDIA_API_KEY` or `GROQ_API_KEY`) for AI reporting.*
-
-### 3. Command Line Interface (CLI)
-
-The system exposes a powerful CLI (`stock_agent/cli.py`) for scanning, portfolio tracking, and ML backtesting:
-
-#### 🔍 Run Scans
-```bash
-# Run a deterministic smoke-test scan using simulated demo data
-python -m stock_agent.cli scan --demo
-
-# Run a live scan fetching real-time data for VN30 from APIs
-python -m stock_agent.cli scan
-```
-
-#### 💼 Manage Portfolio
-```bash
-# Add a stock position (FPT, bought at 105,000 VND, quantity 100)
-python -m stock_agent.cli portfolio add --symbol FPT --buy-price 105000 --quantity 100
-
-# Check real-time P&L status
-python -m stock_agent.cli portfolio pnl
-```
-
-#### 🧠 Train ML Models
-```bash
-# Train the classifiers for FPT and HPG using Logistic Regression, Random Forest, and GBDTs
-python -m stock_agent.cli train --symbols FPT,HPG --families logistic,random_forest,xgboost
-
-# View current model training status and metrics
-python -m stock_agent.cli model-status
-```
-
-#### 📊 Backtesting & Robustness Simulation
-```bash
-# Run a single stock T+2 backtest
-python -m stock_agent.cli backtest --symbol FPT
-
-# Backtest all stocks in the universe
-python -m stock_agent.cli backtest --all
-
-# Run Monte Carlo and parameter sensitivity robustness simulations
-python -m stock_agent.cli robustness --symbols FPT,HPG --monte-carlo-runs 200
-```
-
-#### 🤖 Generate AI Advisory Reports
-```bash
-# Synthesize latest report with LLM and post-validate decisions
-python -m stock_agent.cli ai report
-```
-
-### 4. Running the Web Dashboard
-
-Start the integrated web server (using the Python Standard Library HTTP stack):
-```bash
-python -m stock_agent.app --host 127.0.0.1 --port 8000
-```
-Then navigate to: **[http://127.0.0.1:8000](http://127.0.0.1:8000)**
-
-The dashboard provides a premium, responsive UI featuring:
-* Real-time scan candidates filtered by Decision state (`BUY_SETUP`, `WATCH`, `REJECT`).
-* Deep stock detail audits exposing individual indicator points and source confidence.
-* Visual portfolio position tracking with real-time P&L valuation.
-* Interactive controls to trigger scans, train models, backtest, and generate reports.
+**Tự động 17:05 (T2-T6):** đăng ký `run_eod_update.bat` vào Windows Task Scheduler, hoặc cron trên Linux — xem [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ---
 
-## 📈 Deep Research Framework
+## 6. Lưu ý trung thực
 
-Our research workflow evaluates strategies using a comprehensive set of mathematical metrics:
-
-| Metric | Target Value | Description |
-|---|---|---|
-| **Win Rate** | `> 55.0%` | Number of profitable trades / total trades. |
-| **Sharpe Ratio** | `> 1.2` | Excess return per unit of volatility. |
-| **Sortino Ratio** | `> 1.5` | Excess return adjusted only for downside volatility. |
-| **Max Drawdown** | `< 15.0%` | Peak-to-trough decline of capital. |
-| **Profit Factor** | `> 1.5` | Ratio of Gross Profits to Gross Losses. |
-
----
-
-## 🤝 Contributing & Extension
-Contributions are welcome! Please write unit tests for new signal calculations and verify code correctness:
-```bash
-python -m unittest discover -s tests
-```
+- **EOD, không real-time** — giá đóng cửa; cảnh báo stop theo phiên, không theo tick.
+- **Survivorship** — VN100 là danh sách *hiện tại* áp ngược → số quá khứ (nhất là VN100) bị thổi phồng; tin mức VN30 hơn.
+- **Edge nhỏ & theo regime** — P(win) tối đa ~57% (không phải phép màu); thắng nhờ *R:R bất đối xứng × tilt xác suất nhỏ*.
+- **Khối ngoại** — đã dựng hạ tầng thu thập; gác lại làm tín hiệu (dữ liệu nói "follow khối ngoại" là sai; manh mối contrarian chưa đủ mẫu).
+- **Tests:** `python -m pytest tests/ -q` (85 pass).

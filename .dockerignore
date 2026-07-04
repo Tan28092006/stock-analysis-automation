@@ -1,0 +1,43 @@
+# VCS / IDE
+.git
+.gitignore
+.vscode
+.idea
+.agents
+.codex-plugin
+
+# Python caches / venvs
+__pycache__
+**/__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.venv
+venv
+env
+
+# Secrets — NEVER ship auth cookies or env files
+.env
+.env.*
+!.env.example
+data/raw/foreign/vietstock_session.json
+
+# Regenerated on first run — keep image lean
+data/models/
+catboost_info/
+
+# Research scratch + throwaway experiment outputs (not needed to run the app)
+scratch/
+scratchpad/
+*.log
+bt_*.json
+opt_*.json
+optimize_*.json
+backtest_results.json
+bt_report.json
+
+# Docs / build artifacts
+*.md
+!README.md
+Dockerfile
+.dockerignore

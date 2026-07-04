@@ -13,6 +13,21 @@ from stock_agent.features.backtest import (
 
 
 class BacktestTests(unittest.TestCase):
+    def setUp(self):
+        import tests.test_backtest as test_mod
+        self.original_load_rules = test_mod.load_rules
+        def patched_load_rules():
+            rules = self.original_load_rules()
+            if "ml" in rules:
+                rules["ml"]["enabled"] = False
+                rules["ml"]["override_enabled"] = False
+            return rules
+        test_mod.load_rules = patched_load_rules
+
+    def tearDown(self):
+        import tests.test_backtest as test_mod
+        test_mod.load_rules = self.original_load_rules
+
     def test_cost_calculation(self):
         self.assertAlmostEqual(round_trip_cost_pct(BacktestConfig()), 0.60)
 

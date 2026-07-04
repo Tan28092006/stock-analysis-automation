@@ -88,6 +88,39 @@ def build_feature_snapshot(symbol: str, features_df: pd.DataFrame, latest_row: p
         "kijun": _safe_float(latest.get("kijun"), close),
         "tenkan": _safe_float(latest.get("tenkan"), close),
         "cloud_position": cloud_position,
+        # --- Squeeze / Volatility ---
+        "sqz_on": int(latest.get("sqz_on", 0) or 0),
+        "bb_kc_ratio": _safe_float(latest.get("bb_kc_ratio"), 1.0),
+        "kc_upper": _safe_float(latest.get("kc_upper"), close),
+        "kc_lower": _safe_float(latest.get("kc_lower"), close),
+        # --- VSA ---
+        "spread_ratio": _safe_float(latest.get("spread_ratio"), 1.0),
+        "vsa_stopping_volume": int(latest.get("vsa_stopping_volume", 0) or 0),
+        "vsa_no_demand": int(latest.get("vsa_no_demand", 0) or 0),
+        "vsa_no_supply": int(latest.get("vsa_no_supply", 0) or 0),
+        # --- Market Regime & RS ---
+        "regime_trend": _safe_float(latest.get("regime_trend"), 0.0),
+        "regime_volatility_20": _safe_float(latest.get("regime_volatility_20"), 0.0),
+        "regime_vol_class": int(latest.get("regime_vol_class", 1) or 1),
+        "regime_breadth": _safe_float(latest.get("regime_breadth"), 0.5),
+        "days_since_regime_change": int(latest.get("days_since_regime_change", 0) or 0),
+        "rs_ratio": _safe_float(latest.get("rs_ratio"), 1.0),
+        "rs_slope_5": _safe_float(latest.get("rs_slope_5"), 0.0),
+        # --- Cross-sectional ranks & aggregates ---
+        "cross_rsi14_rank": _safe_float(latest.get("cross_rsi14_rank"), 0.5),
+        "cross_volume_ratio_20_rank": _safe_float(latest.get("cross_volume_ratio_20_rank"), 0.5),
+        "cross_return_1d_rank": _safe_float(latest.get("cross_return_1d_rank"), 0.5),
+        "cross_adx14_rank": _safe_float(latest.get("cross_adx14_rank"), 0.5),
+        "cross_macd_hist_rank": _safe_float(latest.get("cross_macd_hist_rank"), 0.5),
+        "vn30_avg_return_1d": _safe_float(latest.get("vn30_avg_return_1d"), 0.0),
+        "vn30_median_return_1d": _safe_float(latest.get("vn30_median_return_1d"), 0.0),
+        "vn30_advance_decline_ratio": _safe_float(latest.get("vn30_advance_decline_ratio"), 0.5),
+        # --- Temporal ---
+        "day_of_week_sin": _safe_float(latest.get("day_of_week_sin"), 0.0),
+        "day_of_week_cos": _safe_float(latest.get("day_of_week_cos"), 1.0),
+        "month_sin": _safe_float(latest.get("month_sin"), 0.0),
+        "month_cos": _safe_float(latest.get("month_cos"), 1.0),
+        "days_to_expiry": int(latest.get("days_to_expiry", 15) or 15),
     }
 
 

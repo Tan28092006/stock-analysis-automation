@@ -337,9 +337,9 @@ def run_calibration(
             ("model", LogisticRegression(max_iter=1000, random_state=42, solver="liblinear")),
         ]
     )
-    x_train = _feature_frame(train, cols)
-    x_validation = _feature_frame(validation, cols)
-    x_test = _feature_frame(test, cols)
+    x_train, bounds = preprocess_features_robust(train, cols)
+    x_validation, _ = preprocess_features_robust(validation, cols, winsorize_bounds=bounds)
+    x_test, _ = preprocess_features_robust(test, cols, winsorize_bounds=bounds)
     model.fit(x_train, train["net_t2_win"].astype(int))
     validation_prob = model.predict_proba(x_validation)[:, 1]
     threshold, calibrated_metrics, optimizer_warnings = optimize_probability_threshold(
@@ -391,8 +391,86 @@ def run_calibration(
     )
 
 
+def preprocess_features_robust(
+    df: pd.DataFrame,
+    feature_cols: list[str],
+    winsorize_bounds: dict[str, tuple[float, float]] | None = None,
+) -> tuple[pd.DataFrame, dict[str, tuple[float, float]]]:
+    """Preprocess features robustly:
+    1. Fill NaNs with feature-specific neutral values (e.g. RSI->50.0, volume ratio->1.0).
+    2. Winsorize (clip) features at 1st and 99th percentiles based on training bounds.
+    """
+    out = pd.DataFrame(index=df.index)
+    
+    # Feature-specific neutral values
+    neutral_values = {
+        "feature_rsi14": 50.0,
+        "feature_volume_ratio_20": 1.0,
+        "feature_cross_rsi14_rank": 0.5,
+        "feature_cross_volume_ratio_20_rank": 0.5,
+        "feature_cross_return_1d_rank": 0.5,
+        "feature_cross_adx14_rank": 0.5,
+        "feature_cross_macd_hist_rank": 0.5,
+        "feature_regime_breadth": 0.5,
+        "feature_regime_vol_class": 1.0,
+        "feature_bb_kc_ratio": 1.0,
+        "feature_bb_width": 0.1,
+        "feature_spread_proxy_pct": 0.01,
+    }
+    
+    # Perform column-specific forward fill first, then fill remaining NaNs with neutral values
+    for col in feature_cols:
+        if col in df.columns:
+            series = df[col].copy()
+            # Replace inf/-inf with NaN
+            series = series.replace([np.inf, -np.inf], np.nan)
+            # Time-series forward fill
+            series = series.ffill()
+            
+            # Feature-specific fill
+            neutral = 0.0
+            for prefix, val in neutral_values.items():
+                if col.startswith(prefix):
+                    neutral = val
+                    break
+            series = series.fillna(neutral)
+            out[col] = series
+        else:
+            # If missing completely, fill with neutral value
+            neutral = 0.0
+            for prefix, val in neutral_values.items():
+                if col.startswith(prefix):
+                    neutral = val
+                    break
+            out[col] = neutral
+            
+    # Winsorization (Clipping outliers at 1st and 99th percentiles)
+    computed_bounds = {}
+    for col in feature_cols:
+        if col.startswith("rule_"):
+            # Binary rules columns do not need winsorizing
+            continue
+        
+        if winsorize_bounds is not None and col in winsorize_bounds:
+            lower, upper = winsorize_bounds[col]
+        else:
+            series = out[col]
+            lower = float(series.quantile(0.01))
+            upper = float(series.quantile(0.99))
+            # Handle edge case where lower == upper (e.g. constant feature)
+            if lower == upper:
+                lower -= 1e-5
+                upper += 1e-5
+            computed_bounds[col] = (lower, upper)
+            
+        out[col] = out[col].clip(lower=lower, upper=upper)
+        
+    return out, winsorize_bounds or computed_bounds
+
+
 def _feature_frame(frame: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
-    return frame[cols].replace([np.inf, -np.inf], np.nan).fillna(0.0)
+    processed, _ = preprocess_features_robust(frame, cols)
+    return processed
 
 
 def _time_split(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:

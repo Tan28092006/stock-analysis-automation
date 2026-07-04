@@ -22,11 +22,20 @@ def run_robustness(
     seed: int = 42,
     monte_carlo_runs: int = 200,
 ) -> dict[str, Any]:
-    frames = _load_frames(symbols, price_dir)
+    import sys
+    import hashlib
+    from datetime import timezone, datetime
+    from ..data.repository import write_json
+    from ..pipeline.performance_tracker import create_and_log_manifest
+    from ..constants import REPORT_DIR
+
+    requested_symbols = [symbol.upper() for symbol in symbols]
+    frames = _load_frames(requested_symbols, price_dir)
     cfg = BacktestConfig.from_rules(rules)
     baseline = run_portfolio_backtest(frames, rules, cfg, start=start, end=end)
     returns = [trade.net_return_pct for trade in baseline.trades]
-    return {
+    
+    payload = {
         "status": "ok" if frames else "insufficient_data",
         "symbols": sorted(frames),
         "baseline": _portfolio_summary(baseline),
@@ -35,6 +44,49 @@ def run_robustness(
         "monte_carlo": _monte_carlo(returns, seed=seed, runs=monte_carlo_runs),
         "stress_scenarios": _stress_scenarios(returns),
     }
+
+    if "pytest" not in sys.modules and "unittest" not in sys.modules:
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        REPORT_DIR.mkdir(parents=True, exist_ok=True)
+        report_path = REPORT_DIR / f"robustness_{timestamp}.json"
+        
+        # Save robustness report
+        write_json(report_path, payload)
+        
+        # Compute SHA-256 data hashes
+        data_hashes: dict[str, str] = {}
+        for symbol in frames:
+            csv_path = price_dir / f"{symbol}.csv"
+            if csv_path.exists():
+                hasher = hashlib.sha256()
+                with csv_path.open("rb") as f:
+                    for chunk in iter(lambda: f.read(65536), b""):
+                        hasher.update(chunk)
+                data_hashes[symbol] = hasher.hexdigest()
+                
+        # Combined hash
+        combined_hasher = hashlib.sha256()
+        for symbol in sorted(data_hashes):
+            combined_hasher.update(data_hashes[symbol].encode("utf-8"))
+        combined_data_hash = combined_hasher.hexdigest()
+        
+        excluded_symbols = [s for s in requested_symbols if s not in frames]
+        
+        # Log manifest
+        command = " ".join(sys.argv)
+        create_and_log_manifest(
+            command=command,
+            rules=rules,
+            data_start=str(start or (baseline.start if baseline.start else "")),
+            data_end=str(end or (baseline.end if baseline.end else "")),
+            symbols=sorted(frames),
+            report_links={"robustness_report": str(report_path)},
+            symbols_excluded=excluded_symbols,
+            data_hash=combined_data_hash,
+            data_hashes=data_hashes,
+        )
+        
+    return payload
 
 
 def _load_frames(symbols: Iterable[str], price_dir: Path) -> dict[str, pd.DataFrame]:

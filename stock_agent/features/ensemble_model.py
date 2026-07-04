@@ -233,8 +233,13 @@ class EnsembleTrainer:
         if len(working) < self.config.min_train_rows:
             return {"status": "insufficient_data", "rows": len(working)}
 
-        X = self._prepare_features(working)
+        X = self._prepare_features(working, fit=True)
         y = working[label_col].astype(int).values
+
+        # Compute financial-impact sample weights
+        # Wins (y=1) get weight 1.0. Losses (y=0) get 1.0 + 1.0 * abs(net_t2_return_pct)
+        returns = working.get("net_t2_return_pct", pd.Series(0.0, index=working.index)).fillna(0.0).values
+        sample_weights = np.where(y == 1, 1.0, 1.0 + 1.0 * np.abs(returns))
 
         # Walk-forward: generate OOF (out-of-fold) predictions for meta-learner
         oof_lgb = np.zeros(len(y), dtype=float)
@@ -255,16 +260,17 @@ class EnsembleTrainer:
 
             val_indices_set.update(val_idx)
 
-            # Train base models on this fold
+            # Train base models on this fold with sample weights
             lgb = self._build_lgb()
             xgb = self._build_xgb()
             ridge = self._build_ridge()
             cat = self._build_cat()
 
-            lgb.fit(X_tr, y_tr)
-            xgb.fit(X_tr, y_tr)
-            ridge.fit(X_tr, y_tr)
-            cat.fit(X_tr, y_tr, verbose=0)
+            sw_tr = sample_weights[train_idx]
+            lgb.fit(X_tr, y_tr, sample_weight=sw_tr)
+            xgb.fit(X_tr, y_tr, sample_weight=sw_tr)
+            ridge.fit(X_tr, y_tr, model__sample_weight=sw_tr)
+            cat.fit(X_tr, y_tr, sample_weight=sw_tr, verbose=0)
 
             # OOF predictions
             oof_lgb[val_idx] = lgb.predict_proba(X_val)[:, 1]
@@ -282,35 +288,20 @@ class EnsembleTrainer:
                 "win_rate": float(y_val[fold_selected].mean() * 100) if fold_selected.sum() > 0 else 0.0,
             })
 
-        # Train final base models on ALL data
+        # Train final base models on ALL data with sample weights
         self.lgb_model = self._build_lgb()
         self.xgb_model = self._build_xgb()
         self.ridge_pipeline = self._build_ridge()
         self.cat_model = self._build_cat()
 
-        self.lgb_model.fit(X, y)
-        self.xgb_model.fit(X, y)
-        self.ridge_pipeline.fit(X, y)
-        self.cat_model.fit(X, y, verbose=0)
+        self.lgb_model.fit(X, y, sample_weight=sample_weights)
+        self.xgb_model.fit(X, y, sample_weight=sample_weights)
+        self.ridge_pipeline.fit(X, y, model__sample_weight=sample_weights)
+        self.cat_model.fit(X, y, sample_weight=sample_weights, verbose=0)
 
-        # Train meta-learner on OOF predictions
-        # Only use rows that were in at least one validation fold
-        meta_mask = np.zeros(len(y), dtype=bool)
-        if val_indices_set:
-            meta_mask[list(val_indices_set)] = True
-
-        if meta_mask.sum() < 20:
-            # Not enough OOF data — use simple average instead
-            self.meta_model = None
-            logger.warning("Insufficient OOF data for meta-learner; using simple average")
-        else:
-            meta_X = np.column_stack([oof_lgb[meta_mask], oof_xgb[meta_mask], oof_ridge[meta_mask], oof_cat[meta_mask]])
-            meta_y = y[meta_mask]
-            if len(np.unique(meta_y)) >= 2:
-                self.meta_model = self._build_meta()
-                self.meta_model.fit(meta_X, meta_y)
-            else:
-                self.meta_model = None
+        # Stacking meta-learner is disabled to prevent overfitting and uncalibrated probabilities on noisy financial data.
+        # We use a robust simple average (soft voting) of base models instead.
+        self.meta_model = None
 
         # Evaluate on last fold (pseudo-test)
         last_fold_val_idx = list(tscv.split(X))[-1][1] if fold_metrics else []
@@ -377,6 +368,10 @@ class EnsembleTrainer:
         X = self._prepare_features(working)
         y = working[label_col].astype(int).values
 
+        # Compute financial-impact sample weights
+        returns = working.get("net_t2_return_pct", pd.Series(0.0, index=working.index)).fillna(0.0).values
+        sample_weights = np.where(y == 1, 1.0, 1.0 + 1.0 * np.abs(returns))
+
         if len(np.unique(y)) < 2:
             return {"status": "insufficient_labels", "rows": len(working)}
 
@@ -395,7 +390,7 @@ class EnsembleTrainer:
             verbose=-1,
             n_jobs=-1,
         )
-        lgb_new.fit(X, y, init_model=self.lgb_model)
+        lgb_new.fit(X, y, init_model=self.lgb_model, sample_weight=sample_weights)
         self.lgb_model = lgb_new
 
         # XGBoost warm-start
@@ -413,16 +408,16 @@ class EnsembleTrainer:
             n_jobs=-1,
             verbosity=0,
         )
-        xgb_new.fit(X, y, xgb_model=self.xgb_model)
+        xgb_new.fit(X, y, xgb_model=self.xgb_model, sample_weight=sample_weights)
         self.xgb_model = xgb_new
 
         # Ridge: full retrain (fast for linear model)
         self.ridge_pipeline = self._build_ridge()
-        self.ridge_pipeline.fit(X, y)
+        self.ridge_pipeline.fit(X, y, model__sample_weight=sample_weights)
 
         # CatBoost: full retrain
         self.cat_model = self._build_cat()
-        self.cat_model.fit(X, y, verbose=0)
+        self.cat_model.fit(X, y, sample_weight=sample_weights, verbose=0)
 
         # Meta-learner: retrain on base predictions
         lgb_proba = self.lgb_model.predict_proba(X)[:, 1]
@@ -433,7 +428,7 @@ class EnsembleTrainer:
 
         if len(np.unique(y)) >= 2:
             self.meta_model = self._build_meta()
-            self.meta_model.fit(meta_X, y)
+            self.meta_model.fit(meta_X, y, model__sample_weight=sample_weights)
 
         # Quick validation on last 20% of data
         val_start = int(len(working) * 0.8)
@@ -484,13 +479,16 @@ class EnsembleTrainer:
 
         return probabilities, shap_explanations
 
-    def predict_single(self, feature_row: dict[str, float]) -> tuple[float, dict]:
+    def predict_single(self, feature_row: dict[str, float], return_shap: bool = True) -> tuple[float, dict]:
         """Predict for a single stock. Returns (probability, {shap_top5, agreement})."""
         df = pd.DataFrame([{col: feature_row.get(col, 0.0) for col in self.feature_columns}])
-        proba, shap_vals = self.predict(df, return_shap=True)
-
-        # Compute ensemble agreement
+        # Prepare features ONCE and reuse for both the meta probability and the
+        # per-model agreement (previously preprocessed twice per prediction).
         X = self._prepare_features(df)
+        proba = self._predict_proba_internal(X)
+        shap_vals = self._compute_shap(X) if return_shap else None
+
+        # Compute ensemble agreement (reuses X)
         lgb_p = float(self.lgb_model.predict_proba(X)[:, 1][0]) if self.lgb_model else 0.5
         xgb_p = float(self.xgb_model.predict_proba(X)[:, 1][0]) if self.xgb_model else 0.5
         ridge_p = float(self._ridge_proba(self.ridge_pipeline, X)[0]) if self.ridge_pipeline else 0.5
@@ -599,6 +597,7 @@ class EnsembleTrainer:
             "trained_at": self.trained_at,
             "train_rows": self.train_rows,
             "metrics": self.metrics,
+            "winsorize_bounds": getattr(self, "winsorize_bounds", None),
         }
         with save_path.open("wb") as f:
             pickle.dump(payload, f)
@@ -649,6 +648,7 @@ class EnsembleTrainer:
         trainer.trained_at = payload["trained_at"]
         trainer.train_rows = payload["train_rows"]
         trainer.metrics = payload.get("metrics", {})
+        trainer.winsorize_bounds = payload.get("winsorize_bounds")
         return trainer
 
     # -- Optuna HPO -------------------------------------------------------
@@ -664,8 +664,10 @@ class EnsembleTrainer:
         optuna.logging.set_verbosity(optuna.logging.WARNING)
 
         working = dataset.dropna(subset=[label_col]).sort_values("signal_date").reset_index(drop=True)
-        X = self._prepare_features(working)
+        X = self._prepare_features(working, fit=True)
         y = working[label_col].astype(int).values
+        returns = working.get("net_t2_return_pct", pd.Series(0.0, index=working.index)).fillna(0.0).values
+        sample_weights = np.where(y == 1, 1.0, 1.0 + 1.0 * np.abs(returns))
 
         if len(working) < self.config.min_train_rows or len(np.unique(y)) < 2:
             return {"status": "insufficient_data"}
@@ -702,6 +704,7 @@ class EnsembleTrainer:
             for train_idx, val_idx in tscv.split(X):
                 X_tr, X_val = X.iloc[train_idx], X.iloc[val_idx]
                 y_tr, y_val = y[train_idx], y[val_idx]
+                sw_tr = sample_weights[train_idx]
 
                 if len(np.unique(y_tr)) < 2:
                     continue
@@ -712,10 +715,10 @@ class EnsembleTrainer:
                 ridge = self._build_ridge()
                 cat = CatBoostClassifier(**cat_params, random_seed=42, verbose=0, thread_count=1)
 
-                lgb.fit(X_tr, y_tr)
-                xgb.fit(X_tr, y_tr)
-                ridge.fit(X_tr, y_tr)
-                cat.fit(X_tr, y_tr, verbose=0)
+                lgb.fit(X_tr, y_tr, sample_weight=sw_tr)
+                xgb.fit(X_tr, y_tr, sample_weight=sw_tr)
+                ridge.fit(X_tr, y_tr, model__sample_weight=sw_tr)
+                cat.fit(X_tr, y_tr, sample_weight=sw_tr, verbose=0)
 
                 # Predictions
                 lgb_p = lgb.predict_proba(X_val)[:, 1]
@@ -778,15 +781,22 @@ class EnsembleTrainer:
 
     # -- Internal helpers -------------------------------------------------
 
-    def _prepare_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Extract and clean feature columns."""
-        cols = [c for c in self.feature_columns if c in df.columns]
-        missing = [c for c in self.feature_columns if c not in df.columns]
-        frame = df[cols].copy()
-        for c in missing:
-            frame[c] = 0.0
-        frame = frame[self.feature_columns]
-        return frame.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+    def _prepare_features(self, df: pd.DataFrame, fit: bool = False) -> pd.DataFrame:
+        """Extract, clean, and preprocess feature columns robustly."""
+        from .calibration import preprocess_features_robust
+        
+        # Ensure feature columns list exists
+        if not self.feature_columns:
+            return df
+            
+        bounds = getattr(self, "winsorize_bounds", None)
+        if fit or bounds is None:
+            processed, computed_bounds = preprocess_features_robust(df, self.feature_columns)
+            self.winsorize_bounds = computed_bounds
+        else:
+            processed, _ = preprocess_features_robust(df, self.feature_columns, winsorize_bounds=bounds)
+            
+        return processed
 
     def _predict_proba_internal(self, X: pd.DataFrame) -> np.ndarray:
         """Combine base model predictions through meta-learner."""

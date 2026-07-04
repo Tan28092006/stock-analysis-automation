@@ -121,10 +121,12 @@ def add_regime_features(df: pd.DataFrame, market_returns: pd.Series | None = Non
     """
     out = df.copy()
 
-    # Use market returns if available, otherwise fall back to symbol's own
+    # Use market returns if available, otherwise fall back to vn30_avg_return_1d or symbol's own return_1d
     if market_returns is not None:
         date_to_ret = market_returns.to_dict()
         mkt_ret = out["date"].map(date_to_ret).fillna(0.0).astype(float)
+    elif "vn30_avg_return_1d" in out.columns:
+        mkt_ret = out["vn30_avg_return_1d"].fillna(0.0).astype(float)
     else:
         mkt_ret = out.get("return_1d", pd.Series(0.0, index=out.index)).fillna(0.0).astype(float)
 
@@ -141,7 +143,10 @@ def add_regime_features(df: pd.DataFrame, market_returns: pd.Series | None = Non
     )
 
     # Regime: Trend (EMA crossover on market proxy cumulative return)
-    cum_ret = (1 + mkt_ret / 100.0).cumprod()
+    # Check if returns are in percentage or ratio
+    is_percentage = mkt_ret.abs().median() > 0.1
+    scale = 100.0 if is_percentage else 1.0
+    cum_ret = (1 + mkt_ret / scale).cumprod()
     ema9 = cum_ret.ewm(span=9, min_periods=5).mean()
     ema21 = cum_ret.ewm(span=21, min_periods=10).mean()
     ema50 = cum_ret.ewm(span=50, min_periods=20).mean()
@@ -154,6 +159,23 @@ def add_regime_features(df: pd.DataFrame, market_returns: pd.Series | None = Non
         [1, -1],  # 1=bull, -1=bear, 0=sideways
         default=0,
     )
+
+    # Relative Strength (RS) Ratio and 5-day slope (using rolling 60-day relative return to prevent start-date dependency)
+    stock_ret = out.get("return_1d", pd.Series(0.0, index=out.index)).fillna(0.0).astype(float)
+    is_stock_percentage = stock_ret.abs().median() > 0.1
+    stock_scale = 100.0 if is_stock_percentage else 1.0
+    
+    rolling_window = 60
+    # Use log returns to sum them over rolling window stably, then exponentiate
+    log_mkt_ret = np.log1p(mkt_ret / scale)
+    log_stock_ret = np.log1p(stock_ret / stock_scale)
+    
+    rolling_mkt_cum = np.exp(log_mkt_ret.rolling(rolling_window, min_periods=5).sum())
+    rolling_stock_cum = np.exp(log_stock_ret.rolling(rolling_window, min_periods=5).sum())
+    
+    out["rs_ratio"] = (rolling_stock_cum / rolling_mkt_cum.replace(0, np.nan)).fillna(1.0)
+    out["rs_slope_5"] = out["rs_ratio"].diff(5) / out["rs_ratio"].shift(5).replace(0, np.nan)
+    out["rs_slope_5"] = out["rs_slope_5"].fillna(0.0)
 
     # Regime: Market breadth (from cross-sectional data if available)
     if "vn30_advance_decline_ratio" in out.columns:
@@ -303,6 +325,8 @@ def get_v2_feature_columns() -> list[str]:
         "regime_trend",
         "regime_breadth",
         "days_since_regime_change",
+        "rs_ratio",
+        "rs_slope_5",
         # Temporal
         "day_of_week_sin",
         "day_of_week_cos",

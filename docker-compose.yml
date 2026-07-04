@@ -1,0 +1,31 @@
+# Local / VPS deploy. `docker compose up -d` -> http://localhost:8000
+#
+# The `data/` bind-mount persists prices + scan caches + tracked positions across
+# restarts, and lets the host cron (see docs/DEPLOY.md) write EOD updates that the
+# container serves. Auth cookies (data/raw/foreign/vietstock_session.json) live on the
+# host and are NOT baked into the image.
+services:
+  dashboard:
+    build: .
+    image: vn-swing-trading:latest
+    container_name: vn-swing-dashboard
+    ports:
+      - "8000:8000"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8000"
+      # NVIDIA_API_KEY: "..."   # optional — only for the /api/chat LLM summary
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  # Optional: run the EOD update inside a container on a schedule instead of host cron.
+  # Uncomment and pair with an external scheduler, or run manually:
+  #   docker compose run --rm eod
+  eod:
+    build: .
+    image: vn-swing-trading:latest
+    profiles: ["tools"]
+    volumes:
+      - ./data:/app/data
+    command: python -m stock_agent.pipeline.eod_update

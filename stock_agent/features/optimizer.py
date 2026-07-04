@@ -65,20 +65,20 @@ class OptimizationReport:
 
 
 SEARCH_SPACE: dict[tuple[str, ...], tuple[str, float, float]] = {
-    ("time_horizon_days",): ("int", 2, 4),
-    ("signal_thresholds", "buy_setup"): ("int", 50, 78),
+    ("time_horizon_days",): ("int", 2, 30),
+    ("signal_thresholds", "buy_setup"): ("int", 40, 80),
     ("signal_thresholds", "watch"): ("int", 30, 60),
     ("signal_thresholds", "volume_surge_min"): ("float", 0.8, 2.0),
     ("signal_thresholds", "rsi_min"): ("int", 35, 55),
     ("signal_thresholds", "rsi_max"): ("int", 65, 80),
     ("signal_thresholds", "min_rr"): ("float", 1.0, 2.5),
-    ("signal_thresholds", "max_stop_loss_pct"): ("float", 2.5, 6.0),
+    ("signal_thresholds", "max_stop_loss_pct"): ("float", 1.5, 4.0),
     ("signal_thresholds", "adx_min"): ("int", 12, 28),
-    ("risk", "stop_atr_multiple"): ("float", 0.8, 2.0),
+    ("risk", "stop_atr_multiple"): ("float", 0.5, 1.5),
     ("risk", "target_rr"): ("float", 1.2, 3.0),
     ("portfolio", "max_symbol_weight"): ("float", 0.10, 0.35),
     ("portfolio", "max_gross_exposure"): ("float", 0.30, 0.80),
-    ("portfolio", "risk_per_trade_pct"): ("float", 0.5, 3.0),
+    ("portfolio", "risk_per_trade_pct"): ("float", 0.3, 1.5),
     ("rule_points", "ema_trend"): ("int", 5, 25),
     ("rule_points", "medium_trend"): ("int", 3, 15),
     ("rule_points", "sma_short_trend"): ("int", 2, 12),
@@ -179,7 +179,7 @@ def refresh_price_data(
             "attempts": attempts,
         }
 
-    return {
+    payload = {
         "status": "ok" if saved else "failed",
         "technical_only": True,
         "years": years,
@@ -190,6 +190,50 @@ def refresh_price_data(
         "excluded_symbols": excluded,
         "results": results,
     }
+
+    import sys
+    if "pytest" not in sys.modules and "unittest" not in sys.modules:
+        from ..pipeline.performance_tracker import create_and_log_manifest
+        from ..constants import REPORT_DIR
+        import hashlib
+        
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        REPORT_DIR.mkdir(parents=True, exist_ok=True)
+        report_path = REPORT_DIR / f"refresh_{timestamp}.json"
+        
+        write_json(report_path, payload)
+        
+        # Compute SHA-256 data hashes
+        data_hashes: dict[str, str] = {}
+        for symbol in saved:
+            csv_path = price_dir / f"{symbol}.csv"
+            if csv_path.exists():
+                hasher = hashlib.sha256()
+                with csv_path.open("rb") as f:
+                    for chunk in iter(lambda: f.read(65536), b""):
+                        hasher.update(chunk)
+                data_hashes[symbol] = hasher.hexdigest()
+                
+        # Combined hash
+        combined_hasher = hashlib.sha256()
+        for symbol in sorted(data_hashes):
+            combined_hasher.update(data_hashes[symbol].encode("utf-8"))
+        combined_data_hash = combined_hasher.hexdigest()
+        
+        command = " ".join(sys.argv)
+        create_and_log_manifest(
+            command=command,
+            rules=rules,
+            data_start=str(start),
+            data_end=str(end),
+            symbols=sorted(saved),
+            report_links={"refresh_report": str(report_path)},
+            symbols_excluded=list(excluded.keys()),
+            data_hash=combined_data_hash,
+            data_hashes=data_hashes,
+        )
+        
+    return payload
 
 
 def walk_forward_split(
@@ -361,6 +405,41 @@ def run_optimization(
         warnings=warnings,
     )
     payload = _save_report(report)
+    import sys
+    import hashlib
+    if "pytest" not in sys.modules and "unittest" not in sys.modules:
+        from ..pipeline.performance_tracker import create_and_log_manifest
+        
+        # Compute SHA-256 data hashes
+        data_hashes: dict[str, str] = {}
+        for symbol in frames:
+            csv_path = price_dir / f"{symbol}.csv"
+            if csv_path.exists():
+                hasher = hashlib.sha256()
+                with csv_path.open("rb") as f:
+                    for chunk in iter(lambda: f.read(65536), b""):
+                        hasher.update(chunk)
+                data_hashes[symbol] = hasher.hexdigest()
+                
+        # Combined hash
+        combined_hasher = hashlib.sha256()
+        for symbol in sorted(data_hashes):
+            combined_hasher.update(data_hashes[symbol].encode("utf-8"))
+        combined_data_hash = combined_hasher.hexdigest()
+        
+        command = " ".join(sys.argv)
+        create_and_log_manifest(
+            command=command,
+            rules=base_rules,
+            data_start=split.train_start,
+            data_end=split.test_end,
+            symbols=sorted(frames),
+            report_links={"optimization_report": payload["report_path"]},
+            symbols_excluded=list(excluded.keys()),
+            data_hash=combined_data_hash,
+            data_hashes=data_hashes,
+        )
+        
     if apply_if_valid:
         payload["apply_result"] = apply_best_rules(payload, rules_path=rules_path)
         write_json(Path(payload["report_path"]), payload)
@@ -426,7 +505,7 @@ def load_price_frames(
     years: int,
     price_dir: Path = PRICE_CACHE_DIR,
 ) -> tuple[dict[str, pd.DataFrame], dict[str, str]]:
-    min_rows = max(int(rules.get("min_history_rows", 90)), int(years * 180))
+    min_rows = int(rules.get("min_history_rows", 90))
     frames: dict[str, pd.DataFrame] = {}
     excluded: dict[str, str] = {}
     for raw_symbol in symbols:

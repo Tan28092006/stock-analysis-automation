@@ -200,7 +200,62 @@ def _generate_recommendations(
     elif selection_rate < 5:
         recommendations.append(f"Selection rate {selection_rate:.0f}% quá thấp. Xem xét giảm threshold.")
 
-    if not recommendations:
         recommendations.append("Model hoạt động tốt. Tiếp tục monitoring.")
 
     return recommendations
+
+
+MANIFEST_LOG_PATH = Path("data/pipeline/experiment_manifests.jsonl")
+MANIFEST_DIR = Path("data/pipeline/manifests")
+
+
+def log_experiment_manifest(manifest: Any) -> Path:
+    """Log an experiment manifest to the central log and save it as an individual JSON file."""
+    MANIFEST_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    MANIFEST_DIR.mkdir(parents=True, exist_ok=True)
+
+    clean_ts = manifest.timestamp.replace(":", "").replace("+", "Z")
+    individual_path = MANIFEST_DIR / f"manifest_{clean_ts}.json"
+
+    from ..schemas import to_plain_dict
+    manifest_dict = to_plain_dict(manifest)
+
+    with individual_path.open("w", encoding="utf-8") as f:
+        json.dump(manifest_dict, f, ensure_ascii=False, indent=2)
+
+    with MANIFEST_LOG_PATH.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(manifest_dict, ensure_ascii=False) + "\n")
+
+    logger.info(f"Saved experiment manifest to {individual_path}")
+    return individual_path
+
+
+def create_and_log_manifest(
+    command: str,
+    rules: dict,
+    data_start: str,
+    data_end: str,
+    symbols: list[str],
+    report_links: dict[str, str],
+    symbols_excluded: list[str] | None = None,
+    data_hash: str = "",
+    data_hashes: dict[str, str] | None = None,
+) -> Path:
+    """Create an ExperimentManifest and log it."""
+    from ..schemas import ExperimentManifest
+    from ..config import compute_rules_hash
+
+    manifest = ExperimentManifest(
+        command=command,
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        rules_hash=compute_rules_hash(rules),
+        data_start=data_start,
+        data_end=data_end,
+        symbols=symbols,
+        symbols_excluded=symbols_excluded or [],
+        report_links=report_links,
+        data_hash=data_hash,
+        data_hashes=data_hashes or {},
+    )
+    return log_experiment_manifest(manifest)
+

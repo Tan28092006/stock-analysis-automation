@@ -1,6 +1,6 @@
 {
   "strategy": "VN30_T2_MVP",
-  "time_horizon_days": 2,
+  "time_horizon_days": 20,
   "min_history_rows": 90,
   "max_price_age_days": 7,
   "cross_check": {
@@ -17,31 +17,31 @@
     ]
   },
   "signal_thresholds": {
-    "buy_setup": 55,
-    "watch": 39,
-    "volume_surge_min": 1.429708,
+    "buy_setup": 45,
+    "watch": 52,
+    "volume_surge_min": 1.647285,
     "adx_min": 16,
     "obv_lookback": 5,
     "vwap_period": 20,
-    "rsi_min": 44,
-    "rsi_max": 69,
+    "rsi_min": 36,
+    "rsi_max": 80,
     "max_one_day_gain_pct": 6.8,
-    "min_rr": 1.917779,
-    "max_stop_loss_pct": 2.988229
+    "min_rr": 1.778606,
+    "max_stop_loss_pct": 3.06882
   },
   "risk": {
     "atr_period": 14,
-    "stop_atr_multiple": 1.239634,
+    "stop_atr_multiple": 1.59553,
     "stop_support_buffer_pct": 1.0,
-    "target_rr": 2.020926,
+    "target_rr": 2.546033,
     "max_position_weight": 0.296294
   },
   "ml": {
     "enabled": true,
     "model_family": "ensemble",
-    "probability_threshold": 0.598104,
+    "probability_threshold": 0.634655,
     "override_enabled": true,
-    "override_loss_threshold": 0.511613,
+    "override_loss_threshold": 0.554095,
     "families": [
       "logistic",
       "random_forest",
@@ -63,32 +63,38 @@
   "backtest": {
     "initial_capital": 1000000000,
     "commission_pct": 0.15,
-    "sell_tax_pct": 0.10,
-    "slippage_pct": 0.10,
+    "sell_tax_pct": 0.1,
+    "slippage_pct": 0.1,
     "price_limit_pct": 6.9,
     "lot_size": 100
   },
   "portfolio": {
-    "max_symbol_weight": 0.296294,
-    "max_gross_exposure": 0.399837,
-    "risk_per_trade_pct": 1.785586
+    "max_symbol_weight": 0.309289,
+    "max_gross_exposure": 0.571947,
+    "risk_per_trade_pct": 1.511293
   },
   "rule_points": {
-    "ema_trend": 14,
-    "medium_trend": 8,
-    "sma_short_trend": 5,
-    "macd_momentum": 12,
-    "macd_cross_extra": 6,
-    "rsi_t2_zone": 10,
-    "volume_confirmation": 14,
-    "ichimoku_base": 12,
-    "cloud_position": 8,
-    "vwap_position": 5,
-    "adx_trend_strength": 7,
-    "accumulation_flow": 5,
-    "breakout_proximity": 8,
-    "risk_reward": 14,
-    "gap_risk": 6,
-    "gap_risk_penalty": 12
+    "ema_trend": 7,
+    "medium_trend": 3,
+    "sma_short_trend": 12,
+    "macd_momentum": 7,
+    "macd_cross_extra": 5,
+    "rsi_t2_zone": 17,
+    "volume_confirmation": 11,
+    "ichimoku_base": 6,
+    "cloud_position": 11,
+    "vwap_position": 10,
+    "adx_trend_strength": 15,
+    "accumulation_flow": 4,
+    "breakout_proximity": 11,
+    "risk_reward": 21,
+    "gap_risk": 8,
+    "gap_risk_penalty": 22,
+    "market_regime": 10,
+    "market_regime_sideways": 5,
+    "relative_strength": 10,
+    "volatility_squeeze": 8,
+    "vsa_stopping_volume": 12,
+    "pullback_entry": 12
   }
 }
