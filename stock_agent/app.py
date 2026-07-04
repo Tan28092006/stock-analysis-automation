@@ -118,6 +118,18 @@ def _symbols_from_params(params: dict, body: dict | None = None) -> list[str]:
 class StockAgentHandler(BaseHTTPRequestHandler):
     server_version = "VN30T2MVP/0.1"
 
+    def do_HEAD(self) -> None:  # noqa: N802
+        # Uptime monitors (UptimeRobot et al.) default to HEAD, not GET. Answer it for the
+        # health check specifically so keep-alive pings don't get misread as "down".
+        if urlparse(self.path).path == "/api/health":
+            payload = json.dumps({"status": "ok"}).encode("utf-8")
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            return
+        self.send_error(HTTPStatus.NOT_FOUND, "Not found")
+
     def do_GET(self) -> None:  # noqa: N802
         if not _auth_ok(self):
             return
