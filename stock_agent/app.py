@@ -143,6 +143,13 @@ class StockAgentHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/model/status":
             _json_response(self, model_status())
             return
+        if parsed.path == "/api/positions":
+            # Raw open positions (both engines) for the browser to reconcile against its
+            # localStorage copy — cheap, no scan. Lets positions survive an ephemeral
+            # (free-tier) redeploy: the browser re-posts any the server is missing.
+            from .features.position_manager import PositionStore
+            _json_response(self, {"positions": PositionStore().list(status="OPEN")})
+            return
         if parsed.path == "/api/data/update":
             _json_response(self, _DATA_UPDATE)
             return

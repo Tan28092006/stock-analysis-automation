@@ -2035,17 +2035,48 @@
                : `<td class="num" style="color:var(--text-muted)">-</td>`;
     };
 
+    // ---- Position durability via localStorage (survives free-tier redeploys) ----
+    // The server store is ephemeral on a diskless deploy; the browser keeps the master
+    // copy and re-posts anything the server is missing on load (rehydratePositions).
+    const POS_LS_KEY = "stock_agent_positions_v1";
+    function _posLoad() { try { return JSON.parse(localStorage.getItem(POS_LS_KEY) || "{}"); } catch (e) { return {}; } }
+    function _posSaveAll(o) { try { localStorage.setItem(POS_LS_KEY, JSON.stringify(o)); } catch (e) {} }
+    function posKey(kind, symbol, entry_date) { return `${kind}:${symbol}:${entry_date}`; }
+    function posMirror(kind, pos) {   // pos = server-returned position object
+      const o = _posLoad();
+      o[posKey(kind, pos.symbol, pos.entry_date)] = { kind, body: {
+        symbol: pos.symbol, entry_date: pos.entry_date, entry_price: pos.entry_price,
+        stop: pos.stop, target: pos.target, max_hold_days: pos.max_hold_days, qty: pos.qty } };
+      _posSaveAll(o);
+    }
+    function posForget(kind, symbol, entry_date) { const o = _posLoad(); delete o[posKey(kind, symbol, entry_date)]; _posSaveAll(o); }
+    async function rehydratePositions() {
+      const local = _posLoad(); const keys = Object.keys(local);
+      if (!keys.length) return;
+      let server = [];
+      try { server = (await requestJson("/api/positions")).positions || []; } catch (e) { return; }
+      const have = new Set(server.map(p => posKey(p.kind || "mr", p.symbol, p.entry_date)));
+      for (const k of keys) {
+        if (have.has(k)) continue;
+        const e = local[k];
+        const endpoint = e.kind === "momentum" ? "/api/momentum/positions" : "/api/mr/positions";
+        try { await requestJson(endpoint, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(e.body) }); } catch (err) {}
+      }
+    }
+
     async function openPosition(enc) {
       try {
         const body = JSON.parse(decodeURIComponent(enc));
-        await requestJson("/api/mr/positions", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(body) });
+        const r = await requestJson("/api/mr/positions", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(body) });
+        if (r && r.position) posMirror("mr", r.position);
         loadMrScan(false);
       } catch (err) { alert("Ghi vị thế lỗi: " + err.message); }
     }
-    async function closePosition(id) {
-      if (!confirm("Đóng vị thế " + id + "?")) return;
+    async function closePosition(id, symbol, entry_date, kind) {
+      if (!confirm("Đóng vị thế " + (symbol || id) + "?")) return;
       try {
         await requestJson("/api/mr/positions?id=" + encodeURIComponent(id), { method: "DELETE" });
+        if (symbol && entry_date) posForget(kind || "mr", symbol, entry_date);
         loadMrScan(false); if (typeof loadMom === "function") loadMom(false);
       } catch (err) { alert("Đóng lỗi: " + err.message); }
     }
@@ -2072,7 +2103,7 @@
               <td class="num" style="color:${pnlColor};font-weight:700">${(p.unrealized_pct>=0?'+':'')}${p.unrealized_pct}%</td>
               <td class="num">${p.held_days}d</td>
               <td style="font-weight:${sell?700:400};color:${sell?'var(--red,#ef4444)':'var(--teal,#2dd4bf)'}">${stTxt}</td>
-              <td><button onclick="closePosition('${p.id}')" style="min-height:22px;padding:0 8px;font-size:10px;border-radius:4px;">Đóng</button></td>
+              <td><button onclick="closePosition('${p.id}','${p.symbol}','${p.entry_date}','${p.kind||'mr'}')" style="min-height:22px;padding:0 8px;font-size:10px;border-radius:4px;">Đóng</button></td>
             </tr>`;
           }).join("")
         : `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:14px;">Chưa ghi vị thế nào. Bấm "Ghi" ở một kèo bên dưới.</td></tr>`;
@@ -2241,14 +2272,15 @@
               <td class="num">${mrFmt(p.current_price)}</td>
               <td class="num" style="color:${col};font-weight:700">${(p.unrealized_pct>=0?'+':'')}${p.unrealized_pct}%</td>
               <td style="font-weight:${(sell||rot)?700:400};color:${stCol}">${stTxt}</td>
-              <td><button onclick="closePosition('${p.id}')" style="min-height:22px;padding:0 8px;font-size:10px;border-radius:4px;">Đóng</button></td>
+              <td><button onclick="closePosition('${p.id}','${p.symbol}','${p.entry_date}','momentum')" style="min-height:22px;padding:0 8px;font-size:10px;border-radius:4px;">Đóng</button></td>
             </tr>`;
           }).join("")
         : `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:14px;">Chưa ghi vị thế. Bấm "Ghi" ở một mã bên dưới.</td></tr>`;
     }
     async function openMomPosition(enc) {
       try {
-        await requestJson("/api/momentum/positions", {method:"POST", headers:{"Content-Type":"application/json"}, body: decodeURIComponent(enc)});
+        const r = await requestJson("/api/momentum/positions", {method:"POST", headers:{"Content-Type":"application/json"}, body: decodeURIComponent(enc)});
+        if (r && r.position) posMirror("momentum", r.position);
         loadMom(false);
       } catch(e){ alert("Ghi lỗi: "+e.message); }
     }
@@ -2262,11 +2294,14 @@
     }
     document.getElementById("momRefresh").addEventListener("click", () => loadMom(true));
 
-    // Initial load
+    // Initial load — rehydrate positions to the server first (in case a diskless deploy
+    // was redeployed and lost them), then render both engines with correct sell-alerts.
     updateChatSuggestions();
     renderChatHistory();
-    loadMrScan().catch(() => {});
-    loadMom().catch(() => {});
+    rehydratePositions().finally(() => {
+      loadMrScan().catch(() => {});
+      loadMom().catch(() => {});
+    });
     refreshAll().catch(err => {
       document.getElementById("scanStatus").textContent = "Error loading latest: " + err.message;
     });
