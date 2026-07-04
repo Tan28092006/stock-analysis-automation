@@ -77,9 +77,20 @@ The image bundles `data/raw/prices_hist/` (~8.5 MB) so it runs out of the box. T
 The app honours the platform-injected `$PORT` and binds `0.0.0.0` via `HOST` — no code
 changes needed.
 
-- **Render**: New → Web Service → from repo. Runtime **Docker** (uses the `Dockerfile`).
-  Add a **Persistent Disk** mounted at `/app/data` (else scans/positions reset on each
-  deploy). Health check path: `/api/health`.
+- **Render** (recommended for beginners): New → **Web Service** → connect the GitHub repo.
+  1. Runtime **Docker** (auto-detects the `Dockerfile`).
+  2. Add a **Persistent Disk**, mount path `/app/data`, size **1 GB** (data is ~12 MB and
+     grows a few MB/year — 1 GB lasts effectively forever). Without it, scans/positions
+     reset on every deploy.
+  3. Environment: set `APP_PASSWORD` (+ optional `APP_USERNAME`) as secrets; optionally
+     `NVIDIA_API_KEY`. `PORT`/`HOST` are handled automatically.
+  4. Health check path: `/api/health`.
+  5. For the daily EOD refresh, add a separate **Cron Job** service from the same repo,
+     command `python -m stock_agent.pipeline.eod_update`, schedule `5 10 * * 1-5`, with the
+     **same** persistent disk mounted at `/app/data`.
+  Note: Render's *free* web service sleeps after inactivity and does not include a
+  persistent disk — a paid instance (or the cheapest paid tier) is needed for the disk +
+  always-on behaviour.
 - **Railway**: deploy from repo (Dockerfile auto-detected). Add a **Volume** at
   `/app/data`. `PORT` is injected automatically.
 - **Fly.io**: `fly launch` (detects Dockerfile) → attach a **fly volume** mounted at
@@ -99,19 +110,23 @@ The dashboard container does **not** self-schedule. Options:
 
 ## 5. Security
 
-No auth is built in. Before any public exposure, put a gate in front:
+**Built-in login (HTTP Basic auth).** Set `APP_PASSWORD` (and optionally `APP_USERNAME`,
+default `admin`) as env vars and every request requires that user/password. The browser
+shows a native login popup; `/api/health` stays open so platform health checks work.
 
-- **Reverse proxy + basic auth** (Caddy example):
-  ```
-  dash.example.com {
-      basicauth { youruser JDJhJDE0... }   # bcrypt hash via `caddy hash-password`
-      reverse_proxy 127.0.0.1:8000
-  }
-  ```
-- Or a **private network**: Tailscale / WireGuard / Cloudflare Access — simplest for a
-  personal tool.
-- The write endpoints (`/api/data/update`, `/api/*/positions`, `/api/model/train`,
-  `/api/optimize`, `/api/chat`) mutate state or spend compute — never leave them open.
+```bash
+APP_USERNAME=hao APP_PASSWORD='a-long-random-password' python -m stock_agent.app --host 0.0.0.0
+```
+
+- When `APP_PASSWORD` is **empty the gate is OFF** (fine for `127.0.0.1` local dev). The
+  server prints a warning if it's listening on a public interface without a password.
+- On Render/Railway/Fly: add `APP_PASSWORD` (and `APP_USERNAME`) as a **secret env var**.
+- Basic auth sends credentials base64-encoded, so it's only safe over **HTTPS** — all the
+  PaaS options terminate TLS for you. On a raw VPS put it behind an HTTPS reverse proxy
+  (Caddy/Traefik auto-TLS) rather than serving `:8000` in the clear.
+
+For a stronger boundary you can still layer a private network (Tailscale / Cloudflare
+Access) on top, but the built-in password is enough for a personal deployment.
 
 **Secrets:** the only secret is `NVIDIA_API_KEY` (optional — powers the `/api/chat`
 summary only). Set it as an env var / platform secret. Never commit `.env`; copy

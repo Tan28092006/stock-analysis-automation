@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import hmac
 import json
 import os
 from http import HTTPStatus
@@ -48,6 +50,36 @@ def _do_data_update() -> None:
         _DATA_UPDATE["running"] = False
 
 
+# --- HTTP Basic auth -------------------------------------------------------------------
+# Gate every request behind a password when APP_PASSWORD is set (required for any public
+# deploy). When it's empty the gate is OFF (local dev convenience). /api/health is always
+# exempt so platform health checks (Render/Railway/Fly) can reach it without credentials.
+_AUTH_USER = os.environ.get("APP_USERNAME", "admin")
+_AUTH_PASS = os.environ.get("APP_PASSWORD", "")
+
+
+def _auth_ok(handler: BaseHTTPRequestHandler) -> bool:
+    if not _AUTH_PASS:
+        return True
+    if urlparse(handler.path).path == "/api/health":
+        return True
+    header = handler.headers.get("Authorization", "")
+    if header.startswith("Basic "):
+        try:
+            user, _, pwd = base64.b64decode(header[6:]).decode("utf-8").partition(":")
+            ok_user = hmac.compare_digest(user.encode(), _AUTH_USER.encode())
+            ok_pass = hmac.compare_digest(pwd.encode(), _AUTH_PASS.encode())
+            if ok_user and ok_pass:
+                return True
+        except Exception:
+            pass
+    handler.send_response(HTTPStatus.UNAUTHORIZED)
+    handler.send_header("WWW-Authenticate", 'Basic realm="VN Swing", charset="UTF-8"')
+    handler.send_header("Content-Length", "0")
+    handler.end_headers()
+    return False
+
+
 def _json_response(handler: BaseHTTPRequestHandler, payload, status=HTTPStatus.OK) -> None:
     from .data.repository import clean_nan_inf
     raw = json.dumps(clean_nan_inf(payload), ensure_ascii=False).encode("utf-8")
@@ -87,6 +119,8 @@ class StockAgentHandler(BaseHTTPRequestHandler):
     server_version = "VN30T2MVP/0.1"
 
     def do_GET(self) -> None:  # noqa: N802
+        if not _auth_ok(self):
+            return
         parsed = urlparse(self.path)
         if parsed.path == "/api/health":
             _json_response(self, {"status": "ok"})
@@ -172,6 +206,8 @@ class StockAgentHandler(BaseHTTPRequestHandler):
         self.send_error(HTTPStatus.NOT_FOUND, "Not found")
 
     def do_POST(self) -> None:  # noqa: N802
+        if not _auth_ok(self):
+            return
         parsed = urlparse(self.path)
         if parsed.path == "/api/scan/trigger":
             params = parse_qs(parsed.query)
@@ -288,6 +324,8 @@ class StockAgentHandler(BaseHTTPRequestHandler):
         self.send_error(HTTPStatus.NOT_FOUND, "Not found")
 
     def do_DELETE(self) -> None:  # noqa: N802
+        if not _auth_ok(self):
+            return
         parsed = urlparse(self.path)
         if parsed.path == "/api/portfolio/positions":
             PortfolioStore().clear()
@@ -325,6 +363,13 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     args = parser.parse_args()
     server = ThreadingHTTPServer((args.host, args.port), StockAgentHandler)
+    if _AUTH_PASS:
+        print(f"[auth] Basic auth ON (user='{_AUTH_USER}')")
+    elif args.host not in ("127.0.0.1", "localhost"):
+        print("[auth] WARNING: listening on a public interface with NO password. "
+              "Set APP_PASSWORD to protect this deployment.")
+    else:
+        print("[auth] disabled (local only). Set APP_PASSWORD to require a login.")
     print(f"Serving VN30 T+2 MVP at http://{args.host}:{args.port}")
     try:
         server.serve_forever()
