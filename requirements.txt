@@ -9,7 +9,9 @@ scikit-learn>=1.4
 lightgbm>=4.6
 xgboost>=3.2
 catboost>=1.2
-shap>=0.51
+# shap>=0.50 requires numpy>=2, which conflicts with the numpy<2 pin above (verified
+# against PyPI metadata). 0.49.1 has no hard numpy floor and resolves cleanly.
+shap>=0.46,<0.50
 
 # Optimizer / schemas (legacy pipeline)
 optuna>=4.0
