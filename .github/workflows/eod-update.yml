@@ -1,0 +1,29 @@
+# Daily EOD refresh for the deployed dashboard — the free scheduling option.
+#
+# It POSTs to /api/data/update on your live app (Render/Railway/Fly), which pulls fresh
+# EOD prices + rebuilds scans in a background thread on the service that owns the data disk.
+# No server-side cron needed.
+#
+# Required repo secrets (Settings -> Secrets and variables -> Actions):
+#   APP_URL       e.g. https://your-app.onrender.com   (no trailing slash)
+#   APP_USERNAME  the APP_USERNAME you set on the app   (default "admin")
+#   APP_PASSWORD  the APP_PASSWORD you set on the app
+name: EOD data update
+
+on:
+  schedule:
+    - cron: "5 10 * * 1-5"   # 10:05 UTC = 17:05 Asia/Ho_Chi_Minh, Mon–Fri
+  workflow_dispatch: {}       # allow manual "Run workflow" from the Actions tab
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kick off /api/data/update
+        run: |
+          code=$(curl -sS -o /tmp/out.txt -w "%{http_code}" -X POST \
+            -u "${{ secrets.APP_USERNAME }}:${{ secrets.APP_PASSWORD }}" \
+            "${{ secrets.APP_URL }}/api/data/update")
+          echo "HTTP $code"; cat /tmp/out.txt
+          # 202 Accepted = update started in the background. Treat 200/202 as success.
+          [ "$code" = "202" ] || [ "$code" = "200" ]

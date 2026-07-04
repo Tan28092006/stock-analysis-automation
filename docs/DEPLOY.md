@@ -85,9 +85,12 @@ changes needed.
   3. Environment: set `APP_PASSWORD` (+ optional `APP_USERNAME`) as secrets; optionally
      `NVIDIA_API_KEY`. `PORT`/`HOST` are handled automatically.
   4. Health check path: `/api/health`.
-  5. For the daily EOD refresh, add a separate **Cron Job** service from the same repo,
-     command `python -m stock_agent.pipeline.eod_update`, schedule `5 10 * * 1-5`, with the
-     **same** persistent disk mounted at `/app/data`.
+  5. **Daily EOD refresh.** A Render disk can attach to only ONE service, so a separate
+     cron job cannot mount `/app/data`. Instead trigger the update over HTTP — the web
+     service (which owns the disk) runs it in a background thread. Use either:
+     - a Render **Cron Job** (schedule `5 10 * * 1-5`) running
+       `curl -fsS -X POST -u "$APP_USERNAME:$APP_PASSWORD" https://<your-app>.onrender.com/api/data/update`, or
+     - a **GitHub Actions** scheduled workflow doing the same `curl` (free, no extra Render service).
   Note: Render's *free* web service sleeps after inactivity and does not include a
   persistent disk — a paid instance (or the cheapest paid tier) is needed for the disk +
   always-on behaviour.
