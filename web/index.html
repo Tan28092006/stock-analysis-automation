@@ -870,9 +870,9 @@
           </div>
           <div style="overflow-x:auto;">
             <table>
-              <thead><tr><th>Mã</th><th class="num">Giá</th><th class="num">RSI</th><th>Thiếu điều kiện</th></tr></thead>
+              <thead><tr><th>Mã</th><th class="num">Giá</th><th class="num">RSI</th><th class="num">P(win)</th><th>Thiếu điều kiện</th></tr></thead>
               <tbody id="mrWatchBody">
-                <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:18px;">—</td></tr>
+                <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:18px;">—</td></tr>
               </tbody>
             </table>
           </div>
@@ -2167,9 +2167,10 @@
             <td><strong>${w.symbol}</strong></td>
             <td class="num">${mrFmt(w.close)}</td>
             <td class="num">${w.rsi14 ?? "-"}</td>
+            ${pWinCell(w.win_prob)}
             <td style="font-size:11px; color:var(--text-muted)">${(w.missing || []).join(", ") || "-"}</td>
           </tr>`).join("")
-        : `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:18px;">—</td></tr>`;
+        : `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:18px;">—</td></tr>`;
 
       const recent = data.recent_signals || [];
       document.getElementById("mrRecentCount").textContent = recent.length;
