@@ -11,5 +11,8 @@ C:\Users\acer\anaconda3\python.exe -m stock_agent.pipeline.eod_update >> data\pi
 rem --- Publish data to GitHub (only data paths are staged, not unrelated changes) ---
 git add data/raw/prices_hist data/raw/foreign data/pipeline/momentum_scan_cache.json data/pipeline/mr_scan_cache.json data/pipeline/forward_test.jsonl data/pipeline/daily_runs.jsonl data/pipeline/pending_predictions.jsonl data/models/win_prob_mr.pkl >> data\pipeline\eod_update.log 2>&1
 git commit -m "data: EOD update %date%" >> data\pipeline\eod_update.log 2>&1
+rem Rebase onto remote first so a push from elsewhere doesn't make this a non-fast-forward.
+git pull --rebase --autostash >> data\pipeline\eod_update.log 2>&1
 git push >> data\pipeline\eod_update.log 2>&1
+if errorlevel 1 echo ===== !!! GIT PUSH FAILED - Render se phuc vu DATA CU, kiem tra ket noi/credential !!! ===== >> data\pipeline\eod_update.log 2>&1
 echo ===== done %date% %time% ===== >> data\pipeline\eod_update.log 2>&1

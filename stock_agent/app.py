@@ -156,11 +156,13 @@ class StockAgentHandler(BaseHTTPRequestHandler):
             _json_response(self, model_status())
             return
         if parsed.path == "/api/positions":
-            # Raw open positions (both engines) for the browser to reconcile against its
-            # localStorage copy — cheap, no scan. Lets positions survive an ephemeral
-            # (free-tier) redeploy: the browser re-posts any the server is missing.
+            # ALL positions (open + closed) so the browser can reconcile its localStorage
+            # copy — cheap, no scan. Returning closed ones too lets rehydration skip a
+            # position that was closed on the server (from another browser) instead of
+            # resurrecting it. Positions still survive an ephemeral (free-tier) redeploy:
+            # the browser re-posts any the server has NO record of.
             from .features.position_manager import PositionStore
-            _json_response(self, {"positions": PositionStore().list(status="OPEN")})
+            _json_response(self, {"positions": PositionStore().list()})
             return
         if parsed.path == "/api/data/update":
             _json_response(self, _DATA_UPDATE)
@@ -381,12 +383,18 @@ def main() -> None:
     parser.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     args = parser.parse_args()
+    # Fail CLOSED: refuse to serve a public interface without a password. Otherwise the
+    # destructive/expensive endpoints (data wipe, optimize, train, data-update) would be
+    # open to the world. Loopback-only dev is still allowed without a password.
+    public = args.host not in ("127.0.0.1", "localhost", "::1")
+    if public and not _AUTH_PASS:
+        raise SystemExit(
+            "[auth] REFUSING to start: bound to a public interface "
+            f"({args.host}) with no APP_PASSWORD. Set APP_PASSWORD (and optionally "
+            "APP_USERNAME), or bind --host 127.0.0.1 for local-only use.")
     server = ThreadingHTTPServer((args.host, args.port), StockAgentHandler)
     if _AUTH_PASS:
         print(f"[auth] Basic auth ON (user='{_AUTH_USER}')")
-    elif args.host not in ("127.0.0.1", "localhost"):
-        print("[auth] WARNING: listening on a public interface with NO password. "
-              "Set APP_PASSWORD to protect this deployment.")
     else:
         print("[auth] disabled (local only). Set APP_PASSWORD to require a login.")
     print(f"Serving VN30 T+2 MVP at http://{args.host}:{args.port}")

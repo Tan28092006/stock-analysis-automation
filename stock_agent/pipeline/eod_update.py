@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import random
 import re
 import time
@@ -95,7 +96,11 @@ def refresh_prices() -> dict:
                         new[c] = new[c] * 1000.0
                 new["date"] = new["date"].astype(str).str.slice(0, 10)
                 merged = pd.concat([df, new], ignore_index=True).drop_duplicates(subset=["date"], keep="last").sort_values("date")
-                merged.to_csv(path, index=False)
+                # Atomic write: a killed/slept process mid-write must not truncate the CSV
+                # (a partial history would make the next run backfill from a wrong last date).
+                tmp = path.with_suffix(".csv.tmp")
+                merged.to_csv(tmp, index=False)
+                os.replace(tmp, path)
                 updated += 1
                 got = True
                 print(f"  [prices] {sym}: +{len(new)} -> {merged['date'].max()}", flush=True)

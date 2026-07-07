@@ -12,12 +12,20 @@ from __future__ import annotations
 
 import json
 import math
+import os
+import threading
+import uuid
 from datetime import date
 from pathlib import Path
 
 import pandas as pd
 
 PRICES_DIR = Path("data/raw/prices_hist")
+
+# Serialize all store mutations — the store is instantiated per-request in a threaded
+# server, so concurrent add()/close() on different instances would otherwise interleave
+# their load→modify→save and silently drop writes.
+_STORE_LOCK = threading.Lock()
 POSITIONS_PATH = Path("data/pipeline/mr_positions.json")
 
 DEFAULT_MONEY = {
@@ -79,7 +87,11 @@ class PositionStore:
             return []
 
     def _save(self, rows: list[dict]) -> None:
-        self.path.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
+        # Atomic: write to a temp file then rename, so a crash mid-write can't truncate
+        # the positions file (it holds money-at-risk state).
+        tmp = self.path.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(tmp, self.path)
 
     def list(self, status: str | None = None) -> list[dict]:
         rows = self._load()
@@ -87,30 +99,35 @@ class PositionStore:
 
     def add(self, symbol: str, entry_date: str, entry_price: float, stop: float,
             target: float, max_hold_days: int, qty: int, kind: str = "mr") -> dict:
-        rows = self._load()
-        pid = f"{symbol}-{entry_date}-{len(rows)+1}"
+        # Unique id (uuid, not list-length) so two open positions can never collide —
+        # a length-derived id repeats after any close() and would let close() shut both.
         pos = {
-            "id": pid, "symbol": symbol.upper(), "entry_date": entry_date, "kind": kind,
+            "id": f"{symbol.upper()}-{entry_date}-{uuid.uuid4().hex[:8]}",
+            "symbol": symbol.upper(), "entry_date": entry_date, "kind": kind,
             "entry_price": float(entry_price), "stop": float(stop), "target": float(target),
             "max_hold_days": int(max_hold_days), "qty": int(qty), "status": "OPEN",
         }
-        rows.append(pos)
-        self._save(rows)
+        with _STORE_LOCK:
+            rows = self._load()
+            rows.append(pos)
+            self._save(rows)
         return pos
 
     def close(self, pid: str, exit_price: float | None = None,
               exit_date: str | None = None, reason: str = "manual") -> bool:
-        rows = self._load()
-        found = False
-        for r in rows:
-            if r["id"] == pid and r.get("status") == "OPEN":
-                r["status"] = "CLOSED"
-                r["exit_price"] = float(exit_price) if exit_price is not None else None
-                r["exit_date"] = exit_date or str(date.today())
-                r["exit_reason"] = reason
-                found = True
-        if found:
-            self._save(rows)
+        with _STORE_LOCK:
+            rows = self._load()
+            found = False
+            for r in rows:
+                if r["id"] == pid and r.get("status") == "OPEN":
+                    r["status"] = "CLOSED"
+                    r["exit_price"] = float(exit_price) if exit_price is not None else None
+                    r["exit_date"] = exit_date or str(date.today())
+                    r["exit_reason"] = reason
+                    found = True
+                    break  # close exactly one, even if a legacy dup id exists
+            if found:
+                self._save(rows)
         return found
 
 

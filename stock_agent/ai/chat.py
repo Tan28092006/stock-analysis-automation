@@ -58,9 +58,17 @@ def extract_symbol_from_message(message: str) -> str | None:
     return None
 
 
+_SYMBOL_RE = re.compile(r"^[A-Z0-9]{2,5}$")
+
+
 def get_symbol_context(symbol: str) -> dict:
     """Load latest scan candidate info and recent 10-day price history."""
-    symbol = symbol.upper()
+    symbol = (symbol or "").upper()
+    # Reject anything that isn't a plain ticker BEFORE it reaches the filesystem — the
+    # symbol is attacker-controlled (chat body) and is interpolated into a CSV path, so
+    # "../.." would otherwise read arbitrary files off the host.
+    if not _SYMBOL_RE.match(symbol):
+        return {"candidate": None, "recent_prices": []}
     scan = read_json(LATEST_SCAN_PATH, default={})
     candidates = scan.get("candidates", [])
     
