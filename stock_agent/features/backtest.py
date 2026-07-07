@@ -10,6 +10,7 @@ import pandas as pd
 from ..constants import PRICE_CACHE_DIR
 from ..data.exchange_calendar import add_trading_days
 from ..data.validation import normalize_ohlcv
+from .mr_exit import simulate_mr_exit
 from .signal_engine import precompute_signal_frames, prepare_signal_frame, score_precomputed_at
 
 
@@ -323,24 +324,12 @@ def run_backtest(
 
         stop_loss = float(signal.risk_plan.stop_loss)
         take_profit_1 = float(signal.risk_plan.take_profit_1)
-        exit_price = float(data.loc[exit_idx, "close"])
-        exit_reason = "T2_CLOSE"
-        actual_exit_idx = exit_idx
-        for j in range(entry_idx, exit_idx + 1):
-            if j < entry_idx + 2:
-                # T+2 settlement rule: cannot exit on T+0 or T+1
-                continue
-            day = data.loc[j]
-            if float(day["low"]) <= stop_loss:
-                exit_price = stop_loss
-                exit_reason = "STOP_LOSS"
-                actual_exit_idx = j
-                break
-            if float(day["high"]) >= take_profit_1:
-                exit_price = take_profit_1
-                exit_reason = "TAKE_PROFIT_1"
-                actual_exit_idx = j
-                break
+        # Shared canonical exit replay (T+2 settlement lock, first of stop/target/time).
+        # max_hold in bars = exit_idx - entry_idx (the date-based T+N horizon computed above);
+        # slippage / price-limits are applied to the returned raw price below.
+        actual_exit_idx, exit_price, _reason, _ = simulate_mr_exit(
+            data, entry_idx, stop_loss, take_profit_1, max_hold=exit_idx - entry_idx, settle_lock=2)
+        exit_reason = {"stop": "STOP_LOSS", "target": "TAKE_PROFIT_1", "time": "T2_CLOSE"}[_reason]
 
         exit_reference_idx = max(actual_exit_idx - 1, 0)
         exit_reference = float(data.loc[exit_reference_idx, "close"])

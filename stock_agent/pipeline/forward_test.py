@@ -28,6 +28,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from ..features.mr_exit import simulate_mr_exit
+
 LEDGER_PATH = Path("data/pipeline/forward_test.jsonl")
 PRICES_DIR = Path("data/raw/prices_hist")
 
@@ -127,7 +129,7 @@ def _idx_of(frame: pd.DataFrame, dstr: str) -> int | None:
 
 
 def _replay_mr(frame: pd.DataFrame, i: int, stop: float, target: float, max_hold: int):
-    """Next-open fill at i+1, T+2 lock, first of stop/target/time. Returns
+    """Next-open fill at i+1, then the shared canonical exit replay. Returns
     (status, net_pct, exit_reason) — status 'pending' if not enough future bars yet."""
     n = len(frame)
     if i + 1 >= n:
@@ -135,26 +137,12 @@ def _replay_mr(frame: pd.DataFrame, i: int, stop: float, target: float, max_hold
     entry = float(frame.at[i + 1, "open"])
     if not (np.isfinite(entry) and entry > 0):
         return "pending", None, None
-    end = min(i + 1 + max_hold, n - 1)
-    reason, exit_px = None, None
-    for j in range(i + 1, end + 1):
-        k = j - (i + 1)
-        if k < T2_LOCK:
-            continue
-        lo, hi = float(frame.at[j, "low"]), float(frame.at[j, "high"])
-        if stop and lo <= stop:
-            reason, exit_px = "STOP", stop; break
-        if target and hi >= target:
-            reason, exit_px = "TARGET", target; break
-        if k >= max_hold:
-            reason, exit_px = "TIME", float(frame.at[j, "close"]); break
-    if exit_px is None:
-        # no exit yet AND we haven't reached max_hold in available data -> still open
-        if (n - 1) - (i + 1) < max_hold:
-            return "pending", None, None
-        exit_px, reason = float(frame.at[end, "close"]), "TIME"
+    _, exit_px, reason, resolved = simulate_mr_exit(frame, i + 1, stop, target, max_hold, settle_lock=T2_LOCK)
+    if not resolved:
+        return "pending", None, None
+    label = {"stop": "STOP", "target": "TARGET", "time": "TIME"}[reason]
     net = (exit_px - entry) / entry * 100 - COST_PCT
-    return "resolved", round(net, 2), reason
+    return "resolved", round(net, 2), label
 
 
 def _fwd_return(frame: pd.DataFrame, i: int, horizon: int):

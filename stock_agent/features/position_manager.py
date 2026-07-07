@@ -20,6 +20,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from .mr_exit import simulate_mr_exit
+
 PRICES_DIR = Path("data/raw/prices_hist")
 
 # Serialize all store mutations — the store is instantiated per-request in a threaded
@@ -158,19 +160,18 @@ def check_positions(store: PositionStore) -> list[dict]:
             out.append({**pos, "live_status": "PENDING"})
             continue
         entry = pos["entry_price"]
-        # replay bar-by-bar from entry (T+2 lock), first of stop/target/time wins —
-        # exactly the production exit logic, so the alert = what actually would happen.
-        status, reason, exit_px, exit_date = "HOLD", None, None, None
-        for k in range(len(after)):
-            if k < 2:  # T+2 settlement lock
-                continue
-            lo, hi = float(after.at[k, "low"]), float(after.at[k, "high"])
-            if lo <= pos["stop"]:
-                status, reason, exit_px, exit_date = "SELL", "STOP_LOSS", pos["stop"], str(after.at[k, "date"]); break
-            if hi >= pos["target"]:
-                status, reason, exit_px, exit_date = "SELL", "TARGET_HIT", pos["target"], str(after.at[k, "date"]); break
-            if k >= pos["max_hold_days"]:
-                status, reason, exit_px, exit_date = "SELL", "TIME_STOP", float(after.at[k, "close"]), str(after.at[k, "date"]); break
+        # Shared canonical replay from the recorded entry bar (T+2 settlement lock,
+        # first of stop/target/time). Anchored on the position's own entry_date/price
+        # (what the user actually took) — the loop itself is the same one the backtest
+        # and training labels use, so the alert = what the strategy's exit would do.
+        exit_idx, exit_px, reason, resolved = simulate_mr_exit(
+            after, 0, pos["stop"], pos["target"], int(pos["max_hold_days"]), settle_lock=2)
+        if resolved:
+            status = "SELL"
+            reason = {"stop": "STOP_LOSS", "target": "TARGET_HIT", "time": "TIME_STOP"}[reason]
+            exit_date = str(after.at[exit_idx, "date"])
+        else:
+            status, reason, exit_px, exit_date = "HOLD", None, None, None
         last = after.iloc[-1]
         cur = float(last["close"])
         held = max(0, len(after) - 1)

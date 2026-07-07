@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 
 from .indicators import add_indicators, ema, sma
+from .mr_exit import simulate_mr_exit
 
 ARTIFACT_PATH = Path("data/models/win_prob_mr.pkl")
 
@@ -120,7 +121,8 @@ def _breadth_map(frames: dict[str, pd.DataFrame]) -> dict:
 
 
 def _label_trade(f: pd.DataFrame, i: int) -> float | None:
-    """Net % of the simulated MR trade started at signal bar i, or None."""
+    """Net % of the simulated MR trade started at signal bar i, or None. Entry = next open
+    (bar i+1); exit via the shared canonical replay (settle_lock T+2, T+MAX_HOLD time-stop)."""
     n = len(f)
     if i + 1 >= n:
         return None
@@ -132,16 +134,9 @@ def _label_trade(f: pd.DataFrame, i: int) -> float | None:
         return None
     stop = entry - STOP_ATR * atrv
     target = max(kijun, close * 1.01)
-    i_end = min(i + 1 + MAX_HOLD, n - 1)
-    exit_px = float(f.at[i_end, "close"])
-    for j in range(i + 1, i_end + 1):
-        if j < i + 1 + T2_LOCK:
-            continue
-        lo, hi = float(f.at[j, "low"]), float(f.at[j, "high"])
-        if lo <= stop:
-            exit_px = stop; break
-        if hi >= target:
-            exit_px = target; break
+    # Training labels want a value even at the data edge, so use the (partial) mark
+    # regardless of `resolved` — matches the historical labelling behaviour.
+    _, exit_px, _, _ = simulate_mr_exit(f, i + 1, stop, target, MAX_HOLD, settle_lock=T2_LOCK)
     return (exit_px - entry) / entry * 100 - COST
 
 
