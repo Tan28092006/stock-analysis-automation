@@ -22,6 +22,10 @@ data/reports/*
 !data/models/
 !data/reports/
 
+# The P(win) MR model IS shipped (baked into the Docker image / served on Render) — the
+# dashboard's win-probability column is dead without it. All other models stay ignored.
+!data/models/win_prob_mr.pkl
+
 # Vietstock login session (auth cookies) - never commit
 data/raw/foreign/vietstock_session.json
 

@@ -10,10 +10,14 @@
 #   APP_PASSWORD  the APP_PASSWORD you set on the app
 name: EOD data update
 
+# ⚠️ PAID-DISK ONLY. On the FREE tier this is HARMFUL: the POST writes to ephemeral storage
+# (lost on redeploy) and fetches from Render's IP which vnstock blocks, yet returns 202 so
+# the run looks green while doing nothing. Free tier uses the LOCAL run_eod_update.bat +
+# git push instead (docs/RENDER-FREE.md). Schedule is disabled; manual dispatch only.
 on:
-  schedule:
-    - cron: "5 10 * * 1-5"   # 10:05 UTC = 17:05 Asia/Ho_Chi_Minh, Mon–Fri
-  workflow_dispatch: {}       # allow manual "Run workflow" from the Actions tab
+  # schedule:                       # intentionally disabled — do NOT enable on free tier
+  #   - cron: "5 10 * * 1-5"        # 10:05 UTC = 17:05 Asia/Ho_Chi_Minh, Mon–Fri
+  workflow_dispatch: {}             # manual only (use only on a paid persistent disk)
 
 jobs:
   trigger:

@@ -13,8 +13,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# App code + bundled data (prices_hist, configs, web). Auth cookies and models
-# are excluded via .dockerignore; the P(win) model is retrained on first run if absent.
+# App code + bundled data (prices_hist, configs, web, the P(win) MR model). Auth cookies
+# and all OTHER models are excluded via .dockerignore. The P(win) model is baked from git
+# (win_prob_mr.pkl) — the dashboard's win-probability column is inert without it.
 COPY . .
 
 # Snapshot the baked data so we can seed a persistent volume on first boot. When a

@@ -85,12 +85,16 @@ changes needed.
   3. Environment: set `APP_PASSWORD` (+ optional `APP_USERNAME`) as secrets; optionally
      `NVIDIA_API_KEY`. `PORT`/`HOST` are handled automatically.
   4. Health check path: `/api/health`.
-  5. **Daily EOD refresh.** A Render disk can attach to only ONE service, so a separate
-     cron job cannot mount `/app/data`. Instead trigger the update over HTTP — the web
-     service (which owns the disk) runs it in a background thread. Use either:
-     - a Render **Cron Job** (schedule `5 10 * * 1-5`) running
-       `curl -fsS -X POST -u "$APP_USERNAME:$APP_PASSWORD" https://<your-app>.onrender.com/api/data/update`, or
-     - a **GitHub Actions** scheduled workflow doing the same `curl` (free, no extra Render service).
+  5. **Daily EOD refresh (paid disk).** A Render disk can attach to only ONE service, so a
+     separate cron job cannot mount `/app/data`. Trigger the update over HTTP — the web
+     service (which owns the disk) runs it in a background thread — via a Render **Cron Job**
+     (schedule `5 10 * * 1-5`) running
+     `curl -fsS -X POST -u "$APP_USERNAME:$APP_PASSWORD" https://<your-app>.onrender.com/api/data/update`.
+     > ⚠️ This HTTP-trigger path (including the `.github/workflows/eod-update.yml` workflow)
+     > is **paid-disk only**. On the **free** tier it does NOT work: the fetched data lands
+     > on ephemeral storage (lost on redeploy) and the fetch runs from Render's IP which
+     > vnstock blocks. On free tier, refresh via the local `run_eod_update.bat` + `git push`
+     > — see [RENDER-FREE.md](RENDER-FREE.md).
   Note: Render's *free* web service sleeps after inactivity and does not include a
   persistent disk — a paid instance (or the cheapest paid tier) is needed for the disk +
   always-on behaviour.
@@ -165,4 +169,4 @@ rate-limit `SystemExit`, retries up to 4×, and backs off 20 s.
 - [ ] EOD schedule points at the **same** `data/` the dashboard reads.
 - [ ] Port is **not** publicly reachable without auth (§5).
 - [ ] `.env` / `vietstock_session.json` are **not** in the image or repo.
-- [ ] `python -m pytest tests/ -q` passes (85 tests).
+- [ ] `python -m pytest tests/ -q` passes (97 tests).

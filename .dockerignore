@@ -22,8 +22,9 @@ env
 !.env.example
 data/raw/foreign/vietstock_session.json
 
-# Regenerated on first run — keep image lean
-data/models/
+# Keep image lean — but the P(win) MR model IS needed at runtime, so bake just that one.
+data/models/*
+!data/models/win_prob_mr.pkl
 catboost_info/
 
 # Research scratch + throwaway experiment outputs (not needed to run the app)

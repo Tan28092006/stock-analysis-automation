@@ -254,19 +254,33 @@ def main() -> None:
     if date.today().weekday() >= 5:
         print("weekend — prices/foreign unchanged, refreshing caches only", flush=True)
     summary = {}
-    print("[1/4] incremental price refresh...", flush=True)
+    print("[1/7] incremental price refresh...", flush=True)
     summary["prices"] = refresh_prices()
-    print("[2/4] foreign/prop flow harvest...", flush=True)
+    print("[2/7] foreign/prop flow harvest...", flush=True)
     summary["foreign"] = harvest_foreign()
-    print("[3/4] room snapshot...", flush=True)
+    print("[3/7] room snapshot...", flush=True)
     summary["snapshot"] = snapshot_room()
-    print("[4/6] rebuild MR (bat day) scan cache...", flush=True)
+    print("[4/7] rebuild MR (bat day) scan cache...", flush=True)
     summary["mr_scan"] = rebuild_mr_cache()
-    print("[5/6] rebuild momentum (CORE) scan cache...", flush=True)
+    print("[5/7] rebuild momentum (CORE) scan cache...", flush=True)
     summary["momentum"] = rebuild_momentum_cache()
-    print("[6/6] check open positions for SELL alerts...", flush=True)
+    print("[6/7] check open positions for SELL alerts...", flush=True)
     summary["positions"] = check_sell_alerts()
+    print("[7/7] append today's picks to the forward-test ledger...", flush=True)
+    summary["forward_test"] = log_forward_test()
     print(f"=== DONE in {(time.time()-t0)/60:.1f} min: {json.dumps(summary, ensure_ascii=False)}", flush=True)
+
+
+def log_forward_test() -> dict:
+    """Persist today's MR + momentum picks to the scoreable forward-test ledger."""
+    try:
+        from ..features.mr_scan import mr_scan
+        from ..features.momentum_scan import momentum_scan
+        from .forward_test import log_recommendations
+        # read the caches just rebuilt above (no force -> uses fresh cache)
+        return log_recommendations(mr_scan(), momentum_scan())
+    except Exception as exc:
+        return {"status": "error", "error": repr(exc)[:120]}
 
 
 if __name__ == "__main__":
