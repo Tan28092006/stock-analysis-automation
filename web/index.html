@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>VN30 T+2 Stock Agent</title>
-  
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%93%88%3C/text%3E%3C/svg%3E">
+
   <!-- Premium Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -811,6 +812,7 @@
         <h2>🎯 Bắt đáy — Mean-Reversion Hunter (VN100)</h2>
         <div style="display:flex; align-items:center; gap:10px;">
           <div class="status" id="mrStatus">Loading…</div>
+          <button onclick="exportCard(this,'batday_buys')" title="Tải bảng kèo BUY thành CSV" style="min-height:28px; padding:0 10px; font-size:11px;">⬇ CSV</button>
           <button id="mrRefresh" style="min-height:28px; padding:0 12px; font-size:11px;">Re-scan</button>
         </div>
       </div>
@@ -902,6 +904,7 @@
         <h2>🚀 Momentum Rotation (CORE — ăn bull)</h2>
         <div style="display:flex; align-items:center; gap:10px;">
           <div class="status" id="momStatus">Loading…</div>
+          <button onclick="exportCard(this,'momentum_picks')" title="Tải bảng momentum thành CSV" style="min-height:28px; padding:0 10px; font-size:11px;">⬇ CSV</button>
           <button id="momRefresh" style="min-height:28px; padding:0 12px; font-size:11px;">Re-scan</button>
         </div>
       </div>
@@ -2020,6 +2023,44 @@
       const color = p >= 0.60 ? "var(--teal,#2dd4bf)" : p >= 0.55 ? "#a78bfa" : "var(--text-muted)";
       return `<td class="num" style="color:${color}; font-weight:700">${pct}%</td>`;
     };
+
+    // Stale-data badge: how many trading sessions (weekdays) old is the EOD date?
+    // green ≤1 (today/awaiting today's close is normal) · amber 2 · red ≥3 (pipeline likely stalled).
+    function dataAgeBadge(dateStr) {
+      if (!dateStr || dateStr === "-") return "";
+      let gap;
+      try {
+        const from = new Date(dateStr + "T00:00:00");
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        if (isNaN(from.getTime())) return "";
+        gap = 0; const d = new Date(from); d.setDate(d.getDate() + 1);
+        while (d <= today) { const wd = d.getDay(); if (wd !== 0 && wd !== 6) gap++; d.setDate(d.getDate() + 1); }
+      } catch (e) { return ""; }
+      let color, label;
+      if (gap <= 1) { color = "var(--teal,#2dd4bf)"; label = "mới"; }
+      else if (gap === 2) { color = "#eab308"; label = gap + " phiên trễ"; }
+      else { color = "var(--red,#ef4444)"; label = gap + " phiên trễ — kiểm pipeline"; }
+      return `<span title="Dữ liệu EOD cách hôm nay ${gap} phiên giao dịch" style="margin-left:6px;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:${color};color:#0a0a0a;">${label}</span>`;
+    }
+
+    // Export the primary table in a card to CSV (snapshot picks during the forward test).
+    function tableToCSV(table) {
+      return [...table.querySelectorAll("tr")].map(r =>
+        [...r.querySelectorAll("th,td")].map(c => {
+          const t = (c.innerText || "").replace(/\s+/g, " ").trim();
+          return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+        }).join(",")
+      ).join("\n");
+    }
+    function exportCard(btn, name) {
+      const table = btn.closest("section").querySelector("table");
+      if (!table) { alert("Không có bảng để xuất."); return; }
+      const blob = new Blob(["﻿" + tableToCSV(table)], {type: "text/csv;charset=utf-8"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = name + "_" + new Date().toISOString().slice(0, 10) + ".csv";
+      a.click(); URL.revokeObjectURL(a.href);
+    }
     // encode a signal into a data-attr so the "Ghi" button can open a position
     const ghiBtn = (b) => {
       const sz = b.size || {};
@@ -2121,7 +2162,7 @@
         <span>VNINDEX <strong>${mrFmt(data.market?.index_close)}</strong> vs EMA50 <strong>${mrFmt(data.market?.index_ema50)}</strong></span>
         <span>Breadth <strong>${data.market?.breadth_pct ?? "-"}%</strong> mã trên SMA20</span>
         ${modelInfo}
-        <span style="color:var(--text-muted)">Dữ liệu EOD: <strong>${data.data_date || "-"}</strong> · ${data.symbols_scanned} mã</span>`;
+        <span style="color:var(--text-muted)">Dữ liệu EOD: <strong>${data.data_date || "-"}</strong>${dataAgeBadge(data.data_date)} · ${data.symbols_scanned} mã</span>`;
       document.getElementById("mrThresh").textContent = Math.round((data.min_win_prob ?? 0.55) * 100);
 
       const buys = data.buys || [];
@@ -2234,7 +2275,7 @@
       document.getElementById("momNote").innerHTML =
         `<span style="font-weight:700;color:${expoCol}">● Exposure ${expo}%</span> ` +
         `<span style="color:var(--text-muted)">(vol thị trường ${d.market_vol_pct}%/năm, target 20% — vol cao thì tự giảm tỷ trọng)</span> &nbsp; ` +
-        `<span style="color:var(--text-muted)">${d.note || ''} · EOD ${d.data_date||'-'}</span>`;
+        `<span style="color:var(--text-muted)">${d.note || ''} · EOD ${d.data_date||'-'}</span>` + dataAgeBadge(d.data_date);
       const picks = d.picks || [];
       const momGhi = (p) => {
         const body = encodeURIComponent(JSON.stringify({symbol:p.symbol, entry_price:p.close, qty:p.qty}));

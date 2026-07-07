@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -64,8 +64,10 @@ def load_performance_history(last_n_days: int = 60) -> list[dict]:
                 records.append(json.loads(line))
 
     if last_n_days and records:
-        cutoff = str(date.today().isoformat())
-        records = records[-last_n_days:]
+        # Filter by actual calendar age, not row count. Records without a parseable date
+        # are kept (fail-open) rather than silently dropped.
+        cutoff = (date.today() - timedelta(days=last_n_days)).isoformat()
+        records = [r for r in records if str(r.get("date", ""))[:10] >= cutoff or not r.get("date")]
 
     return records
 
@@ -200,6 +202,8 @@ def _generate_recommendations(
     elif selection_rate < 5:
         recommendations.append(f"Selection rate {selection_rate:.0f}% quá thấp. Xem xét giảm threshold.")
 
+    # Healthy only when nothing above flagged a problem (was wrongly nested in the <5 branch).
+    if not recommendations:
         recommendations.append("Model hoạt động tốt. Tiếp tục monitoring.")
 
     return recommendations
