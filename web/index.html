@@ -819,6 +819,7 @@
       <div id="mrMarket" style="display:flex; flex-wrap:wrap; gap:18px; align-items:center; padding:14px 20px; border-bottom:1px solid var(--border); background:rgba(0,0,0,0.15); font-size:12px;">
         <span style="color:var(--text-muted)">Đang tải trạng thái thị trường…</span>
       </div>
+      <div id="mrAction" style="padding:14px 20px; border-bottom:1px solid var(--border);"></div>
       <div id="mrSellBanner" style="display:none; padding:10px 20px; background:rgba(239,68,68,0.14); border-bottom:1px solid var(--red-border,#7f1d1d); color:var(--red,#ef4444); font-weight:700; font-size:12px;"></div>
       <!-- Open positions -->
       <div style="padding:12px 20px 4px; font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:var(--teal,#2dd4bf);">
@@ -2150,8 +2151,45 @@
         : `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:14px;">Chưa ghi vị thế nào. Bấm "Ghi" ở một kèo bên dưới.</td></tr>`;
     }
 
+    // "HÀNH ĐỘNG HÔM NAY" — turn the scan into a plain buy/wait instruction. Actionable =
+    // any name with P(win) >= 55% (the validated threshold: ~56% win, +1.78%/trade above it).
+    function renderActionToday(data) {
+      const el = document.getElementById("mrAction");
+      if (!el) return;
+      const THR = 0.55;
+      const st = data.market?.state || "UNKNOWN";
+      const breadth = data.market?.breadth_pct ?? 100;
+      const cand = [...(data.prob_buys || []), ...(data.buys || [])];
+      const bySym = {};
+      cand.forEach(b => { if ((b.win_prob || 0) >= THR && (!bySym[b.symbol] || (b.win_prob || 0) > (bySym[b.symbol].win_prob || 0))) bySym[b.symbol] = b; });
+      const list = Object.values(bySym).sort((a, b) => (b.win_prob - a.win_prob) || ((b.reward_risk || 0) - (a.reward_risk || 0)));
+      if (!list.length) {
+        el.innerHTML = `<div style="background:rgba(148,163,184,0.12);border-left:4px solid #94a3b8;border-radius:8px;padding:12px 14px;">
+          <div style="font-weight:800;font-size:15px;color:#94a3b8">⚪ HÔM NAY KHÔNG MUA</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:3px">Chưa mã nào đạt P(win) ≥ 55% — giữ tiền, chờ phiên sau.</div></div>`;
+        return;
+      }
+      const deep = st === "PANIC_BEAR" && breadth < 15;
+      const nTake = deep ? 3 : 5;
+      const take = list.slice(0, nTake);
+      const rows = take.map(b => `<tr>
+          <td style="padding:3px 12px 3px 0"><strong>${b.symbol}</strong></td>
+          <td class="num" style="color:var(--teal,#2dd4bf);font-weight:700;padding:3px 12px">P ${Math.round((b.win_prob || 0) * 100)}%</td>
+          <td class="num" style="padding:3px 12px">KL ${b.size && b.size.qty ? new Intl.NumberFormat('vi-VN').format(deep ? Math.floor(b.size.qty / 200) * 100 : b.size.qty) : '-'}</td>
+          <td class="num" style="padding:3px 12px">vào ~${mrFmt(b.entry_reference)}</td>
+          <td class="num" style="color:var(--red,#ef4444);padding:3px 12px">stop ${mrFmt(b.stop_loss)}</td>
+          <td class="num" style="color:var(--teal,#2dd4bf);padding:3px 12px">tgt ${mrFmt(b.take_profit)}</td>
+          <td class="num" style="padding:3px 12px">RR ${b.reward_risk ?? '-'}</td></tr>`).join("");
+      el.innerHTML = `<div style="background:rgba(45,212,191,0.1);border-left:4px solid var(--teal,#2dd4bf);border-radius:8px;padding:12px 14px;">
+        <div style="font-weight:800;font-size:15px;color:var(--teal,#2dd4bf)">🟢 MUA ${take.length} mã — vào ở MỞ CỬA phiên sau</div>
+        <div style="font-size:11px;color:var(--text-muted);margin:3px 0 8px">${deep ? `NỬA khối lượng (PANIC sâu, breadth ${breadth}% — đáy chưa xác nhận)` : 'Khối lượng như dưới'}${list.length > nTake ? ` · còn ${list.length - nTake} mã P≥55% khác ở bảng dưới` : ''}</div>
+        <div style="overflow-x:auto"><table style="font-size:12px">${rows}</table></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px">⚠️ Edge ~56% — sẽ có lệnh thua, tuân thủ stop. Không mua đuổi trong phiên.</div></div>`;
+    }
+
     function renderMr(data) {
       renderRegimeBanner(data.market);
+      renderActionToday(data);
       const st = MR_STATES[data.market?.state] || MR_STATES.UNKNOWN;
       const m = data.model || {};
       const modelInfo = m.available
