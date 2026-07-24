@@ -56,12 +56,24 @@ def _do_data_update() -> None:
 # exempt so platform health checks (Render/Railway/Fly) can reach it without credentials.
 _AUTH_USER = os.environ.get("APP_USERNAME", "admin")
 _AUTH_PASS = os.environ.get("APP_PASSWORD", "")
+# Set True in main() when bound to a public interface WITHOUT a password. The server still
+# boots (so the platform sees a healthy service, no 503) but every request except health is
+# denied — resilient AND secure. Beats crashing the whole app over a missing env var.
+_LOCKDOWN = False
 
 
 def _auth_ok(handler: BaseHTTPRequestHandler) -> bool:
-    if not _AUTH_PASS:
-        return True
     if urlparse(handler.path).path == "/api/health":
+        return True
+    if _LOCKDOWN:
+        handler.send_response(HTTPStatus.SERVICE_UNAVAILABLE)
+        handler.send_header("Content-Type", "text/plain; charset=utf-8")
+        msg = "Server locked: APP_PASSWORD is not set. Set it in the environment to enable access.".encode()
+        handler.send_header("Content-Length", str(len(msg)))
+        handler.end_headers()
+        handler.wfile.write(msg)
+        return False
+    if not _AUTH_PASS:
         return True
     header = handler.headers.get("Authorization", "")
     if header.startswith("Basic "):
@@ -383,18 +395,18 @@ def main() -> None:
     parser.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     args = parser.parse_args()
-    # Fail CLOSED: refuse to serve a public interface without a password. Otherwise the
-    # destructive/expensive endpoints (data wipe, optimize, train, data-update) would be
-    # open to the world. Loopback-only dev is still allowed without a password.
+    # Fail CLOSED but STAY UP: on a public bind without a password, lock down every route
+    # (except health) instead of crashing — a missing env var shouldn't take the whole
+    # service offline. Loopback-only dev is still open without a password.
+    global _LOCKDOWN
     public = args.host not in ("127.0.0.1", "localhost", "::1")
-    if public and not _AUTH_PASS:
-        raise SystemExit(
-            "[auth] REFUSING to start: bound to a public interface "
-            f"({args.host}) with no APP_PASSWORD. Set APP_PASSWORD (and optionally "
-            "APP_USERNAME), or bind --host 127.0.0.1 for local-only use.")
+    _LOCKDOWN = public and not _AUTH_PASS
     server = ThreadingHTTPServer((args.host, args.port), StockAgentHandler)
     if _AUTH_PASS:
         print(f"[auth] Basic auth ON (user='{_AUTH_USER}')")
+    elif _LOCKDOWN:
+        print("[auth] LOCKDOWN: public bind with no APP_PASSWORD — all routes return 503 "
+              "except /api/health. Set APP_PASSWORD to unlock.")
     else:
         print("[auth] disabled (local only). Set APP_PASSWORD to require a login.")
     print(f"Serving VN30 T+2 MVP at http://{args.host}:{args.port}")
