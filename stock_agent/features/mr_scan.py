@@ -60,7 +60,13 @@ def _market_state(prices_dir: Path, frames: dict[str, pd.DataFrame]) -> dict:
         idx = idx.sort_values("date").reset_index(drop=True)
         close = float(idx["close"].iloc[-1])
         e50 = float(ema(idx["close"], 50).iloc[-1])
+        # "Making a new low" = index at/below its lowest close of the last 20 sessions. This
+        # is the confirmed-ongoing-crash flag: a 12-filter/7-year study showed bottom-fishing
+        # is a ~34% coin-flip while the index keeps making new lows, un-fixable by any signal
+        # filter — so the dashboard suppresses "MUA" here (risk mgmt, not bottom prediction).
+        low20 = float(idx["close"].iloc[-20:].min()) if len(idx) >= 20 else close
         out.update(index_close=round(close, 2), index_ema50=round(e50, 2),
+                   index_low20=round(low20, 2), making_new_low=bool(close <= low20 * 1.005),
                    date=str(idx["date"].iloc[-1]))
         above = tot = 0
         for df in frames.values():

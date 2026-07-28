@@ -2151,22 +2151,33 @@
         : `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:14px;">Chưa ghi vị thế nào. Bấm "Ghi" ở một kèo bên dưới.</td></tr>`;
     }
 
-    // "HÀNH ĐỘNG HÔM NAY" — turn the scan into a plain buy/wait instruction. Actionable =
-    // any name with P(win) >= 55% (the validated threshold: ~56% win, +1.78%/trade above it).
+    // "HÀNH ĐỘNG HÔM NAY" — plain buy/wait. Two HARD levers from the 7-year bottom study
+    // (win% can't be raised by filtering; it's a ~50% coin-flip, ~34% in one-way crashes):
+    //   1) demand RR >= 1.5 (a coin-flip only pays if wins > losses), and
+    //   2) DON'T bottom-fish while the index is still making new 20-session lows (risk mgmt).
     function renderActionToday(data) {
       const el = document.getElementById("mrAction");
       if (!el) return;
-      const THR = 0.55;
+      const THR = 0.55, MIN_RR = 1.5;
       const st = data.market?.state || "UNKNOWN";
       const breadth = data.market?.breadth_pct ?? 100;
+      const newLow = !!data.market?.making_new_low;
+      // Lever 2: confirmed ongoing crash → refuse to bottom-fish (34% death-trap, no filter fixes it).
+      if (newLow) {
+        el.innerHTML = `<div style="background:rgba(239,68,68,0.12);border-left:4px solid var(--red,#ef4444);border-radius:8px;padding:12px 14px;">
+          <div style="font-weight:800;font-size:15px;color:var(--red,#ef4444)">⛔ ĐANG DÒ ĐÁY — KHÔNG BẮT ĐÁY</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">VNINDEX đang tạo đáy 20 phiên mới (${mrFmt(data.market?.index_close)} ≤ đáy ${mrFmt(data.market?.index_low20)}) → downtrend chưa dứt. Bắt đáy lúc này thắng ~34% (kiểm 7 năm), 90% dính stop trong crash một chiều. <b>Đứng ngoài, giữ tiền.</b> Chờ index đóng cửa TRÊN đáy 20 phiên vài phiên liên tiếp + breadth bật lên rồi tính.</div></div>`;
+        return;
+      }
       const cand = [...(data.prob_buys || []), ...(data.buys || [])];
       const bySym = {};
-      cand.forEach(b => { if ((b.win_prob || 0) >= THR && (!bySym[b.symbol] || (b.win_prob || 0) > (bySym[b.symbol].win_prob || 0))) bySym[b.symbol] = b; });
-      const list = Object.values(bySym).sort((a, b) => (b.win_prob - a.win_prob) || ((b.reward_risk || 0) - (a.reward_risk || 0)));
+      cand.forEach(b => { if ((b.win_prob || 0) >= THR && (b.reward_risk || 0) >= MIN_RR && (!bySym[b.symbol] || (b.win_prob || 0) > (bySym[b.symbol].win_prob || 0))) bySym[b.symbol] = b; });
+      // Lever 1: rank by reward:risk (payoff), not win_prob — win% doesn't discriminate, RR does.
+      const list = Object.values(bySym).sort((a, b) => (b.reward_risk - a.reward_risk) || (b.win_prob - a.win_prob));
       if (!list.length) {
         el.innerHTML = `<div style="background:rgba(148,163,184,0.12);border-left:4px solid #94a3b8;border-radius:8px;padding:12px 14px;">
           <div style="font-weight:800;font-size:15px;color:#94a3b8">⚪ HÔM NAY KHÔNG MUA</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:3px">Chưa mã nào đạt P(win) ≥ 55% — giữ tiền, chờ phiên sau.</div></div>`;
+          <div style="font-size:12px;color:var(--text-muted);margin-top:3px">Chưa mã nào đạt P(win) ≥ 55% VÀ RR ≥ 1.5 — giữ tiền, chờ phiên sau.</div></div>`;
         return;
       }
       const deep = st === "PANIC_BEAR" && breadth < 15;
@@ -2182,9 +2193,9 @@
           <td class="num" style="padding:3px 12px">RR ${b.reward_risk ?? '-'}</td></tr>`).join("");
       el.innerHTML = `<div style="background:rgba(45,212,191,0.1);border-left:4px solid var(--teal,#2dd4bf);border-radius:8px;padding:12px 14px;">
         <div style="font-weight:800;font-size:15px;color:var(--teal,#2dd4bf)">🟢 MUA ${take.length} mã — vào ở MỞ CỬA phiên sau</div>
-        <div style="font-size:11px;color:var(--text-muted);margin:3px 0 8px">${deep ? `NỬA khối lượng (PANIC sâu, breadth ${breadth}% — đáy chưa xác nhận)` : 'Khối lượng như dưới'}${list.length > nTake ? ` · còn ${list.length - nTake} mã P≥55% khác ở bảng dưới` : ''}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin:3px 0 8px">Lọc RR ≥ 1.5, xếp theo RR (không phải P(win)). ${deep ? `NỬA khối lượng (PANIC sâu, breadth ${breadth}%)` : 'Khối lượng như dưới'}${list.length > nTake ? ` · còn ${list.length - nTake} mã khác đạt chuẩn ở bảng dưới` : ''}</div>
         <div style="overflow-x:auto"><table style="font-size:12px">${rows}</table></div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:6px">⚠️ Edge ~56% — sẽ có lệnh thua, tuân thủ stop. Không mua đuổi trong phiên.</div></div>`;
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px">⚠️ KHÔNG phải dự báo đáy. Bắt đáy thắng ~50% (bình thường), ~34% (crash mạnh) — lời được là nhờ RR>1.5, KHÔNG phải win%. Size nhỏ, tuân thủ stop, không mua đuổi.</div></div>`;
     }
 
     function renderMr(data) {
