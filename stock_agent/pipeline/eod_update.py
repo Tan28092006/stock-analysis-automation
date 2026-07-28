@@ -225,6 +225,11 @@ def rebuild_momentum_cache() -> dict:
     """Refresh the CORE momentum-rotation scan cache (bull-catcher panel)."""
     try:
         from ..features.momentum_scan import momentum_scan
+        try:
+            from ..features.swing_scan import swing_scan
+            swing_scan(force=True)   # warm the RSI2 swing cache too
+        except Exception:
+            pass
         payload = momentum_scan(force=True)
         for p in payload.get("sell_alerts", []):
             print(f"  *** MOMENTUM SELL: {p['symbol']} — {p['sell_reason']} "

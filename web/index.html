@@ -941,6 +941,30 @@
       </div>
     </section>
 
+    <!-- Swing: Connors RSI2 short-term reversal panel -->
+    <section id="swingCard" style="grid-column: 1 / -1;">
+      <div class="section-head">
+        <h2>🌊 Lướt sóng RSI2 (mua dip trong uptrend)</h2>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="status" id="swingStatus">Loading…</div>
+          <button onclick="exportCard(this,'swing_rsi2')" title="Tải CSV" style="min-height:28px; padding:0 10px; font-size:11px;">⬇ CSV</button>
+          <button id="swingRefresh" style="min-height:28px; padding:0 12px; font-size:11px;">Re-scan</button>
+        </div>
+      </div>
+      <div id="swingNote" style="padding:12px 20px; border-bottom:1px solid var(--border); background:rgba(0,0,0,0.15); font-size:12px; color:var(--text-muted);">Đang tải…</div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th>Mã</th><th class="num">RSI2</th><th class="num">Giá vào</th>
+            <th class="num">Bán khi &gt; SMA5</th><th class="num">Stop −8%</th><th class="num">KL</th>
+          </tr></thead>
+          <tbody id="swingBody">
+            <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:18px;">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <!-- Left Column: Scan results -->
     <section>
       <div class="section-head">
@@ -2380,6 +2404,31 @@
     }
     document.getElementById("momRefresh").addEventListener("click", () => loadMom(true));
 
+    // ---- Swing RSI2 panel (Connors short-term reversal) ----
+    function renderSwing(d) {
+      document.getElementById("swingNote").innerHTML = `${d.note || ''} · EOD ${d.data_date || '-'}`;
+      const picks = d.picks || [];
+      document.getElementById("swingBody").innerHTML = picks.length
+        ? picks.map(p => `<tr>
+            <td><strong>${p.symbol}</strong></td>
+            <td class="num" style="color:var(--red,#ef4444);font-weight:700">${p.rsi2}</td>
+            <td class="num">${mrFmt(p.entry_reference)}</td>
+            <td class="num" style="color:var(--teal,#2dd4bf)">${mrFmt(p.sma5)}</td>
+            <td class="num" style="color:var(--red,#ef4444)">${mrFmt(p.stop_loss)}</td>
+            <td class="num">${(p.size && p.size.qty) ? new Intl.NumberFormat('vi-VN').format(p.size.qty) : '-'}</td>
+          </tr>`).join("")
+        : `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:18px;">Không có kèo — không mã nào RSI2&lt;5 trong uptrend (đúng: đang crash/chỉnh thì đứng ngoài).</td></tr>`;
+    }
+    async function loadSwing(force = false) {
+      const s = document.getElementById("swingStatus"); s.textContent = force ? "Scanning…" : "Loading…";
+      try {
+        const d = await requestJson("/api/swing/scan" + (force ? "?force=true" : ""));
+        if (d.error) throw new Error(d.error);
+        renderSwing(d); s.textContent = "OK · " + (d.data_date || "");
+      } catch (e) { s.textContent = "Error: " + e.message; }
+    }
+    document.getElementById("swingRefresh").addEventListener("click", () => loadSwing(true));
+
     // Initial load — rehydrate positions to the server first (in case a diskless deploy
     // was redeployed and lost them), then render both engines with correct sell-alerts.
     updateChatSuggestions();
@@ -2387,6 +2436,7 @@
     rehydratePositions().finally(() => {
       loadMrScan().catch(() => {});
       loadMom().catch(() => {});
+      loadSwing().catch(() => {});
     });
     refreshAll().catch(err => {
       document.getElementById("scanStatus").textContent = "Error loading latest: " + err.message;

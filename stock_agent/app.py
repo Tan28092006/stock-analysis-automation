@@ -202,6 +202,14 @@ class StockAgentHandler(BaseHTTPRequestHandler):
             except Exception as exc:
                 _json_response(self, {"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
             return
+        if parsed.path == "/api/swing/scan":
+            params = parse_qs(parsed.query)
+            from .features.swing_scan import swing_scan
+            try:
+                _json_response(self, swing_scan(force=params.get("force", ["false"])[0] == "true"))
+            except Exception as exc:
+                _json_response(self, {"error": str(exc)}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
         if parsed.path == "/api/backtest/portfolio":
             params = parse_qs(parsed.query)
             rules = load_rules()
