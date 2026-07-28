@@ -2151,24 +2151,19 @@
         : `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:14px;">Chưa ghi vị thế nào. Bấm "Ghi" ở một kèo bên dưới.</td></tr>`;
     }
 
-    // "HÀNH ĐỘNG HÔM NAY" — plain buy/wait. Two HARD levers from the 7-year bottom study
-    // (win% can't be raised by filtering; it's a ~50% coin-flip, ~34% in one-way crashes):
-    //   1) demand RR >= 1.5 (a coin-flip only pays if wins > losses), and
-    //   2) DON'T bottom-fish while the index is still making new 20-session lows (risk mgmt).
+    // "HÀNH ĐỘNG HÔM NAY" — plain buy/wait. A 7-crash study proved bottom-detection is a
+    // ~48% coin-flip (9%–58% depending on whether the crash recovers within the hold — NOT
+    // knowable at entry; NO entry filter reliably improves it). So the only honest levers are
+    // asymmetric RR (require RR>=1.5) + small size, and a blunt caveat. No fake "wait" gate.
     function renderActionToday(data) {
       const el = document.getElementById("mrAction");
       if (!el) return;
       const THR = 0.55, MIN_RR = 1.5;
       const st = data.market?.state || "UNKNOWN";
       const breadth = data.market?.breadth_pct ?? 100;
-      const newLow = !!data.market?.making_new_low;
-      // Lever 2: confirmed ongoing crash → refuse to bottom-fish (34% death-trap, no filter fixes it).
-      if (newLow) {
-        el.innerHTML = `<div style="background:rgba(239,68,68,0.12);border-left:4px solid var(--red,#ef4444);border-radius:8px;padding:12px 14px;">
-          <div style="font-weight:800;font-size:15px;color:var(--red,#ef4444)">⛔ ĐANG DÒ ĐÁY — KHÔNG BẮT ĐÁY</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">VNINDEX đang tạo đáy 20 phiên mới (${mrFmt(data.market?.index_close)} ≤ đáy ${mrFmt(data.market?.index_low20)}) → downtrend chưa dứt. Bắt đáy lúc này thắng ~34% (kiểm 7 năm), 90% dính stop trong crash một chiều. <b>Đứng ngoài, giữ tiền.</b> Chờ index đóng cửa TRÊN đáy 20 phiên vài phiên liên tiếp + breadth bật lên rồi tính.</div></div>`;
-        return;
-      }
+      // NOTE: a "block when the index makes a new 20d low" guard was tested across 7 crashes
+      // and REJECTED — new-low signals were the BEST in 4/7 (Mar-2026 85%, Apr-2025 60%),
+      // so blocking them threw away the best bottoms. No entry filter reliably times bottoms.
       const cand = [...(data.prob_buys || []), ...(data.buys || [])];
       const bySym = {};
       cand.forEach(b => { if ((b.win_prob || 0) >= THR && (b.reward_risk || 0) >= MIN_RR && (!bySym[b.symbol] || (b.win_prob || 0) > (bySym[b.symbol].win_prob || 0))) bySym[b.symbol] = b; });
@@ -2195,7 +2190,7 @@
         <div style="font-weight:800;font-size:15px;color:var(--teal,#2dd4bf)">🟢 MUA ${take.length} mã — vào ở MỞ CỬA phiên sau</div>
         <div style="font-size:11px;color:var(--text-muted);margin:3px 0 8px">Lọc RR ≥ 1.5, xếp theo RR (không phải P(win)). ${deep ? `NỬA khối lượng (PANIC sâu, breadth ${breadth}%)` : 'Khối lượng như dưới'}${list.length > nTake ? ` · còn ${list.length - nTake} mã khác đạt chuẩn ở bảng dưới` : ''}</div>
         <div style="overflow-x:auto"><table style="font-size:12px">${rows}</table></div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:6px">⚠️ KHÔNG phải dự báo đáy. Bắt đáy thắng ~50% (bình thường), ~34% (crash mạnh) — lời được là nhờ RR>1.5, KHÔNG phải win%. Size nhỏ, tuân thủ stop, không mua đuổi.</div></div>`;
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px">⚠️ KHÔNG phải dự báo đáy — bắt đáy là coin-flip ~48% (kiểm 7 crash: 9-58% tùy crash có hồi hay không, biết trước không được). Lời nhờ RR≥1.5 + size NHỎ, KHÔNG phải win%. Crash chưa hồi (như 7/2026) có thể thua 90% — chấp nhận chuỗi thua, đừng dồn vốn.</div></div>`;
     }
 
     function renderMr(data) {
