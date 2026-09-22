@@ -207,6 +207,7 @@ def build_labeled_dataset_fast(
     from ..features.feature_store import build_feature_snapshot
     from ..config import compute_rules_hash
     from ..features.calibration import _add_normalized_features
+    from ..data.training_quality import read_training_prices
     from ..features.feature_engineering_v2 import (
         add_cross_sectional_features,
         add_regime_features,
@@ -229,14 +230,9 @@ def build_labeled_dataset_fast(
         path = price_dir / f"{symbol}.csv"
         if not path.exists():
             continue
-        try:
-            df = pd.read_csv(path)
-            data = normalize_ohlcv(df)
-            if len(data) >= min_rows + cost_config.holding_days + 1:
-                symbol_data[symbol] = data.sort_values("date").reset_index(drop=True)
-        except Exception as exc:
-            logger.warning(f"Error loading {symbol} in parallel_engine: {exc}")
-            continue
+        data = read_training_prices(path)
+        if len(data) >= min_rows + cost_config.holding_days + 1:
+            symbol_data[symbol] = data
 
     if not symbol_data:
         return pd.DataFrame()

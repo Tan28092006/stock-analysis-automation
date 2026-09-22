@@ -138,7 +138,8 @@ def train_model_suite_from_dataset(
         write_json(MODEL_REGISTRY_PATH, payload)
         return payload
 
-    working = dataset.dropna(subset=["net_t2_win", "net_t2_return_pct"]).copy()
+    from .temporal_validation import mature_labeled
+    working = mature_labeled(dataset.dropna(subset=["net_t2_win", "net_t2_return_pct"]))
     cols = feature_columns(working)
     working = working.sort_values(["signal_date", "symbol"]).reset_index(drop=True)
     dataset_summary = {
@@ -232,7 +233,11 @@ def predict_model_signal(symbol: str, signal: Any, rules: dict[str, Any]) -> Mod
         artifact = _load_artifact(Path(artifact_path))
         cols = list(artifact["feature_columns"])
         row = _feature_row_from_signal(signal)
-        frame = pd.DataFrame([{col: row.get(col, 0.0) for col in cols}]).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+        from .calibration import preprocess_features_robust
+        bounds = artifact.get("winsorize_bounds")
+        if bounds is None:
+            raise ValueError("Missing fitted preprocessing; retrain a verified artifact")
+        frame, _ = preprocess_features_robust(pd.DataFrame([row]), cols, bounds)
         probability = _predict_probability(artifact["model"], frame)
     except Exception as exc:
         return ModelSignal(
@@ -380,9 +385,11 @@ def _train_one_family(
         return TrainingResult(family, "skipped", feature_columns=cols, warnings=[setup_warning or "adapter unavailable"])
 
     try:
-        x_train = _feature_frame(train, cols)
-        x_validation = _feature_frame(validation, cols)
-        x_test = _feature_frame(test, cols)
+        from .calibration import preprocess_features_robust
+        from .temporal_validation import training_manifest
+        x_train, bounds = preprocess_features_robust(train, cols)
+        x_validation, _ = preprocess_features_robust(validation, cols, bounds)
+        x_test, _ = preprocess_features_robust(test, cols, bounds)
         estimator.fit(x_train, train["net_t2_win"].astype(int))
         validation_probability = _predict_probability_array(estimator, x_validation)
         test_probability = _predict_probability_array(estimator, x_test)
@@ -396,6 +403,12 @@ def _train_one_family(
                 "family": family,
                 "threshold": threshold,
                 "trained_at": created_at,
+                "winsorize_bounds": bounds,
+                "training_metadata": training_manifest(
+                    train, cols, validation_start=str(validation.signal_date.min()),
+                    evaluation_test_start=str(test.signal_date.min()),
+                    evaluation_label_end=str(test.exit_date.max()),
+                ),
             },
         )
         return TrainingResult(

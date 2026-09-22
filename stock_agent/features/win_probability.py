@@ -102,7 +102,8 @@ def is_candidate(fr: dict) -> bool:
 
 def _context(prices_dir: Path):
     """market_regime + breadth + index 20d return, keyed by date string."""
-    idx = pd.read_csv(prices_dir / "VNINDEX.csv")
+    from ..data.training_quality import read_training_prices
+    idx = read_training_prices(prices_dir / "VNINDEX.csv")
     idx["date"] = idx["date"].astype(str).str.slice(0, 10)
     idx = idx.sort_values("date").reset_index(drop=True)
     e50 = ema(idx["close"], 50)
@@ -125,6 +126,12 @@ def _breadth_map(frames: dict[str, pd.DataFrame]) -> dict:
 def _label_trade(f: pd.DataFrame, i: int) -> float | None:
     """Net % of the simulated MR trade started at signal bar i, or None. Entry = next open
     (bar i+1); exit via the shared canonical replay (settle_lock T+2, T+MAX_HOLD time-stop)."""
+    record = _trade_label_record(f, i)
+    return record["net_return_pct"] if record else None
+
+
+def _trade_label_record(f: pd.DataFrame, i: int) -> dict | None:
+    """Retain the actual resolution date so splits can purge overlapping labels."""
     n = len(f)
     if i + 1 >= n:
         return None
@@ -136,21 +143,20 @@ def _label_trade(f: pd.DataFrame, i: int) -> float | None:
         return None
     stop = close - STOP_ATR * atrv
     target = max(kijun, close * 1.01)
-    _, exit_px, _, resolved = simulate_mr_exit(f, i + 1, stop, target, MAX_HOLD, settle_lock=T2_LOCK)
+    exit_idx, exit_px, _, resolved = simulate_mr_exit(f, i + 1, stop, target, MAX_HOLD, settle_lock=T2_LOCK)
     if not resolved:
         return None
-    return (exit_px - entry) / entry * 100 - COST
+    return {"net_return_pct": (exit_px - entry) / entry * 100 - COST,
+            "exit_date": f.at[exit_idx, "date"], "label_resolved": True}
 
 
 def train_and_save(prices_dir: Path = Path("data/raw/prices_hist"),
                    artifact_path: Path = ARTIFACT_PATH) -> dict:
-    import lightgbm as lgb
-    from sklearn.isotonic import IsotonicRegression
-    from sklearn.metrics import roc_auc_score
+    from ..data.training_quality import read_training_prices
 
     regime, idx_ret20 = _context(prices_dir)
     files = {p.stem: p for p in prices_dir.glob("*.csv") if p.stem != "VNINDEX"}
-    frames = {s: _prep(pd.read_csv(p)) for s, p in files.items()}
+    frames = {s: _prep(read_training_prices(p)) for s, p in files.items()}
     breadth = _breadth_map(frames)
 
     rows = []
@@ -161,19 +167,36 @@ def train_and_save(prices_dir: Path = Path("data/raw/prices_hist"),
             fr = feature_row(f, i, regime.get(sd, 1.0), breadth.get(sd, 0.5), idx_ret20.get(sd))
             if fr is None or not is_candidate(fr):
                 continue
-            net = _label_trade(f, i)
-            if net is None:
+            label = _trade_label_record(f, i)
+            if label is None:
                 continue
             rec = {k: fr[k] for k in FEATURES}
-            rec["date"] = sd; rec["win"] = int(net > 0)
+            rec.update(symbol=sym, signal_date=sd, win=int(label["net_return_pct"] > 0), **label)
             rows.append(rec)
-    df = pd.DataFrame(rows).sort_values("date").reset_index(drop=True)
-    if len(df) < 1000:
-        return {"status": "insufficient_data", "rows": len(df)}
+    if not rows:
+        return {"status": "insufficient_data", "rows": 0}
+    artifact = _fit_candidates(pd.DataFrame(rows))
+    if artifact.get("status") == "insufficient_data":
+        return artifact
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    with artifact_path.open("wb") as fh:
+        pickle.dump(artifact, fh)
+    return {"status": "ok", "rows": artifact["n_candidates"],
+            "test_auc": artifact["test_auc"], "test_brier": artifact["test_brier"],
+            "artifact": str(artifact_path), "training_metadata": artifact["training_metadata"]}
 
-    # final model on all-but-tail; isotonic calibrated on the tail (time-ordered)
-    cut = int(len(df) * 0.85)
-    tr, cal = df.iloc[:cut], df.iloc[cut:]
+
+def _fit_candidates(df: pd.DataFrame) -> dict:
+    import lightgbm as lgb
+    from sklearn.isotonic import IsotonicRegression
+    from sklearn.metrics import roc_auc_score, brier_score_loss
+    from .temporal_validation import mature_labeled, purged_time_split, training_manifest
+
+    df = mature_labeled(df)
+    tr, cal, test = purged_time_split(df)
+    if len(df) < 1000 or min(len(tr), len(cal), len(test)) < 50 or tr.win.nunique() < 2 or cal.win.nunique() < 2:
+        return {"status": "insufficient_data", "rows": len(df), "reason": "purged train/calibration/test split"}
+    # Freeze the classifier before fitting its calibrator; never refit either on test.
     model = lgb.LGBMClassifier(n_estimators=300, max_depth=4, learning_rate=0.03,
                                subsample=0.8, colsample_bytree=0.8, min_child_samples=40,
                                reg_lambda=1.0, random_state=42, verbose=-1)
@@ -182,17 +205,21 @@ def train_and_save(prices_dir: Path = Path("data/raw/prices_hist"),
     iso = IsotonicRegression(out_of_bounds="clip").fit(raw_cal, cal["win"])
     auc = float(roc_auc_score(cal["win"], raw_cal)) if cal["win"].nunique() > 1 else float("nan")
 
-    # refit on ALL data for deployment (keep the tail-fit isotonic map)
-    model.fit(df[FEATURES], df["win"])
-
-    artifact_path.parent.mkdir(parents=True, exist_ok=True)
-    with artifact_path.open("wb") as fh:
-        pickle.dump({"model": model, "iso": iso, "features": FEATURES,
-                     "trained_at": datetime.now(timezone.utc).isoformat(),
-                     "n_candidates": len(df), "base_win_rate": float(df["win"].mean()),
-                     "calib_auc": auc}, fh)
-    return {"status": "ok", "rows": len(df), "calib_auc": auc,
-            "base_win_rate": float(df["win"].mean()), "artifact": str(artifact_path)}
+    raw_test = model.predict_proba(test[FEATURES])[:, 1]
+    test_probability = iso.transform(raw_test)
+    return {"model": model, "iso": iso, "features": FEATURES,
+            "trained_at": datetime.now(timezone.utc).isoformat(),
+            "n_candidates": len(df), "base_win_rate": float(tr.win.mean()), "calib_auc": auc,
+            "test_auc": float(roc_auc_score(test.win, test_probability)) if test.win.nunique() > 1 else None,
+            "test_brier": float(brier_score_loss(test.win, test_probability)),
+            "training_metadata": training_manifest(
+                tr, FEATURES, calibration_start=str(cal.signal_date.min()),
+                calibration_label_end=str(pd.to_datetime(cal.exit_date).max().date()),
+                calibration_sha256=training_manifest(cal, FEATURES)["dataset_sha256"],
+                evaluation_test_start=str(pd.to_datetime(test.signal_date).min().date()),
+                evaluation_label_end=str(test.exit_date.max()),
+                universe_policy="available_files_not_point_in_time",
+            )}
 
 
 class WinProbModel:

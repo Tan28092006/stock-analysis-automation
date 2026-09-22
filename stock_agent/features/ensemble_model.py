@@ -2,7 +2,7 @@
 
 Provides:
 - Walk-forward validation (expanding window)
-- Incremental daily retraining (warm-start)
+- Fresh daily retraining with purged evaluation
 - Optuna HPO (weekly)
 - Drift detection + auto-disable
 - SHAP explanations per prediction
@@ -152,6 +152,7 @@ class EnsembleTrainer:
         self.trained_at: str | None = None
         self.train_rows: int = 0
         self.metrics: dict[str, Any] = {}
+        self.training_metadata: dict[str, Any] = {}
         self._historical_predictions: list[dict] = []
 
     # -- Build base models ------------------------------------------------
@@ -457,6 +458,7 @@ class EnsembleTrainer:
             "train_rows": self.train_rows,
             "metrics": self.metrics,
             "winsorize_bounds": getattr(self, "winsorize_bounds", None),
+            "training_metadata": self.training_metadata,
         }
         with save_path.open("wb") as f:
             pickle.dump(payload, f)
@@ -470,6 +472,7 @@ class EnsembleTrainer:
             "train_rows": self.train_rows,
             "feature_columns": self.feature_columns,
             "metrics": self.metrics,
+            "training_metadata": self.training_metadata,
             "config": {
                 "lgb_n_estimators": self.config.lgb_n_estimators,
                 "xgb_n_estimators": self.config.xgb_n_estimators,
@@ -508,6 +511,7 @@ class EnsembleTrainer:
         trainer.train_rows = payload["train_rows"]
         trainer.metrics = payload.get("metrics", {})
         trainer.winsorize_bounds = payload.get("winsorize_bounds")
+        trainer.training_metadata = payload.get("training_metadata", {})
         return trainer
 
     # -- Optuna HPO -------------------------------------------------------
@@ -522,8 +526,11 @@ class EnsembleTrainer:
         import optuna
         optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-        working = dataset.dropna(subset=[label_col]).sort_values("signal_date").reset_index(drop=True)
-        X = self._prepare_features(working, fit=True)
+        from .temporal_validation import mature_labeled, purged_time_split, purged_walk_forward
+        from .calibration import preprocess_features_robust
+        eligible = mature_labeled(dataset.dropna(subset=[label_col]))
+        # Match train()'s outer holdout exactly. HPO may only see development.
+        working, _ = purged_time_split(eligible, fractions=(.8,))
         y = working[label_col].astype(int).values
         returns = working.get("net_t2_return_pct", pd.Series(0.0, index=working.index)).fillna(0.0).values
         sample_weights = np.where(y == 1, 1.0, 1.0 + 1.0 * np.abs(returns))
@@ -557,11 +564,13 @@ class EnsembleTrainer:
             from xgboost import XGBClassifier
             from catboost import CatBoostClassifier
 
-            tscv = TimeSeriesSplit(n_splits=3)
             fold_scores = []
 
-            for train_idx, val_idx in tscv.split(X):
-                X_tr, X_val = X.iloc[train_idx], X.iloc[val_idx]
+            for train_idx, val_idx in purged_walk_forward(working, n_splits=3):
+                if not len(train_idx) or not len(val_idx):
+                    continue
+                X_tr, bounds = preprocess_features_robust(working.iloc[train_idx], self.feature_columns)
+                X_val, _ = preprocess_features_robust(working.iloc[val_idx], self.feature_columns, bounds)
                 y_tr, y_val = y[train_idx], y[val_idx]
                 sw_tr = sample_weights[train_idx]
 
@@ -649,7 +658,9 @@ class EnsembleTrainer:
             return df
             
         bounds = getattr(self, "winsorize_bounds", None)
-        if fit or bounds is None:
+        if not fit and bounds is None:
+            raise ValueError("Missing fitted preprocessing; retrain a verified artifact")
+        if fit:
             processed, computed_bounds = preprocess_features_robust(df, self.feature_columns)
             self.winsorize_bounds = computed_bounds
         else:
