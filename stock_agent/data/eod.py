@@ -14,9 +14,9 @@ def completed_bars(frame: pd.DataFrame, end: date | None = None) -> pd.DataFrame
     cutoff = calendar.completed_session_date()
     if end is not None:
         cutoff = min(cutoff, end)
-    dates = pd.to_datetime(frame["date"], errors="coerce").dt.date
-    keep = dates.notna() & (dates <= cutoff)
-    keep &= dates.map(lambda d: calendar.is_trading_day(d) if pd.notna(d) else False)
+    dates = pd.to_datetime(frame["date"].astype(str).str[:10], format="%Y-%m-%d", errors="coerce")
+    keep = dates.notna() & (dates <= pd.Timestamp(cutoff))
+    keep &= dates.dt.date.map(lambda d: calendar.is_trading_day(d) if pd.notna(d) else False)
     return frame.loc[keep].sort_values("date").reset_index(drop=True).copy()
 
 
