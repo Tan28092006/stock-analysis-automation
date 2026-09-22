@@ -8,6 +8,8 @@ Hệ thống nghiên cứu **lướt sóng T+ cho thị trường Việt Nam (VN
 
 > **Kiểm toán 22/09/2026: CHƯA ĐẠT gate dữ liệu/leakage.** Đã tìm thấy đánh giá ensemble in-sample, preprocessing nhìn tương lai, nhãn MR chưa chín và thiếu provenance ledger. Các số backtest/calibration dưới đây là kết quả nghiên cứu cũ, không phải hiệu quả đã chứng nhận ngoài mẫu. Xem [báo cáo kiến trúc, bằng chứng và điều kiện trước retrain](docs/audits/2026-09-22-architecture-and-leakage.md). Sửa universe/EOD/ledger không đồng nghĩa model đã sạch; chưa retrain hoặc thay artifact trong đợt kiểm toán này.
 
+> **Cập nhật sau sửa:** code đã có split theo ngày/purge nhãn, holdout độc lập, preprocessing train-only, calibration MR không refit và gate model theo thời điểm. Xem [chi tiết sửa và test](docs/audits/2026-09-22-training-remediation.md). Artifact legacy bị chặn khỏi ML override/probability buy; chưa được thay bằng model mới. Còn 76 dòng giá sai, thiếu provenance/PIT universe; không chạy retrain/promotion production trước khi xác minh.
+
 > [!IMPORTANT]
 > Công cụ nghiên cứu cá nhân, **không phải lời khuyên đầu tư**, không tự đặt lệnh.
 

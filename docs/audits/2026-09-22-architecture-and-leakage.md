@@ -1,5 +1,7 @@
 # Kiểm toán kiến trúc và tính nhân quả dữ liệu — 22/09/2026
 
+> Đây là báo cáo baseline và đợt sửa universe/EOD/ledger đầu tiên. Các lỗi train/evaluate được sửa tiếp theo yêu cầu sau đó của user; xem [báo cáo remediation](2026-09-22-training-remediation.md). Giữ nguyên phát hiện và số đo baseline bên dưới để đối chiếu, không hiểu chúng là trạng thái code sau sửa. Dữ liệu và artifact cũ vẫn chưa được chứng nhận sạch.
+
 ## Kết luận trước khi thay đổi pipeline
 
 **FAIL: chưa thể xác nhận hệ thống/mô hình sạch về dữ liệu hoặc đánh giá ngoài mẫu.** Có leakage tái hiện được trong code ensemble và feature V2; nhánh xác suất MR có vấn đề về độ chín nhãn, ranh giới calibration và tính tái lập. Ba blocker vận hành (universe, EOD, ledger) không đủ để sửa các lỗi huấn luyện này. Chưa được dùng các chỉ số hiện có làm căn cứ retrain/promotion hoặc giao dịch tiền thật.

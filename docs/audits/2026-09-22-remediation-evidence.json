@@ -1,0 +1,448 @@
+{
+  "audit_utc": "2026-09-22T04:40:53.437061+00:00",
+  "git_head": "7defbee6e12565013bf37edc37eafca129842c83",
+  "contract": {
+    "goal": "Audit existing artifacts before any retraining or promotion",
+    "success": "No data available after prediction time may influence features, split preprocessing or evaluation",
+    "unacceptable": "Treat synthetic, retrospectively fitted or unresolved records as live outcomes"
+  },
+  "causality": {
+    "base_indicators_prefix_columns_tested": 69,
+    "base_indicators_prefix_columns_stable": 69,
+    "mr_feature_vector_prefix_stable": true,
+    "v2_past_regime_classes_changed_after_future_append": 0,
+    "ensemble_evaluated_rows": 16,
+    "ensemble_evaluated_rows_seen_by_fit": 0,
+    "winsorization_demonstration_note": "Full-data fit is intentionally contrasted with train-only fit; production no longer fits full data.",
+    "winsor_bounds_full": {
+      "feature_x": [
+        1.99,
+        197.01
+      ]
+    },
+    "winsor_bounds_future_perturbed": {
+      "feature_x": [
+        1.99,
+        1000197.01
+      ]
+    },
+    "winsor_bounds_train_only": {
+      "feature_x": [
+        0.99,
+        98.01
+      ]
+    },
+    "panel_fold_label_overlap": [
+      {
+        "same_signal_day_in_both": false,
+        "train_labels_not_known_at_test_start": 0
+      }
+    ]
+  },
+  "legacy_ledger": {
+    "rows": 143,
+    "unique_symbol_dates": 65,
+    "exact_demo_close_rows": 0,
+    "demo_line_numbers": [],
+    "market_close_discrepancy_over_5pct": 93,
+    "close_compatible_rows": 50,
+    "missing_price_rows": 0,
+    "sha256": "db6736d2ab641f66ab8c51fde514848d1ca11da16bc8004eecf2f7e45c803a0c",
+    "fields": [
+      "decision",
+      "entry_reference",
+      "ml_passed",
+      "ml_probability",
+      "score",
+      "signal_date",
+      "status",
+      "symbol"
+    ]
+  },
+  "prices": {
+    "prices": {
+      "files": 32,
+      "latest_dates": {
+        "2026-09-16": 30,
+        "2026-07-03": 2
+      },
+      "invalid": [],
+      "large_jumps_requiring_corporate_action_review": [],
+      "weekend_rows": 0,
+      "duplicate_dates": 0,
+      "snapshot_sha256": "dd4eba601526b9777a8c9df5252573a4a0753924c72c13188c2ab534fad61711"
+    },
+    "prices_hist": {
+      "files": 101,
+      "latest_dates": {
+        "2026-09-21": 101
+      },
+      "invalid": [
+        {
+          "symbol": "BCM",
+          "rows": 7,
+          "examples": [
+            {
+              "date": "2018-11-23",
+              "open": 17800.0,
+              "high": 17980.0,
+              "low": 17980.0,
+              "close": 17980.0,
+              "volume": 0
+            },
+            {
+              "date": "2018-11-26",
+              "open": 17800.0,
+              "high": 17980.0,
+              "low": 17980.0,
+              "close": 17980.0,
+              "volume": 0
+            }
+          ]
+        },
+        {
+          "symbol": "CTR",
+          "rows": 2,
+          "examples": [
+            {
+              "date": "2018-03-15",
+              "open": 7570.0,
+              "high": 7570.0,
+              "low": 7570.0,
+              "close": 7540.0,
+              "volume": 5
+            },
+            {
+              "date": "2019-12-02",
+              "open": 21690.0,
+              "high": 21880.0,
+              "low": 18970.0,
+              "close": 21970.0,
+              "volume": 710881
+            }
+          ]
+        },
+        {
+          "symbol": "EVF",
+          "rows": 3,
+          "examples": [
+            {
+              "date": "2019-10-02",
+              "open": 3980.0,
+              "high": 3920.0,
+              "low": 3920.0,
+              "close": 3920.0,
+              "volume": 0
+            },
+            {
+              "date": "2019-10-03",
+              "open": 3980.0,
+              "high": 3920.0,
+              "low": 3920.0,
+              "close": 3920.0,
+              "volume": 0
+            }
+          ]
+        },
+        {
+          "symbol": "HCM",
+          "rows": 1,
+          "examples": [
+            {
+              "date": "2020-06-05",
+              "open": 4800.0,
+              "high": 6880.0,
+              "low": 6660.0,
+              "close": 6810.0,
+              "volume": 2859450
+            }
+          ]
+        },
+        {
+          "symbol": "HHV",
+          "rows": 47,
+          "examples": [
+            {
+              "date": "2019-06-04",
+              "open": 7510.0,
+              "high": 8420.0,
+              "low": 8420.0,
+              "close": 8420.0,
+              "volume": 0
+            },
+            {
+              "date": "2019-06-05",
+              "open": 7510.0,
+              "high": 8420.0,
+              "low": 8420.0,
+              "close": 8420.0,
+              "volume": 0
+            }
+          ]
+        },
+        {
+          "symbol": "NAB",
+          "rows": 2,
+          "examples": [
+            {
+              "date": "2022-03-30",
+              "open": 6820.0,
+              "high": 6950.0,
+              "low": 6650.0,
+              "close": 6620.0,
+              "volume": 975269
+            },
+            {
+              "date": "2022-04-01",
+              "open": 6750.0,
+              "high": 6780.0,
+              "low": 6680.0,
+              "close": 6820.0,
+              "volume": 152828
+            }
+          ]
+        },
+        {
+          "symbol": "SCS",
+          "rows": 2,
+          "examples": [
+            {
+              "date": "2018-02-22",
+              "open": 49410.0,
+              "high": 49570.0,
+              "low": 49410.0,
+              "close": 50040.0,
+              "volume": 12130
+            },
+            {
+              "date": "2018-07-23",
+              "open": 53470.0,
+              "high": 53790.0,
+              "low": 53310.0,
+              "close": 0.0,
+              "volume": 11713
+            }
+          ]
+        },
+        {
+          "symbol": "SIP",
+          "rows": 2,
+          "examples": [
+            {
+              "date": "2019-07-04",
+              "open": 16129.999999999998,
+              "high": 17720.0,
+              "low": 16129.999999999998,
+              "close": 16030.000000000002,
+              "volume": 110219
+            },
+            {
+              "date": "2019-10-31",
+              "open": 23850.0,
+              "high": 25320.0,
+              "low": 22940.0,
+              "close": 22030.0,
+              "volume": 141456
+            }
+          ]
+        },
+        {
+          "symbol": "VIB",
+          "rows": 2,
+          "examples": [
+            {
+              "date": "2018-07-23",
+              "open": 3540.0,
+              "high": 3650.0,
+              "low": 3540.0,
+              "close": 3450.0,
+              "volume": 218470
+            },
+            {
+              "date": "2019-07-04",
+              "open": 3190.0,
+              "high": 3310.0,
+              "low": 3180.0,
+              "close": 3160.0,
+              "volume": 353232
+            }
+          ]
+        },
+        {
+          "symbol": "VND",
+          "rows": 1,
+          "examples": [
+            {
+              "date": "2020-02-19",
+              "open": 2630.0,
+              "high": 2640.0,
+              "low": 2620.0,
+              "close": 2680.0,
+              "volume": 182300
+            }
+          ]
+        },
+        {
+          "symbol": "VNINDEX",
+          "rows": 4,
+          "examples": [
+            {
+              "date": "2019-06-24",
+              "open": 949.48,
+              "high": 967.11,
+              "low": 962.63,
+              "close": 962.85,
+              "volume": 113476250
+            },
+            {
+              "date": "2019-06-25",
+              "open": 949.48,
+              "high": 963.23,
+              "low": 960.06,
+              "close": 960.13,
+              "volume": 120760130
+            }
+          ]
+        },
+        {
+          "symbol": "VTP",
+          "rows": 3,
+          "examples": [
+            {
+              "date": "2019-10-31",
+              "open": 39520.0,
+              "high": 42090.0,
+              "low": 39520.0,
+              "close": 39490.0,
+              "volume": 64721
+            },
+            {
+              "date": "2022-05-11",
+              "open": 40080.0,
+              "high": 40530.0,
+              "low": 38640.0,
+              "close": 36470.0,
+              "volume": 129326
+            }
+          ]
+        }
+      ],
+      "large_jumps_requiring_corporate_action_review": [
+        {
+          "symbol": "BCM",
+          "jumps_over_15pct": 1
+        },
+        {
+          "symbol": "CTR",
+          "jumps_over_15pct": 4
+        },
+        {
+          "symbol": "GEE",
+          "jumps_over_15pct": 3
+        },
+        {
+          "symbol": "GVR",
+          "jumps_over_15pct": 2
+        },
+        {
+          "symbol": "HCM",
+          "jumps_over_15pct": 1
+        },
+        {
+          "symbol": "HHV",
+          "jumps_over_15pct": 7
+        },
+        {
+          "symbol": "KOS",
+          "jumps_over_15pct": 1
+        },
+        {
+          "symbol": "LPB",
+          "jumps_over_15pct": 1
+        },
+        {
+          "symbol": "MBB",
+          "jumps_over_15pct": 1
+        },
+        {
+          "symbol": "MSB",
+          "jumps_over_15pct": 1
+        },
+        {
+          "symbol": "PHR",
+          "jumps_over_15pct": 1
+        },
+        {
+          "symbol": "PVD",
+          "jumps_over_15pct": 2
+        },
+        {
+          "symbol": "SCS",
+          "jumps_over_15pct": 2
+        },
+        {
+          "symbol": "SIP",
+          "jumps_over_15pct": 5
+        },
+        {
+          "symbol": "SSI",
+          "jumps_over_15pct": 1
+        },
+        {
+          "symbol": "VHM",
+          "jumps_over_15pct": 2
+        },
+        {
+          "symbol": "VTP",
+          "jumps_over_15pct": 5
+        }
+      ],
+      "weekend_rows": 0,
+      "duplicate_dates": 0,
+      "snapshot_sha256": "a14998428f83f4f52aeccd7dc38691a728b000da5a94fcd0643fa82ab762058e"
+    }
+  },
+  "mr": {
+    "artifact_sha256": "6dc71d3c2027c068b8c7638bfe504ff2d9ff7348889a8c4943a918d36d4c0038",
+    "artifact_metadata": {
+      "features": [
+        "rsi14",
+        "rsi_below_30",
+        "dist_below_bblo",
+        "bb_pos",
+        "vol_ratio",
+        "atr_pct",
+        "ret_1d",
+        "ret_5d",
+        "ret_20d",
+        "reversal",
+        "vsa_stop",
+        "dist_to_kijun",
+        "dist_to_ema21",
+        "cloud_block",
+        "adx14",
+        "di_diff",
+        "rr_to_kijun",
+        "market_regime",
+        "breadth",
+        "rs_20d"
+      ],
+      "trained_at": "2026-07-03T06:25:57.039261+00:00",
+      "n_candidates": 20420,
+      "base_win_rate": 0.530460333006856,
+      "calib_auc": 0.5445244415613237
+    },
+    "reconstruction_note": "Legacy 85/15 split and entry-anchored stop reconstructed on current history; NOT the repaired trainer or original missing snapshot.",
+    "legacy_reconstructed_candidate_count": 30155,
+    "legacy_partial_labels": 314,
+    "legacy_calibration_start": "2025-11-27",
+    "legacy_same_signal_date_in_train_and_cal": true,
+    "legacy_train_labels_not_known_at_cal_start": 184,
+    "forward_rows": 737,
+    "forward_date_range": [
+      "2026-07-03",
+      "2026-09-21"
+    ],
+    "forward_rows_missing_model_version": 737
+  }
+}
