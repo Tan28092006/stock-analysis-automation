@@ -165,10 +165,13 @@ def test_mr_classifier_is_not_refit_after_calibration(monkeypatch):
     data = panel(500)
     for col in wp.FEATURES:
         data[col] = np.arange(len(data)) * .001
+    data.loc[::7, wp.FEATURES[0]] = np.nan
+    data.loc[::11, wp.FEATURES[1]] = np.inf
     data["win"] = data.net_t2_win
     fit_calls = []
     class Model(Spy):
         def fit(self, x, y, **kwargs):
+            assert np.isfinite(x.to_numpy()).all(), "MR train must use the same neutral imputation as serving"
             fit_calls.append(set(x.index))
             return super().fit(x, y, **kwargs)
     model = Model()
