@@ -12,7 +12,7 @@ from ..data.exchange_calendar import completed_session_date
 from ..features.backtest import BacktestConfig, run_backtest
 from ..features.feature_store import save_feature_snapshot
 from ..features.ml_models import predict_model_signal
-from ..features.signal_engine import score_symbol
+from ..features.signal_engine import score_symbol, precompute_signal_frames
 from ..schemas import DataQuality, HybridDecisionTrace, RuleEvidence, ScanCandidate, ScanResult, to_plain_dict
 from .fundamental_filter import pass_basic_filter
 from .parallel_engine import parallel_fetch_symbols
@@ -132,6 +132,8 @@ def run_scan(
     # via pick_cross_checked_frame.
     fetched = parallel_fetch_symbols(selected_symbols, start, end, rules, demo=demo, max_workers=8)
     _apply_market_regime(fetched, start, end, rules, demo, warnings)
+    feature_frames = precompute_signal_frames(
+        {s: f for s, (f, q) in fetched.items() if f is not None and q is not None and q.status != "failed"}, rules)
 
     for symbol in selected_symbols:
         frame, quality = fetched.get(symbol, (None, None))
@@ -182,7 +184,7 @@ def run_scan(
             candidates.append(candidate)
             continue
 
-        signal = score_symbol(symbol, frame, rules)
+        signal = score_symbol(symbol, feature_frames[symbol], rules)
         rule_decision = signal.decision
         model_signal = predict_model_signal(symbol, signal, rules)
         if model_signal.status == "available":

@@ -87,13 +87,10 @@ def precompute_signal_frames(symbol_frames: dict[str, pd.DataFrame], rules: dict
             continue
         frames[symbol.upper()] = prepare_signal_frame(frame.sort_values("date").reset_index(drop=True).copy(), rules)
         
-    try:
-        from .feature_engineering_v2 import add_cross_sectional_features, add_regime_features
-        cs_frames = add_cross_sectional_features(frames)
-        for symbol, frame in cs_frames.items():
-            frames[symbol] = add_regime_features(frame)
-    except Exception:
-        pass
+    from .feature_engineering_v2 import add_cross_sectional_features, add_regime_features, add_temporal_features
+    cs_frames = add_cross_sectional_features(frames)
+    for symbol, frame in cs_frames.items():
+        frames[symbol] = add_temporal_features(add_regime_features(frame))
         
     return frames
 

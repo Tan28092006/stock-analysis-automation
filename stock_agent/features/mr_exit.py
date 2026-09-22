@@ -31,7 +31,7 @@ def simulate_mr_exit(frame: pd.DataFrame, entry_idx: int, stop: float, target: f
       * resolved=True when a stop/target fired or the full max_hold window was in the data.
       * resolved=False means the horizon runs past the available data with no stop/target yet
         → the position is still open. exit_idx/exit_price then point at the LAST available bar
-        (a partial mark), so training labels can use it while live/forward callers treat
+        (a partial mark). Training MUST reject it; live/forward callers treat
         resolved=False as "pending / keep holding".
     """
     n = len(frame)

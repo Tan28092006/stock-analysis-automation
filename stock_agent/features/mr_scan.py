@@ -156,6 +156,8 @@ def _compute(recent_days: int, min_win_prob: float) -> dict:
         if model is None:
             return None, None
         sd = str(feats["date"].iloc[i])
+        if not model.available_at(sd):
+            return None, None
         fr = wp.feature_row(feats, i, regime.get(sd, 1.0), breadth.get(sd, 0.5), idx_ret20.get(sd))
         if fr is None:
             return None, None

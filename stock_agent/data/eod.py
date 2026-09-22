@@ -32,7 +32,7 @@ def scan_input_snapshot(prices_dir: Path) -> str:
     Content hashes also provide a reproducible identifier for future ledger rows.
     No assertion that those bytes are clean/independent is implied by a hash.
     """
-    h = hashlib.sha256(b"eod-scan-contract-v1")
+    h = hashlib.sha256(b"eod-scan-contract-v2-purged-model-gate")
     h.update(str(calendar.completed_session_date()).encode())
     paths = sorted(prices_dir.glob("*.csv")) + [
         Path("configs/universe_vn30.json"), Path("data/models/win_prob_mr.pkl")]

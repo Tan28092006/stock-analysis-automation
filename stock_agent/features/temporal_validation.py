@@ -32,14 +32,35 @@ def label_times(frame: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
 
 def mature_labeled(frame: pd.DataFrame, as_of: date | None = None) -> pd.DataFrame:
     signal, end = label_times(frame)
-    cutoff = pd.Timestamp(as_of or completed_session_date())
+    cutoff = pd.Timestamp(min(as_of or completed_session_date(), completed_session_date()))
     keep = end <= cutoff
     if "label_resolved" in frame:
         keep &= frame["label_resolved"].eq(True)
     out = frame.loc[keep].copy()
+    if "label_quality" in out and out.label_quality.ne("observed_bar_path").any():
+        raise ValueError("Unverified label price path: investigate corporate actions before training")
     if "symbol" in out and out.duplicated(["symbol", "signal_date"]).any():
         raise ValueError("Duplicate symbol/signal_date labels")
     return out.sort_values("signal_date", kind="stable").reset_index(drop=True)
+
+
+def model_available_at(metadata: dict, trained_at: str | None, signal_date) -> bool:
+    """Availability is necessary, not proof of PIT inputs or profitable execution."""
+    if not metadata or metadata.get("training_protocol") != TRAINING_PROTOCOL:
+        return False
+    try:
+        signal = pd.Timestamp(signal_date).normalize()
+        fitted = pd.Timestamp(trained_at)
+        if pd.isna(signal) or pd.isna(fitted) or fitted.tzinfo is None:
+            return False
+        cutoff = signal.tz_localize("Asia/Ho_Chi_Minh") + pd.Timedelta(hours=16)
+        label_end = pd.Timestamp(metadata["fit_label_end"])
+        calibration_end = pd.Timestamp(metadata.get("calibration_label_end", metadata["fit_label_end"]))
+        evaluation_end = pd.Timestamp(metadata["evaluation_label_end"])
+        # Evaluation and model-family/threshold selection must also have existed.
+        return bool(fitted <= cutoff and label_end < signal and calibration_end < signal and evaluation_end < signal)
+    except (TypeError, ValueError, KeyError):
+        return False
 
 
 def purged_time_split(frame: pd.DataFrame, fractions=(.6, .8)) -> tuple[pd.DataFrame, ...]:

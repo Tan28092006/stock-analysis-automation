@@ -57,6 +57,8 @@ class DailyRunner:
 
     def run(self) -> dict[str, Any]:
         """Execute the full daily pipeline."""
+        if self.demo:
+            return {"status": "blocked", "reason": "Demo daily pipeline cannot write production models/ledgers; use a non-persisting demo scan"}
         start_time = datetime.now(timezone.utc)
         PIPELINE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -105,6 +107,10 @@ class DailyRunner:
             self.on_progress("MODEL", "Training/updating ensemble model...")
             model_result = self._train_or_update(dataset, v1_cols)
             result["stages"]["model"] = model_result
+            if model_result.get("status") not in {"trained", "updated"}:
+                result["status"] = "model_not_updated"
+                self._log_run(result, start_time)
+                return result
 
             # Stage 4: Run scan with updated model
             self.on_progress("SCAN", "Running scan with updated ML model...")
@@ -173,9 +179,12 @@ class DailyRunner:
         try:
             # Try to load existing ensemble for incremental update
             trainer = EnsembleTrainer.load()
-            self.on_progress("MODEL", "Incremental update with warm-start...")
+            trainer.config = config
+            trainer.feature_columns = list(all_feature_cols)
+            self.on_progress("MODEL", "Fresh purged retraining; warm-start disabled...")
             result = trainer.daily_update(dataset, label_col="net_t2_win")
-            trainer.save()
+            if result.get("status") == "updated":
+                trainer.save()
             return result
         except FileNotFoundError:
             # No existing model — full train

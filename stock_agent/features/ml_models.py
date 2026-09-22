@@ -231,6 +231,10 @@ def predict_model_signal(symbol: str, signal: Any, rules: dict[str, Any]) -> Mod
 
     try:
         artifact = _load_artifact(Path(artifact_path))
+        from .temporal_validation import model_available_at
+        if not model_available_at(artifact.get("training_metadata", {}), artifact.get("trained_at"), getattr(signal, "latest_date", None)):
+            return ModelSignal(status="unavailable", model_family=family,
+                               detail="Artifact unverified or unavailable at signal EOD; no ML override")
         cols = list(artifact["feature_columns"])
         row = _feature_row_from_signal(signal)
         from .calibration import preprocess_features_robust
@@ -296,6 +300,10 @@ def _predict_ensemble(symbol: str, signal: Any, rules: dict, ml_rules: dict) -> 
             warnings=[str(exc)],
         )
 
+    from .temporal_validation import model_available_at
+    if not model_available_at(getattr(trainer, "training_metadata", {}), trainer.trained_at, getattr(signal, "latest_date", None)):
+        return ModelSignal(status="unavailable", model_family="ensemble",
+                           detail="Artifact unverified or unavailable at signal EOD; no ML override")
     try:
         row = _feature_row_from_signal(signal)
         return_shap = bool(ml_rules.get("return_shap", False))

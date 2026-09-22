@@ -100,10 +100,12 @@ def is_candidate(fr: dict) -> bool:
     return fr["_rsi"] < CAND_RSI_MAX and fr["_close"] <= fr["_bbl"] * CAND_BAND_MULT
 
 
-def _context(prices_dir: Path):
+def _context(prices_dir: Path, *, strict_training: bool = False):
     """market_regime + breadth + index 20d return, keyed by date string."""
     from ..data.training_quality import read_training_prices
-    idx = read_training_prices(prices_dir / "VNINDEX.csv")
+    from ..data.eod import read_eod_csv
+    reader = read_training_prices if strict_training else read_eod_csv
+    idx = reader(prices_dir / "VNINDEX.csv")
     idx["date"] = idx["date"].astype(str).str.slice(0, 10)
     idx = idx.sort_values("date").reset_index(drop=True)
     e50 = ema(idx["close"], 50)
@@ -154,7 +156,7 @@ def train_and_save(prices_dir: Path = Path("data/raw/prices_hist"),
                    artifact_path: Path = ARTIFACT_PATH) -> dict:
     from ..data.training_quality import read_training_prices
 
-    regime, idx_ret20 = _context(prices_dir)
+    regime, idx_ret20 = _context(prices_dir, strict_training=True)
     files = {p.stem: p for p in prices_dir.glob("*.csv") if p.stem != "VNINDEX"}
     frames = {s: _prep(read_training_prices(p)) for s, p in files.items()}
     breadth = _breadth_map(frames)
@@ -227,7 +229,11 @@ class WinProbModel:
 
     def __init__(self, art):
         self.model = art["model"]; self.iso = art["iso"]; self.features = art["features"]
-        self.meta = {k: art.get(k) for k in ("trained_at", "n_candidates", "base_win_rate", "calib_auc")}
+        self.meta = {k: art.get(k) for k in ("trained_at", "n_candidates", "base_win_rate", "calib_auc", "test_auc", "test_brier", "training_metadata")}
+
+    def available_at(self, signal_date) -> bool:
+        from .temporal_validation import model_available_at
+        return model_available_at(self.meta.get("training_metadata"), self.meta.get("trained_at"), signal_date)
 
     @classmethod
     def load(cls, path: Path = ARTIFACT_PATH):
