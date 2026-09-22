@@ -1,18 +1,22 @@
 @echo off
-rem Daily EOD update: prices + foreign flows + room snapshot + MR/momentum scan caches.
+setlocal
+rem Daily EOD PAPER run: refresh a verified snapshot, check readiness, then log paper signals.
 rem Registered in Windows Task Scheduler as "StockAgent_EOD_Update" (17:05 Mon-Fri).
-rem After updating, it publishes the fresh data to GitHub so a free Render deploy
-rem auto-redeploys with today's data (no paid persistent disk needed).
-cd /d D:\Chungkhoan
+rem No broker orders, production model replacement, legacy ledger writes, or Git publishing.
+rem VN30_PYTHON may override the existing local Anaconda interpreter.
+cd /d "%~dp0" || exit /b 2
+if not exist "data\pipeline" mkdir "data\pipeline"
+if not exist "data\pipeline" exit /b 2
+if not defined VN30_PYTHON set "VN30_PYTHON=C:\Users\acer\anaconda3\python.exe"
 
-echo ===== EOD run %date% %time% ===== >> data\pipeline\eod_update.log 2>&1
-C:\Users\acer\anaconda3\python.exe -m stock_agent.pipeline.eod_update >> data\pipeline\eod_update.log 2>&1
+echo ===== EOD PAPER run %date% %time% ===== >> "data\pipeline\eod_update.log" 2>&1
+"%VN30_PYTHON%" -m stock_agent.pipeline.paper_runner --refresh --run >> "data\pipeline\eod_update.log" 2>&1
+set "VN30_RUN_EXIT=%errorlevel%"
+if not "%VN30_RUN_EXIT%"=="0" goto failed
 
-rem --- Publish data to GitHub (only data paths are staged, not unrelated changes) ---
-git add data/raw/prices_hist data/raw/foreign data/pipeline/momentum_scan_cache.json data/pipeline/mr_scan_cache.json data/pipeline/forward_test.jsonl data/pipeline/daily_runs.jsonl data/pipeline/pending_predictions.jsonl data/models/win_prob_mr.pkl >> data\pipeline\eod_update.log 2>&1
-git commit -m "data: EOD update %date%" >> data\pipeline\eod_update.log 2>&1
-rem Rebase onto remote first so a push from elsewhere doesn't make this a non-fast-forward.
-git pull --rebase --autostash >> data\pipeline\eod_update.log 2>&1
-git push >> data\pipeline\eod_update.log 2>&1
-if errorlevel 1 echo ===== !!! GIT PUSH FAILED - Render se phuc vu DATA CU, kiem tra ket noi/credential !!! ===== >> data\pipeline\eod_update.log 2>&1
-echo ===== done %date% %time% ===== >> data\pipeline\eod_update.log 2>&1
+echo ===== EOD PAPER SUCCESS %date% %time% - local only, not published ===== >> "data\pipeline\eod_update.log" 2>&1
+exit /b 0
+
+:failed
+echo ===== EOD PAPER FAILED exit=%VN30_RUN_EXIT% %date% %time% - see runner readiness report ===== >> "data\pipeline\eod_update.log" 2>&1
+exit /b %VN30_RUN_EXIT%
