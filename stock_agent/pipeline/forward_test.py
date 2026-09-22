@@ -176,10 +176,15 @@ def _read_ledger() -> list[dict]:
     out = []
     with LEDGER_PATH.open(encoding="utf-8") as fh:
         for line in fh:
-            try:
-                out.append(json.loads(line))
-            except Exception:
+            if not line.strip():
                 continue
+            try:
+                value = json.loads(line)
+                if not isinstance(value, dict):
+                    raise ValueError("expected a ledger object")
+                out.append(value)
+            except (ValueError, TypeError):
+                out.append({"_parse_error": True, "_raw_line": line.rstrip()})
     return out
 
 

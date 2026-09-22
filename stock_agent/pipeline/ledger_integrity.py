@@ -11,12 +11,15 @@ import json
 import math
 
 import pandas as pd
+import numpy as np
 
 from ..data.exchange_calendar import VN_TIMEZONE, next_trading_day, is_trading_day
 
 
 def provenance_reasons(record: dict) -> list[str]:
     reasons = []
+    if record.get("_parse_error"):
+        reasons.append("invalid_json_record")
     required = ("recorded_at", "mode", "model_version", "rules_hash", "input_snapshot", "data_source")
     if record.get("schema_version") != 2 or any(not record.get(k) for k in required):
         reasons.append("missing_provenance")
@@ -62,6 +65,22 @@ def price_reasons(record: dict, frame: pd.DataFrame | None) -> list[str]:
             return ["reference_price_mismatch"]
     except (TypeError, ValueError):
         return ["invalid_reference"]
+    # Validate the bars that may enter this outcome, not unrelated old history.
+    # The replay still cannot certify adjusted prices, fills or slippage.
+    try:
+        horizon = 21 if record.get("engine") == "momentum" else int(record.get("max_hold_days") or 15)
+        if horizon < 1:
+            return ["invalid_horizon"]
+        i = frame.index.get_loc(matched.index[0])
+        window = frame.iloc[i:i + horizon + 2]
+        prices = window[["open", "high", "low", "close"]].astype(float)
+        invalid = (~np.isfinite(prices)).any(axis=1) | (prices <= 0).any(axis=1)
+        invalid |= prices.high < prices[["open", "low", "close"]].max(axis=1)
+        invalid |= prices.low > prices[["open", "high", "close"]].min(axis=1)
+        if invalid.any() or window["date"].duplicated().any():
+            return ["invalid_outcome_bars"]
+    except (KeyError, TypeError, ValueError):
+        return ["invalid_outcome_bars"]
     return []
 
 

@@ -233,7 +233,7 @@ def _compute(recent_days: int, min_win_prob: float) -> dict:
         "min_win_prob": min_win_prob,
         "money": {"account_nav": cfg["account_nav"], "risk_per_trade_pct": cfg["risk_per_trade_pct"],
                   "max_positions": cfg["max_positions"]},
-        "model": {"available": model is not None, **({k: meta.get(k) for k in ("calib_auc", "base_win_rate", "trained_at", "n_candidates")} if model else {})},
+        "model": {"available": model is not None, **({k: meta.get(k) for k in ("calib_auc", "base_win_rate", "trained_at", "n_candidates", "model_version")} if model else {})},
         "market": market,
         "buys": buys,
         "watches": watches,

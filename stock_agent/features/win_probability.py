@@ -13,6 +13,7 @@ Features are read from the SAME production indicator frame the signal engine sco
 from __future__ import annotations
 
 import pickle
+import hashlib
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -202,12 +203,14 @@ class WinProbModel:
 
     @classmethod
     def load(cls, path: Path = ARTIFACT_PATH):
-        if cls._cache is not None:
-            return cls._cache
         if not path.exists():
             return None
-        with path.open("rb") as fh:
-            cls._cache = cls(pickle.load(fh))
+        raw = path.read_bytes()
+        version = hashlib.sha256(raw).hexdigest()
+        if cls._cache is not None and cls._cache.meta.get("model_version") == version:
+            return cls._cache
+        cls._cache = cls(pickle.loads(raw))
+        cls._cache.meta["model_version"] = version
         return cls._cache
 
     def predict(self, fr: dict) -> float:
