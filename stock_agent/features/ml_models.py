@@ -527,10 +527,10 @@ def _select_model(results: list[TrainingResult]) -> str | None:
         return None
 
     def key(item: TrainingResult) -> tuple[float, float, int]:
-        test = item.metrics.get("test", {})
-        avg_return = float(test.get("avg_net_return_pct") or 0.0)
-        win_rate = float(test.get("win_rate") or 0.0)
-        trades = int(test.get("selected_trades") or 0)
+        validation = item.metrics.get("validation", {})
+        avg_return = float(validation.get("avg_net_return_pct") or 0.0)
+        win_rate = float(validation.get("win_rate") or 0.0)
+        trades = int(validation.get("selected_trades") or 0)
         return (avg_return, win_rate, trades)
 
     return max(trained, key=key).model_family
@@ -558,11 +558,8 @@ def _feature_frame(frame: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
 
 
 def _time_split(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    n = len(frame)
-    train_end = max(1, int(n * 0.6))
-    validation_end = max(train_end + 1, int(n * 0.8))
-    validation_end = min(validation_end, n - 1)
-    return frame.iloc[:train_end], frame.iloc[train_end:validation_end], frame.iloc[validation_end:]
+    from .temporal_validation import purged_time_split
+    return purged_time_split(frame)
 
 
 def _feature_row_from_signal(signal: Any) -> dict[str, Any]:

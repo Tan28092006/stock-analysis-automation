@@ -219,240 +219,99 @@ class EnsembleTrainer:
 
     # -- Train (full) -----------------------------------------------------
 
+    def _fit_bases(self, frame: pd.DataFrame, label_col: str) -> None:
+        """Fit a fresh voting ensemble and train-only preprocessing."""
+        X = self._prepare_features(frame, fit=True)
+        y = frame[label_col].astype(int).to_numpy()
+        returns = frame.get("net_t2_return_pct", pd.Series(0., index=frame.index)).fillna(0).to_numpy()
+        weights = np.where(y == 1, 1., 1. + np.abs(returns))
+        self.lgb_model = self._build_lgb()
+        self.xgb_model = self._build_xgb()
+        self.ridge_pipeline = self._build_ridge()
+        self.cat_model = self._build_cat()
+        self.lgb_model.fit(X, y, sample_weight=weights)
+        self.xgb_model.fit(X, y, sample_weight=weights)
+        self.ridge_pipeline.fit(X, y, model__sample_weight=weights)
+        self.cat_model.fit(X, y, sample_weight=weights, verbose=0)
+        self.meta_model = None
+        self._explainer = None
+
     def train(
         self,
         dataset: pd.DataFrame,
         feature_cols: list[str],
         label_col: str = "net_t2_win",
     ) -> dict[str, Any]:
-        """Full training with walk-forward validation."""
-        self.feature_columns = list(feature_cols)
-        working = dataset.dropna(subset=[label_col]).copy()
-        working = working.sort_values("signal_date").reset_index(drop=True)
+        """Purged development CV plus a frozen 20%-of-days holdout.
 
+        Keep the evaluated development-fit model. Never refit on test rows and
+        reuse that test score; any future all-data deployment needs a new eval.
+        """
+        from .temporal_validation import mature_labeled, purged_time_split, purged_walk_forward, training_manifest
+        self.feature_columns = list(feature_cols)
+        working = mature_labeled(dataset.dropna(subset=[label_col]))
         if len(working) < self.config.min_train_rows:
             return {"status": "insufficient_data", "rows": len(working)}
+        development, test = purged_time_split(working, fractions=(.8,))
+        if (len(development) < self.config.min_train_rows or test.empty
+                or development[label_col].nunique() < 2):
+            return {"status": "insufficient_data", "rows": len(working), "reason": "purged split"}
 
-        X = self._prepare_features(working, fit=True)
-        y = working[label_col].astype(int).values
-
-        # Compute financial-impact sample weights
-        # Wins (y=1) get weight 1.0. Losses (y=0) get 1.0 + 1.0 * abs(net_t2_return_pct)
-        returns = working.get("net_t2_return_pct", pd.Series(0.0, index=working.index)).fillna(0.0).values
-        sample_weights = np.where(y == 1, 1.0, 1.0 + 1.0 * np.abs(returns))
-
-        # Walk-forward: generate OOF (out-of-fold) predictions for meta-learner
-        oof_lgb = np.zeros(len(y), dtype=float)
-        oof_xgb = np.zeros(len(y), dtype=float)
-        oof_ridge = np.zeros(len(y), dtype=float)
-        oof_cat = np.zeros(len(y), dtype=float)
-
-        tscv = TimeSeriesSplit(n_splits=self.config.n_splits)
-        fold_metrics: list[dict] = []
-        val_indices_set = set()
-
-        for fold_idx, (train_idx, val_idx) in enumerate(tscv.split(X)):
-            X_tr, X_val = X.iloc[train_idx], X.iloc[val_idx]
-            y_tr, y_val = y[train_idx], y[val_idx]
-
-            if len(np.unique(y_tr)) < 2:
+        fold_metrics = []
+        for fold, (tr, val) in enumerate(purged_walk_forward(development, self.config.n_splits)):
+            train_fold, val_fold = development.iloc[tr], development.iloc[val]
+            if val_fold.empty or train_fold[label_col].nunique() < 2:
                 continue
-
-            val_indices_set.update(val_idx)
-
-            # Train base models on this fold with sample weights
-            lgb = self._build_lgb()
-            xgb = self._build_xgb()
-            ridge = self._build_ridge()
-            cat = self._build_cat()
-
-            sw_tr = sample_weights[train_idx]
-            lgb.fit(X_tr, y_tr, sample_weight=sw_tr)
-            xgb.fit(X_tr, y_tr, sample_weight=sw_tr)
-            ridge.fit(X_tr, y_tr, model__sample_weight=sw_tr)
-            cat.fit(X_tr, y_tr, sample_weight=sw_tr, verbose=0)
-
-            # OOF predictions
-            oof_lgb[val_idx] = lgb.predict_proba(X_val)[:, 1]
-            oof_xgb[val_idx] = xgb.predict_proba(X_val)[:, 1]
-            oof_ridge[val_idx] = self._ridge_proba(ridge, X_val)
-            oof_cat[val_idx] = cat.predict_proba(X_val)[:, 1]
-
-            # Per-fold metrics
-            fold_preds = (oof_lgb[val_idx] + oof_xgb[val_idx] + oof_ridge[val_idx] + oof_cat[val_idx]) / 4.0
-            fold_selected = fold_preds >= self.config.probability_threshold
+            self._fit_bases(train_fold, label_col)
+            probabilities, _ = self.predict(val_fold)
+            selected = probabilities >= self.config.probability_threshold
             fold_metrics.append({
-                "fold": fold_idx,
-                "val_size": len(val_idx),
-                "selected": int(fold_selected.sum()),
-                "win_rate": float(y_val[fold_selected].mean() * 100) if fold_selected.sum() > 0 else 0.0,
+                "fold": fold, "train_size": len(train_fold), "val_size": len(val_fold),
+                "fit_label_end": str(train_fold.exit_date.max()),
+                "validation_start": str(val_fold.signal_date.min()),
+                "selected": int(selected.sum()),
+                "win_rate": float(val_fold.loc[selected, label_col].mean() * 100) if selected.any() else 0.,
             })
 
-        # Train final base models on ALL data with sample weights
-        self.lgb_model = self._build_lgb()
-        self.xgb_model = self._build_xgb()
-        self.ridge_pipeline = self._build_ridge()
-        self.cat_model = self._build_cat()
-
-        self.lgb_model.fit(X, y, sample_weight=sample_weights)
-        self.xgb_model.fit(X, y, sample_weight=sample_weights)
-        self.ridge_pipeline.fit(X, y, model__sample_weight=sample_weights)
-        self.cat_model.fit(X, y, sample_weight=sample_weights, verbose=0)
-
-        # Stacking meta-learner is disabled to prevent overfitting and uncalibrated probabilities on noisy financial data.
-        # We use a robust simple average (soft voting) of base models instead.
-        self.meta_model = None
-
-        # Evaluate on last fold (pseudo-test)
-        last_fold_val_idx = list(tscv.split(X))[-1][1] if fold_metrics else []
-        if len(last_fold_val_idx) > 0:
-            test_X = X.iloc[last_fold_val_idx]
-            test_y = y[last_fold_val_idx]
-            test_proba = self._predict_proba_internal(test_X)
-            test_selected = test_proba >= self.config.probability_threshold
-            test_frame = working.iloc[last_fold_val_idx]
-
-            self.metrics = {
-                "threshold": self.config.probability_threshold,
-                "test_size": len(test_y),
-                "test_selected": int(test_selected.sum()),
-                "test_win_rate": float(test_y[test_selected].mean() * 100) if test_selected.sum() > 0 else 0.0,
-                "test_avg_return": float(test_frame.loc[test_selected, "net_t2_return_pct"].mean()) if test_selected.sum() > 0 and "net_t2_return_pct" in test_frame else 0.0,
-                "accuracy": float(accuracy_score(test_y, (test_proba >= 0.5).astype(int))),
-                "precision": float(precision_score(test_y, (test_proba >= self.config.probability_threshold).astype(int), zero_division=0)),
-                "recall": float(recall_score(test_y, (test_proba >= self.config.probability_threshold).astype(int), zero_division=0)),
-                "fold_metrics": fold_metrics,
-                "ensemble_type": "stacking_lgb_xgb_ridge_cat",
-                "meta_learner": "logistic" if self.meta_model else "simple_average",
-            }
-        else:
-            self.metrics = {"status": "no_test_data"}
-
-        self.trained_at = datetime.now(timezone.utc).isoformat()
-        self.train_rows = len(working)
-
-        # Compute profit factor from test predictions
-        if len(last_fold_val_idx) > 0 and "net_t2_return_pct" in test_frame.columns:
-            selected_returns = test_frame.loc[test_selected, "net_t2_return_pct"].tolist()
-            gains = sum(r for r in selected_returns if r > 0)
-            losses = abs(sum(r for r in selected_returns if r < 0))
-            self.metrics["test_profit_factor"] = round(gains / losses, 4) if losses > 0 else None
-            self.metrics["test_selection_metrics"] = selection_metrics(test_frame, test_selected)
-
-        return {
-            "status": "trained",
-            "metrics": self.metrics,
-            "train_rows": self.train_rows,
-            "feature_count": len(self.feature_columns),
+        self._fit_bases(development, label_col)
+        proba, _ = self.predict(test)
+        y = test[label_col].astype(int).to_numpy()
+        selected = proba >= self.config.probability_threshold
+        self.metrics = {
+            "threshold": self.config.probability_threshold,
+            "evaluation": "untouched_date_holdout_with_label_purge",
+            "test_size": len(test), "test_selected": int(selected.sum()),
+            "test_win_rate": float(y[selected].mean() * 100) if selected.any() else 0.,
+            "accuracy": float(accuracy_score(y, proba >= .5)),
+            "precision": float(precision_score(y, selected, zero_division=0)),
+            "recall": float(recall_score(y, selected, zero_division=0)),
+            "fold_metrics": fold_metrics, "ensemble_type": "voting_lgb_xgb_ridge_cat",
+            "meta_learner": "simple_average",
         }
-
-    # -- Incremental daily update -----------------------------------------
-
-    def daily_update(
-        self,
-        full_dataset: pd.DataFrame,
-        label_col: str = "net_t2_win",
-    ) -> dict[str, Any]:
-        """Incremental retrain: add trees to LightGBM/XGBoost, retrain Ridge+Meta.
-
-        Uses warm-start (init_model for LGB, xgb_model for XGB) to add
-        a small number of additional trees on the expanded dataset.
-        """
-        if self.lgb_model is None or self.xgb_model is None or getattr(self, "cat_model", None) is None:
-            return self.train(full_dataset, self.feature_columns, label_col)
-
-        working = full_dataset.dropna(subset=[label_col]).sort_values("signal_date").reset_index(drop=True)
-        if len(working) < self.config.min_train_rows:
-            return {"status": "insufficient_data", "rows": len(working)}
-
-        X = self._prepare_features(working)
-        y = working[label_col].astype(int).values
-
-        # Compute financial-impact sample weights
-        returns = working.get("net_t2_return_pct", pd.Series(0.0, index=working.index)).fillna(0.0).values
-        sample_weights = np.where(y == 1, 1.0, 1.0 + 1.0 * np.abs(returns))
-
-        if len(np.unique(y)) < 2:
-            return {"status": "insufficient_labels", "rows": len(working)}
-
-        # LightGBM warm-start: add incremental trees
-        from lightgbm import LGBMClassifier
-        lgb_new = LGBMClassifier(
-            n_estimators=self.config.incremental_trees,
-            max_depth=self.config.lgb_max_depth,
-            learning_rate=self.config.lgb_learning_rate * 0.5,  # Lower LR for fine-tuning
-            subsample=self.config.lgb_subsample,
-            colsample_bytree=self.config.lgb_colsample_bytree,
-            reg_alpha=self.config.lgb_reg_alpha,
-            reg_lambda=self.config.lgb_reg_lambda,
-            min_child_samples=self.config.lgb_min_child_samples,
-            random_state=42,
-            verbose=-1,
-            n_jobs=-1,
+        if "net_t2_return_pct" in test:
+            trade_metrics = selection_metrics(test, selected)
+            self.metrics.update(test_selection_metrics=trade_metrics,
+                                test_avg_return=trade_metrics["avg_net_return_pct"],
+                                test_profit_factor=trade_metrics["profit_factor"])
+        self.training_metadata = training_manifest(
+            development, self.feature_columns,
+            evaluation_test_start=str(test.signal_date.min()),
+            evaluation_test_end=str(test.signal_date.max()),
+            evaluation_label_end=str(test.exit_date.max()),
+            universe_policy=dataset.attrs.get("universe_policy", "caller_supplied_unverified"),
         )
-        lgb_new.fit(X, y, init_model=self.lgb_model, sample_weight=sample_weights)
-        self.lgb_model = lgb_new
-
-        # XGBoost warm-start
-        from xgboost import XGBClassifier
-        xgb_new = XGBClassifier(
-            n_estimators=self.config.incremental_trees,
-            max_depth=self.config.xgb_max_depth,
-            learning_rate=self.config.xgb_learning_rate * 0.5,
-            subsample=self.config.xgb_subsample,
-            colsample_bytree=self.config.xgb_colsample_bytree,
-            reg_alpha=self.config.xgb_reg_alpha,
-            reg_lambda=self.config.xgb_reg_lambda,
-            eval_metric="logloss",
-            random_state=42,
-            n_jobs=-1,
-            verbosity=0,
-        )
-        xgb_new.fit(X, y, xgb_model=self.xgb_model, sample_weight=sample_weights)
-        self.xgb_model = xgb_new
-
-        # Ridge: full retrain (fast for linear model)
-        self.ridge_pipeline = self._build_ridge()
-        self.ridge_pipeline.fit(X, y, model__sample_weight=sample_weights)
-
-        # CatBoost: full retrain
-        self.cat_model = self._build_cat()
-        self.cat_model.fit(X, y, sample_weight=sample_weights, verbose=0)
-
-        # Meta-learner: retrain on base predictions
-        lgb_proba = self.lgb_model.predict_proba(X)[:, 1]
-        xgb_proba = self.xgb_model.predict_proba(X)[:, 1]
-        ridge_proba = self._ridge_proba(self.ridge_pipeline, X)
-        cat_proba = self.cat_model.predict_proba(X)[:, 1] if self.cat_model else np.full(len(X), 0.5)
-        meta_X = np.column_stack([lgb_proba, xgb_proba, ridge_proba, cat_proba])
-
-        if len(np.unique(y)) >= 2:
-            self.meta_model = self._build_meta()
-            self.meta_model.fit(meta_X, y, model__sample_weight=sample_weights)
-
-        # Quick validation on last 20% of data
-        val_start = int(len(working) * 0.8)
-        val_X = X.iloc[val_start:]
-        val_y = y[val_start:]
-        val_proba = self._predict_proba_internal(val_X)
-        val_selected = val_proba >= self.config.probability_threshold
-
         self.trained_at = datetime.now(timezone.utc).isoformat()
-        self.train_rows = len(working)
+        self.train_rows = len(development)
+        return {"status": "trained", "metrics": self.metrics, "train_rows": self.train_rows,
+                "dataset_rows": len(working), "feature_count": len(self.feature_columns),
+                "training_metadata": self.training_metadata}
 
-        update_metrics = {
-            "status": "updated",
-            "mode": "incremental",
-            "total_trees_lgb": self.lgb_model.n_estimators_,
-            "total_trees_xgb": self.xgb_model.get_booster().num_boosted_rounds() if hasattr(self.xgb_model, "get_booster") else "unknown",
-            "total_trees_cat": self.cat_model.get_all_params().get("iterations") if self.cat_model else "unknown",
-            "train_rows": self.train_rows,
-            "val_size": len(val_y),
-            "val_selected": int(val_selected.sum()),
-            "val_win_rate": float(val_y[val_selected].mean() * 100) if val_selected.sum() > 0 else 0.0,
-        }
-        self.metrics.update(update_metrics)
-        return update_metrics
+    def daily_update(self, full_dataset: pd.DataFrame, label_col: str = "net_t2_win") -> dict[str, Any]:
+        """Fresh purged fit; warm-start cannot unlearn a previously seen holdout."""
+        result = self.train(full_dataset, self.feature_columns, label_col)
+        if result.get("status") == "trained":
+            result = {**result, "status": "updated", "mode": "purged_retrain"}
+        return result
 
     # -- Predict ----------------------------------------------------------
 

@@ -134,11 +134,11 @@ def _label_trade(f: pd.DataFrame, i: int) -> float | None:
     close = float(f.at[i, "close"])
     if not (np.isfinite(entry) and entry > 0):
         return None
-    stop = entry - STOP_ATR * atrv
+    stop = close - STOP_ATR * atrv
     target = max(kijun, close * 1.01)
-    # Training labels want a value even at the data edge, so use the (partial) mark
-    # regardless of `resolved` — matches the historical labelling behaviour.
-    _, exit_px, _, _ = simulate_mr_exit(f, i + 1, stop, target, MAX_HOLD, settle_lock=T2_LOCK)
+    _, exit_px, _, resolved = simulate_mr_exit(f, i + 1, stop, target, MAX_HOLD, settle_lock=T2_LOCK)
+    if not resolved:
+        return None
     return (exit_px - entry) / entry * 100 - COST
 
 
