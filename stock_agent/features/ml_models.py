@@ -135,7 +135,6 @@ def train_model_suite_from_dataset(
             "models": {},
             "warnings": ["no labeled rows available"],
         }
-        write_json(MODEL_REGISTRY_PATH, payload)
         return payload
 
     from .temporal_validation import mature_labeled
@@ -163,7 +162,6 @@ def train_model_suite_from_dataset(
             "models": {},
             "warnings": warnings,
         }
-        write_json(MODEL_REGISTRY_PATH, payload)
         return payload
 
     train, validation, test = _time_split(working)
@@ -178,7 +176,6 @@ def train_model_suite_from_dataset(
             "models": {},
             "warnings": warnings,
         }
-        write_json(MODEL_REGISTRY_PATH, payload)
         return payload
 
     threshold = float(rules.get("ml", {}).get("probability_threshold", 0.58))
@@ -196,7 +193,8 @@ def train_model_suite_from_dataset(
         "models": models,
         "warnings": warnings,
     }
-    write_json(MODEL_REGISTRY_PATH, payload)
+    if selected:
+        write_json(MODEL_REGISTRY_PATH, payload)
     return payload
 
 

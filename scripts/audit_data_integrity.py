@@ -31,6 +31,7 @@ from stock_agent.features.feature_engineering_v2 import add_regime_features
 from stock_agent.features.indicators import add_indicators
 from stock_agent.features.mr_exit import simulate_mr_exit
 from stock_agent.features import win_probability as wp
+from stock_agent.features.temporal_validation import purged_walk_forward
 
 
 def digest(path):
@@ -79,6 +80,8 @@ def audit_causality():
     dataset = pd.DataFrame({"signal_date": pd.bdate_range("2025-01-01", periods=80),
                             "feature_x": np.arange(80), "net_t2_win": np.arange(80) % 2,
                             "net_t2_return_pct": np.where(np.arange(80) % 2, 1., -1.)})
+    dataset["exit_date"] = dataset.signal_date + pd.offsets.BDay(2)
+    dataset["label_resolved"] = True
     with patch.object(trainer, "_build_lgb", FitSpy), patch.object(trainer, "_build_xgb", FitSpy), \
          patch.object(trainer, "_build_ridge", FitSpy), patch.object(trainer, "_build_cat", FitSpy), \
          patch.object(trainer, "_ridge_proba", lambda model, x: model.predict_proba(x)[:, 1]):
@@ -88,7 +91,9 @@ def audit_causality():
     panel = pd.DataFrame({"signal_date": np.repeat(pd.bdate_range("2025-01-01", periods=40), 7)})
     panel["exit_date"] = panel.signal_date + pd.offsets.BDay(20)
     folds = []
-    for tr, te in TimeSeriesSplit(n_splits=5).split(panel):
+    for tr, te in purged_walk_forward(panel, n_splits=5):
+        if not len(te):
+            continue
         boundary = panel.iloc[te].signal_date.min()
         folds.append({"same_signal_day_in_both": bool(panel.iloc[tr].signal_date.max() == boundary),
                       "train_labels_not_known_at_test_start": int((panel.iloc[tr].exit_date >= boundary).sum())})
@@ -98,6 +103,7 @@ def audit_causality():
             "v2_past_regime_classes_changed_after_future_append": regime_changed,
             "ensemble_evaluated_rows": len(spy.last_predict_indices),
             "ensemble_evaluated_rows_seen_by_fit": len(spy.last_predict_indices & spy.fit_indices),
+            "winsorization_demonstration_note": "Full-data fit is intentionally contrasted with train-only fit; production no longer fits full data.",
             "winsor_bounds_full": bounds, "winsor_bounds_future_perturbed": bounds2,
             "winsor_bounds_train_only": first_bounds,
             "panel_fold_label_overlap": folds}
@@ -180,10 +186,10 @@ def audit_mr():
     train = df.iloc[:cut]
     ledger = read_jsonl(ROOT / "data/pipeline/forward_test.jsonl")
     return {"artifact_sha256": digest(path), "artifact_metadata": meta,
-            "reconstruction_note": "Current local history with current code; not the unavailable original training snapshot.",
-            "current_candidate_count": len(df), "partial_labels_accepted_by_current_trainer": int((~df.resolved).sum()),
-            "calibration_start": boundary, "same_signal_date_in_train_and_cal": bool(train.date.max() == boundary),
-            "train_labels_not_known_at_cal_start": int((train.exit_date >= boundary).sum()),
+            "reconstruction_note": "Legacy 85/15 split and entry-anchored stop reconstructed on current history; NOT the repaired trainer or original missing snapshot.",
+            "legacy_reconstructed_candidate_count": len(df), "legacy_partial_labels": int((~df.resolved).sum()),
+            "legacy_calibration_start": boundary, "legacy_same_signal_date_in_train_and_cal": bool(train.date.max() == boundary),
+            "legacy_train_labels_not_known_at_cal_start": int((train.exit_date >= boundary).sum()),
             "forward_rows": len(ledger), "forward_date_range": [min(r['signal_date'] for r in ledger), max(r['signal_date'] for r in ledger)],
             "forward_rows_missing_model_version": sum("model_version" not in r for r in ledger)}
 

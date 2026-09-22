@@ -341,7 +341,7 @@ class EnsembleTrainer:
 
     def predict_single(self, feature_row: dict[str, float], return_shap: bool = True) -> tuple[float, dict]:
         """Predict for a single stock. Returns (probability, {shap_top5, agreement})."""
-        df = pd.DataFrame([{col: feature_row.get(col, 0.0) for col in self.feature_columns}])
+        df = pd.DataFrame([{col: feature_row.get(col, np.nan) for col in self.feature_columns}])
         # Prepare features ONCE and reuse for both the meta probability and the
         # per-model agreement (previously preprocessed twice per prediction).
         X = self._prepare_features(df)
