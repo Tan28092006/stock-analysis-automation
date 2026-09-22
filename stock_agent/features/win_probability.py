@@ -153,11 +153,26 @@ def _trade_label_record(f: pd.DataFrame, i: int) -> dict | None:
 
 
 def train_and_save(prices_dir: Path = Path("data/raw/prices_hist"),
-                   artifact_path: Path = ARTIFACT_PATH) -> dict:
+                   artifact_path: Path | None = None, *,
+                   snapshot_manifest: Path | None = None,
+                   candidate_dir: Path = Path("data/models/candidates")) -> dict:
+    """Train a frozen candidate; never overwrite or promote the active model.
+
+    No snapshot means research-only. A verified provider snapshot is necessary but
+    not sufficient for paper eligibility, and never confers live approval.
+    """
     from ..data.training_quality import read_training_prices
+    from .model_release import validate_candidate_target, verify_snapshot, stage_candidate
+
+    validate_candidate_target(artifact_path)
+    prices_dir = Path(prices_dir)
+    snapshot = verify_snapshot(snapshot_manifest, prices_dir) if snapshot_manifest else {
+        "verified": False,
+        "files": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(prices_dir.glob("*.csv"))},
+    }
 
     regime, idx_ret20 = _context(prices_dir, strict_training=True)
-    files = {p.stem: p for p in prices_dir.glob("*.csv") if p.stem != "VNINDEX"}
+    files = {p.stem: p for p in sorted(prices_dir.glob("*.csv")) if p.stem != "VNINDEX"}
     frames = {s: _prep(read_training_prices(p)) for s, p in files.items()}
     breadth = _breadth_map(frames)
 
@@ -180,12 +195,16 @@ def train_and_save(prices_dir: Path = Path("data/raw/prices_hist"),
     artifact = _fit_candidates(pd.DataFrame(rows))
     if artifact.get("status") == "insufficient_data":
         return artifact
-    artifact_path.parent.mkdir(parents=True, exist_ok=True)
-    with artifact_path.open("wb") as fh:
-        pickle.dump(artifact, fh)
-    return {"status": "ok", "rows": artifact["n_candidates"],
+    after = verify_snapshot(snapshot_manifest, prices_dir) if snapshot_manifest else {
+        "verified": False,
+        "files": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(prices_dir.glob("*.csv"))},
+    }
+    if snapshot != after:
+        raise ValueError("Training source snapshot changed during fit; candidate not saved")
+    staged = stage_candidate(artifact, candidate_dir=candidate_dir, artifact_path=artifact_path, snapshot=snapshot)
+    return {"status": "candidate_staged", "rows": artifact["n_candidates"],
             "test_auc": artifact["test_auc"], "test_brier": artifact["test_brier"],
-            "artifact": str(artifact_path), "training_metadata": artifact["training_metadata"]}
+            "evaluation": artifact["evaluation"], "training_metadata": artifact["training_metadata"], **staged}
 
 
 def _fit_candidates(df: pd.DataFrame) -> dict:
@@ -195,6 +214,8 @@ def _fit_candidates(df: pd.DataFrame) -> dict:
     from .temporal_validation import mature_labeled, purged_time_split, training_manifest
 
     df = mature_labeled(df)
+    if not df["win"].isin([0, 1]).all():
+        raise ValueError("Candidate win labels must be binary and observed")
     tr, cal, test = purged_time_split(df)
     if len(df) < 1000 or min(len(tr), len(cal), len(test)) < 50 or tr.win.nunique() < 2 or cal.win.nunique() < 2:
         return {"status": "insufficient_data", "rows": len(df), "reason": "purged train/calibration/test split"}
@@ -205,28 +226,63 @@ def _fit_candidates(df: pd.DataFrame) -> dict:
     model.fit(_model_features(tr, FEATURES), tr["win"])
     raw_cal = model.predict_proba(_model_features(cal, FEATURES))[:, 1]
     iso = IsotonicRegression(out_of_bounds="clip").fit(raw_cal, cal["win"])
-    auc = float(roc_auc_score(cal["win"], raw_cal)) if cal["win"].nunique() > 1 else float("nan")
+    auc = float(roc_auc_score(cal["win"], raw_cal)) if cal["win"].nunique() > 1 else None
 
     raw_test = model.predict_proba(_model_features(test, FEATURES))[:, 1]
     test_probability = iso.transform(raw_test)
+    from .model_release import CANDIDATE_GATES
+    threshold = CANDIDATE_GATES["decision_threshold"]
+    baseline_probability = float(tr.win.mean())
+    evaluation = _evaluation_metrics(test, test_probability, baseline_probability, threshold)
+    evaluation.update(calibration_rows=len(cal), baseline_probability=baseline_probability,
+                      threshold=threshold, evaluation_policy="frozen_train_calibration_test_no_test_tuning")
+    evaluation["time_slices"] = {}
+    for period, indices in test.groupby(pd.to_datetime(test.signal_date).dt.to_period("Q")).groups.items():
+        positions = test.index.get_indexer(indices)
+        evaluation["time_slices"][str(period)] = _evaluation_metrics(
+            test.loc[indices], test_probability[positions], baseline_probability, threshold)
     return {"model": model, "iso": iso, "features": FEATURES,
             "trained_at": datetime.now(timezone.utc).isoformat(),
             "n_candidates": len(df), "base_win_rate": float(tr.win.mean()), "calib_auc": auc,
-            "test_auc": float(roc_auc_score(test.win, test_probability)) if test.win.nunique() > 1 else None,
-            "test_brier": float(brier_score_loss(test.win, test_probability)),
+            "test_auc": evaluation["test_auc"], "test_brier": evaluation["test_brier"],
+            "evaluation": evaluation,
             "training_metadata": training_manifest(
                 tr, FEATURES, calibration_start=str(cal.signal_date.min()),
                 calibration_label_end=str(pd.to_datetime(cal.exit_date).max().date()),
                 calibration_sha256=training_manifest(cal, FEATURES)["dataset_sha256"],
                 evaluation_test_start=str(pd.to_datetime(test.signal_date).min().date()),
                 evaluation_label_end=str(test.exit_date.max()),
+                evaluation_sha256=training_manifest(test, FEATURES)["dataset_sha256"],
                 universe_policy="available_files_not_point_in_time",
             )}
 
 
+def _evaluation_metrics(frame: pd.DataFrame, probabilities: np.ndarray,
+                        baseline_probability: float, threshold: float) -> dict:
+    """Fixed bins, fixed threshold and train-prior baseline; no test-set selection."""
+    from sklearn.metrics import brier_score_loss, roc_auc_score
+    y = frame.win.to_numpy()
+    p = np.asarray(probabilities, dtype=float)
+    if not np.isfinite(p).all() or ((p < 0) | (p > 1)).any():
+        raise ValueError("Invalid model probability during candidate evaluation")
+    bins = np.minimum((p * 10).astype(int), 9)
+    ece = sum(float(np.mean(bins == bucket)) * abs(float(p[bins == bucket].mean()) - float(y[bins == bucket].mean()))
+              for bucket in range(10) if (bins == bucket).any())
+    selected = p >= threshold
+    return {"test_rows": len(frame), "test_auc": float(roc_auc_score(y, p)) if len(np.unique(y)) > 1 else None,
+            "test_brier": float(brier_score_loss(y, p)), "test_ece": ece,
+            "baseline_brier": float(brier_score_loss(y, np.repeat(baseline_probability, len(frame)))),
+            "selected_rows": int(selected.sum()), "selected_precision": float(y[selected].mean()) if selected.any() else None,
+            "selected_mean_net_return_pct": float(frame.loc[selected, "net_return_pct"].mean())
+                if selected.any() and "net_return_pct" in frame else None}
+
+
 def _model_features(frame: pd.DataFrame, features: list[str]) -> pd.DataFrame:
     """Same fixed neutral fill at fit, calibration, evaluation and serving."""
-    return frame.reindex(columns=features).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+    missing = set(features) - set(frame.columns)
+    if missing:
+        raise ValueError(f"Missing model feature columns: {sorted(missing)}")
+    return frame.loc[:, features].apply(pd.to_numeric, errors="raise").replace([np.inf, -np.inf], np.nan).fillna(0.0)
 
 
 class WinProbModel:
@@ -234,7 +290,7 @@ class WinProbModel:
 
     def __init__(self, art):
         self.model = art["model"]; self.iso = art["iso"]; self.features = art["features"]
-        self.meta = {k: art.get(k) for k in ("trained_at", "n_candidates", "base_win_rate", "calib_auc", "test_auc", "test_brier", "training_metadata")}
+        self.meta = {k: art.get(k) for k in ("trained_at", "n_candidates", "base_win_rate", "calib_auc", "test_auc", "test_brier", "training_metadata", "release", "source_snapshot")}
 
     def available_at(self, signal_date) -> bool:
         from .temporal_validation import model_available_at
@@ -255,4 +311,9 @@ class WinProbModel:
     def predict(self, fr: dict) -> float:
         x = _model_features(pd.DataFrame([fr]), self.features)
         raw = float(self.model.predict_proba(x)[:, 1][0])
-        return float(self.iso.transform([raw])[0])
+        if not np.isfinite(raw) or not 0 <= raw <= 1:
+            raise ValueError("Invalid raw model probability")
+        probability = float(self.iso.transform([raw])[0])
+        if not np.isfinite(probability) or not 0 <= probability <= 1:
+            raise ValueError("Invalid calibrated model probability")
+        return probability
