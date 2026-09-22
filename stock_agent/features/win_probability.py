@@ -2,13 +2,14 @@
 
 Loosen the entry gate to a broad dip-zone, label each historical candidate by the ACTUAL
 trade outcome (net of costs), train LightGBM on features known at signal close, and
-CALIBRATE (isotonic) so predicted P matches realized win rate. Validated in
-scratch/win_probability.py: calibration is exact; discrimination is weak overall
-(AUC ~0.50) but real in crash/recovery regimes (2022 AUC 0.557); used as a FILTER the
-loose money-losing pool becomes 56% win / +1.78%/trade at P>=0.55.
+CALIBRATE (isotonic). The 2026-09-22 audit found incomplete labels, unpurged splits
+and no independent validation of the final classifier/calibrator pair. Historical
+research metrics are NOT evidence of clean out-of-sample calibration; see
+docs/audits/2026-09-22-architecture-and-leakage.md before retraining or promotion.
 
 Features are read from the SAME production indicator frame the signal engine scores
-(add_indicators output), so there is zero train/inference feature drift.
+(add_indicators output). This alone does not prove train/serve parity: the label's
+stop anchor differs from the production risk plan.
 """
 from __future__ import annotations
 

@@ -4,7 +4,9 @@
 [![ML](https://img.shields.io/badge/ML-LightGBM%20%7C%20Isotonic%20Calibration-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
 [![Data](https://img.shields.io/badge/Data-vnstock%20%7C%20yfinance-00C4CC?style=for-the-badge)](https://github.com/thinh-vu/vnstock)
 
-Hệ thống hỗ trợ **lướt sóng T+ cho thị trường Việt Nam (VN100)**, xây theo tư duy **định lượng cá nhân**: đọc chế độ thị trường (regime), rồi tự khuyến nghị đúng "động cơ" cho từng chế độ. Tín hiệu chạy **cuối phiên (EOD)**, không real-time, và **mọi thành phần đều được backtest chặt** (kiểm out-of-sample, chống leak, chống overfit).
+Hệ thống nghiên cứu **lướt sóng T+ cho thị trường Việt Nam (VN100)**, gồm các nhánh rules, momentum và xác suất mean-reversion. Tín hiệu dự kiến chạy **cuối phiên (EOD)**, không real-time.
+
+> **Kiểm toán 22/09/2026: CHƯA ĐẠT gate dữ liệu/leakage.** Đã tìm thấy đánh giá ensemble in-sample, preprocessing nhìn tương lai, nhãn MR chưa chín và thiếu provenance ledger. Các số backtest/calibration dưới đây là kết quả nghiên cứu cũ, không phải hiệu quả đã chứng nhận ngoài mẫu. Xem [báo cáo kiến trúc, bằng chứng và điều kiện trước retrain](docs/audits/2026-09-22-architecture-and-leakage.md). Sửa universe/EOD/ledger không đồng nghĩa model đã sạch; chưa retrain hoặc thay artifact trong đợt kiểm toán này.
 
 > [!IMPORTANT]
 > Công cụ nghiên cứu cá nhân, **không phải lời khuyên đầu tư**, không tự đặt lệnh.
