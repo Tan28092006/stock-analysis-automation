@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 
 from ..config import compute_rules_hash, load_json
+from ..data.eod import read_eod_csv, scan_input_snapshot
 from .mr_scan import PRICES_DIR, MR_RULES_PATH, _load_frames, _market_state
 from .position_manager import money_cfg, suggest_size
 
@@ -82,18 +83,21 @@ def _compute(rsi2_max: float = RSI2_MAX) -> dict:
 
 def swing_scan(force: bool = False) -> dict:
     rules_hash = compute_rules_hash(load_json(MR_RULES_PATH))
+    snapshot = scan_input_snapshot(PRICES_DIR)
     if not force and CACHE_PATH.exists():
         try:
             cached = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
             latest = None
             idx = PRICES_DIR / "VNINDEX.csv"
             if idx.exists():
-                latest = str(pd.read_csv(idx)["date"].astype(str).str.slice(0, 10).max())
-            if cached.get("rules_hash") == rules_hash and cached.get("data_date") == latest:
+                latest = str(read_eod_csv(idx)["date"].max())
+            if (cached.get("rules_hash") == rules_hash and cached.get("data_date") == latest
+                    and cached.get("input_snapshot") == snapshot):
                 return cached
         except Exception:
             pass
     payload = _compute()
+    payload["input_snapshot"] = snapshot
     try:
         CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         CACHE_PATH.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")

@@ -23,12 +23,15 @@ portfolio rotation, watches have no risk plan) — labelled as informational.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from ..features.mr_exit import simulate_mr_exit
+from ..data.eod import read_eod_csv
+from .ledger_integrity import audit_rows
 
 LEDGER_PATH = Path("data/pipeline/forward_test.jsonl")
 PRICES_DIR = Path("data/raw/prices_hist")
@@ -66,6 +69,7 @@ def log_recommendations(mr_payload: dict | None, momentum_payload: dict | None) 
     """Append today's actionable picks to the forward-test ledger (idempotent)."""
     seen = _ledger_keys()
     new: list[dict] = []
+    recorded_at = datetime.now(timezone.utc).isoformat()
 
     if mr_payload:
         regime = (mr_payload.get("market") or {}).get("state")
@@ -82,6 +86,10 @@ def log_recommendations(mr_payload: dict | None, momentum_payload: dict | None) 
                     continue
                 seen.add(key)
                 new.append({
+                    "schema_version": 2, "recorded_at": recorded_at, "mode": "paper",
+                    "data_source": "prices_hist", "input_snapshot": mr_payload.get("input_snapshot"),
+                    "model_version": (mr_payload.get("model") or {}).get("model_version"),
+                    "model_trained_at": (mr_payload.get("model") or {}).get("trained_at"),
                     "logged_date": sig_date, "engine": "mr", "kind": kind,
                     "symbol": p["symbol"], "signal_date": sd,
                     "entry_reference": p.get("entry_reference"), "stop_loss": p.get("stop_loss"),
@@ -100,6 +108,10 @@ def log_recommendations(mr_payload: dict | None, momentum_payload: dict | None) 
                 continue
             seen.add(key)
             new.append({
+                "schema_version": 2, "recorded_at": recorded_at, "mode": "paper",
+                "data_source": "prices_hist", "input_snapshot": momentum_payload.get("input_snapshot"),
+                "rules_hash": momentum_payload.get("rules_hash"),
+                "model_version": "rule-only-momentum-12-1-v1",
                 "logged_date": sig_date, "engine": "momentum", "kind": "pick",
                 "symbol": p["symbol"], "signal_date": sig_date,
                 "entry_reference": p.get("close"), "weight_pct": p.get("weight_pct"),
@@ -118,7 +130,7 @@ def _load_frame(symbol: str) -> pd.DataFrame | None:
     p = PRICES_DIR / f"{symbol.upper()}.csv"
     if not p.exists():
         return None
-    df = pd.read_csv(p)
+    df = read_eod_csv(p)
     df["date"] = df["date"].astype(str).str.slice(0, 10)
     return df.sort_values("date").reset_index(drop=True)
 
@@ -149,12 +161,7 @@ def _fwd_return(frame: pd.DataFrame, i: int, horizon: int):
     """Forward return from bar i's close to i+horizon close (informational)."""
     n = len(frame)
     if i + horizon >= n:
-        if i + 1 >= n:
-            return "pending", None
-        # partial: use latest available if at least a few bars in
-        if (n - 1) - i < 3:
-            return "pending", None
-        j = n - 1
+        return "pending", None
     else:
         j = i + horizon
     c0, c1 = float(frame.at[i, "close"]), float(frame.at[j, "close"])
@@ -188,7 +195,12 @@ def score() -> dict:
 
     mr_trades, mom_fwd, watch_fwd = [], [], []
     pending = 0
-    for r in rows:
+    audit = audit_rows(rows, frame_for)
+    invalid_risk = 0
+    for classified in audit["records"]:
+        if not classified["eligible"]:
+            continue
+        r = classified["record"]
         f = frame_for(r["symbol"])
         if f is None:
             continue
@@ -199,6 +211,9 @@ def score() -> dict:
             stop = r.get("stop_loss") or 0.0
             target = r.get("take_profit") or 0.0
             mh = int(r.get("max_hold_days") or 15)
+            if not (np.isfinite(stop) and np.isfinite(target) and 0 < stop < target and mh >= T2_LOCK):
+                invalid_risk += 1
+                continue
             st, net, reason = _replay_mr(f, i, stop, target, mh)
             if st == "pending":
                 pending += 1
@@ -241,6 +256,10 @@ def score() -> dict:
 
     return {
         "ledger_rows": len(rows), "pending": pending,
+        "provenance_eligible": audit["eligible"],
+        "quarantined": audit["quarantined"] + invalid_risk,
+        "quarantine_reasons": {**audit["reason_counts"], "invalid_risk_plan": invalid_risk},
+        "scope": "Paper replay only; provenance eligibility does not certify model/data quality or execution PnL.",
         "mr_trades": agg(mr_trades, "net"),
         "mr_by_regime": {reg: agg([t for t in mr_trades if t.get("regime") == reg], "net")
                          for reg in sorted({t.get("regime") for t in mr_trades if t.get("regime")})},

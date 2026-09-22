@@ -13,6 +13,7 @@ from ..constants import PRICE_CACHE_DIR
 from ..schemas import ProviderAudit
 from .sample_data import make_demo_ohlcv
 from .validation import ProviderFrame, normalize_ohlcv
+from .eod import completed_bars
 
 
 def _save_cache(symbol: str, df: pd.DataFrame) -> None:
@@ -56,6 +57,7 @@ class LocalCsvProvider:
         try:
             df = normalize_ohlcv(pd.read_csv(path))
             df = df[(df["date"] >= start) & (df["date"] <= end)].reset_index(drop=True)
+            df = completed_bars(df, end)
             return ProviderFrame(
                 self.name,
                 df,
@@ -165,6 +167,7 @@ class VnStockProvider:
                     )
 
             out = normalize_ohlcv(df)
+            out = completed_bars(out[out["date"] >= start], end)
             if not out.empty and float(out["close"].median()) < 1000:
                 out[["open", "high", "low", "close"]] = out[["open", "high", "low", "close"]] * 1000
             _save_cache(symbol, out)
@@ -235,6 +238,7 @@ class YahooProvider:
                 }
             )
             out = normalize_ohlcv(raw)
+            out = completed_bars(out[out["date"] >= start], end)
             _save_cache(symbol, out)
             return ProviderFrame(
                 self.name,

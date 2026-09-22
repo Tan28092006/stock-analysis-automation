@@ -8,6 +8,7 @@ import pandas as pd
 from ..config import compute_rules_hash, load_rules, load_universe
 from ..constants import LATEST_SCAN_PATH, TRAINING_EVENTS_PATH
 from ..data.repository import append_jsonl, write_json
+from ..data.exchange_calendar import completed_session_date
 from ..features.backtest import BacktestConfig, run_backtest
 from ..features.feature_store import save_feature_snapshot
 from ..features.ml_models import predict_model_signal
@@ -64,7 +65,7 @@ def _load_index_frame(start, end, rules, demo):
         try:
             df = pd.read_csv(p)
             df["date"] = pd.to_datetime(df["date"]).dt.date
-            return df
+            return df[(df["date"] >= start) & (df["date"] <= end)].reset_index(drop=True)
         except Exception:
             pass
     try:
@@ -115,7 +116,7 @@ def run_scan(
     rules_version = compute_rules_hash(rules)
     universe = load_universe()
     selected_symbols = [item.upper() for item in (symbols or universe["symbols"])]
-    end = date.today()
+    end = date.today() if demo else completed_session_date()
     start = end - timedelta(days=260)
     scan_id = f"scan-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
 

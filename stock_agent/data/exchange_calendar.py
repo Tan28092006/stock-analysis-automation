@@ -1,6 +1,22 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+
+VN_TIMEZONE = timezone(timedelta(hours=7))
+
+
+def completed_session_date(now: datetime | None = None) -> date:
+    """Conservative EOD cutoff: 16:00 Vietnam time, not the host's timezone.
+
+    This is a data-availability buffer, not an assertion about auction close time.
+    The maintained HOSE holiday table still needs refreshing for future years.
+    """
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("now must be timezone-aware")
+    local = now.astimezone(VN_TIMEZONE)
+    day = local.date() if local.hour >= 16 else local.date() - timedelta(days=1)
+    return last_trading_day(day)
 
 
 HOSE_HOLIDAYS = {

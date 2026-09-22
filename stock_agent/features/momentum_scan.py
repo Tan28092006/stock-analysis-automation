@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 
 from ..config import compute_rules_hash, load_json
+from ..data.eod import read_eod_csv, scan_input_snapshot
 from .indicators import ema
 from .mr_scan import PRICES_DIR, MR_RULES_PATH, _load_frames, _market_state
 from .position_manager import money_cfg
@@ -51,7 +52,9 @@ def _market_vol() -> float:
     idx = PRICES_DIR / "VNINDEX.csv"
     if not idx.exists():
         return TARGET_VOL
-    df = pd.read_csv(idx)
+    df = read_eod_csv(idx)
+    if df.empty:
+        return TARGET_VOL
     r = df["close"].pct_change()
     v = r.rolling(20, min_periods=10).std().iloc[-1] * math.sqrt(252)
     return float(v) if np.isfinite(v) else TARGET_VOL
@@ -129,14 +132,16 @@ def _compute(top_n: int) -> dict:
 
 def momentum_scan(top_n: int = DEFAULT_TOP_N, force: bool = False) -> dict:
     rules_hash = compute_rules_hash(load_json(MR_RULES_PATH))
+    snapshot = scan_input_snapshot(PRICES_DIR)
     if not force and CACHE_PATH.exists():
         try:
             cached = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
             latest = None
             idx = PRICES_DIR / "VNINDEX.csv"
             if idx.exists():
-                latest = str(pd.read_csv(idx)["date"].astype(str).str.slice(0, 10).max())
-            if cached.get("rules_hash") == rules_hash and cached.get("data_date") == latest and cached.get("top_n") == top_n:
+                latest = str(read_eod_csv(idx)["date"].max())
+            if (cached.get("rules_hash") == rules_hash and cached.get("data_date") == latest
+                    and cached.get("top_n") == top_n and cached.get("input_snapshot") == snapshot):
                 try:
                     from .position_manager import PositionStore, check_momentum_positions
                     buf = set(cached.get("buffer_symbols", []))
@@ -148,6 +153,7 @@ def momentum_scan(top_n: int = DEFAULT_TOP_N, force: bool = False) -> dict:
         except Exception:
             pass
     payload = _compute(top_n)
+    payload["input_snapshot"] = snapshot
     try:
         CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         CACHE_PATH.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")

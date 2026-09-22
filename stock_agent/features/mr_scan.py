@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 
 from ..config import compute_rules_hash, load_json
+from ..data.eod import read_eod_csv, scan_input_snapshot
 from .indicators import ema, sma
 from .signal_engine import prepare_signal_frame, score_precomputed_at
 from . import win_probability as wp
@@ -36,14 +37,23 @@ def _load_rules() -> dict:
 
 def _load_frames(prices_dir: Path) -> dict[str, pd.DataFrame]:
     frames: dict[str, pd.DataFrame] = {}
+    index_path = prices_dir / "VNINDEX.csv"
+    if not index_path.exists():
+        return frames  # No common market as-of: abstain instead of mixing dates.
+    index = read_eod_csv(index_path)
+    if index.empty:
+        return frames
+    as_of = str(index["date"].iloc[-1])
     for p in sorted(prices_dir.glob("*.csv")):
         if p.stem == "VNINDEX":
             continue
         try:
-            df = pd.read_csv(p)
+            df = read_eod_csv(p, pd.Timestamp(as_of).date())
         except Exception:
             continue
         if len(df) < 90:
+            continue
+        if str(df["date"].iloc[-1]) != as_of:
             continue
         df["date"] = df["date"].astype(str).str.slice(0, 10)
         frames[p.stem] = df.sort_values("date").reset_index(drop=True)
@@ -55,7 +65,9 @@ def _market_state(prices_dir: Path, frames: dict[str, pd.DataFrame]) -> dict:
            "breadth_pct": None, "date": None}
     idx_path = prices_dir / "VNINDEX.csv"
     if idx_path.exists():
-        idx = pd.read_csv(idx_path)
+        idx = read_eod_csv(idx_path)
+        if idx.empty:
+            return out
         idx["date"] = idx["date"].astype(str).str.slice(0, 10)
         idx = idx.sort_values("date").reset_index(drop=True)
         close = float(idx["close"].iloc[-1])
@@ -236,14 +248,16 @@ def mr_scan(recent_days: int = 120, force: bool = False,
            min_win_prob: float = DEFAULT_MIN_WIN_PROB) -> dict:
     """Cached MR scan; recomputes when data date, rules, or the threshold change."""
     rules_hash = compute_rules_hash(_load_rules())
+    snapshot = scan_input_snapshot(PRICES_DIR)
     if not force and CACHE_PATH.exists():
         try:
             cached = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
             latest_csv_date = None
             idx = PRICES_DIR / "VNINDEX.csv"
             if idx.exists():
-                latest_csv_date = str(pd.read_csv(idx)["date"].astype(str).str.slice(0, 10).max())
+                latest_csv_date = str(read_eod_csv(idx)["date"].max())
             if (cached.get("rules_hash") == rules_hash
+                    and cached.get("input_snapshot") == snapshot
                     and cached.get("data_date") == latest_csv_date
                     and cached.get("min_win_prob") == min_win_prob):
                 # positions change independently of the (cached) scan — refresh them live
@@ -257,6 +271,7 @@ def mr_scan(recent_days: int = 120, force: bool = False,
         except Exception:
             pass
     payload = _compute(recent_days, min_win_prob)
+    payload["input_snapshot"] = snapshot
     try:
         CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         CACHE_PATH.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")

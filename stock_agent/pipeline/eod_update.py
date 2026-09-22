@@ -27,6 +27,8 @@ import http.cookiejar
 from contextlib import redirect_stdout
 from datetime import date, datetime, timedelta
 from pathlib import Path
+from ..data.exchange_calendar import completed_session_date
+from ..data.eod import completed_bars
 
 PRICES_DIR = Path("data/raw/prices_hist")
 FOREIGN_DIR = Path("data/raw/foreign")
@@ -45,12 +47,8 @@ def _symbols() -> list[str]:
 
 
 def _fetch_end_date() -> date:
-    """Only fetch completed sessions: before 16:00 local, stop at yesterday."""
-    now = datetime.now()
-    end = now.date()
-    if now.hour < 16:
-        end = end - timedelta(days=1)
-    return end
+    """Use the same Vietnam-time completed-session boundary as every EOD scan."""
+    return completed_session_date()
 
 
 # ---------------------------------------------------------------- 1. prices
@@ -75,10 +73,9 @@ def refresh_prices() -> dict:
             failed += 1
             print(f"  [prices] {sym} read FAIL {repr(exc)[:80]}", flush=True)
             continue
-        if last >= end:
-            skipped += 1
-            continue
-        start = last + timedelta(days=1)
+        # Re-fetch the tail even if its date already exists: it may be an old
+        # intraday snapshot. Do not assume a date match proves a completed bar.
+        start = min(last, end)
         got = False
         for attempt in range(4):
             try:
@@ -95,6 +92,11 @@ def refresh_prices() -> dict:
                     for c in ["open", "high", "low", "close"]:
                         new[c] = new[c] * 1000.0
                 new["date"] = new["date"].astype(str).str.slice(0, 10)
+                new = completed_bars(new, end)
+                if new.empty:
+                    skipped += 1
+                    got = True
+                    break
                 merged = pd.concat([df, new], ignore_index=True).drop_duplicates(subset=["date"], keep="last").sort_values("date")
                 # Atomic write: a killed/slept process mid-write must not truncate the CSV
                 # (a partial history would make the next run backfill from a wrong last date).

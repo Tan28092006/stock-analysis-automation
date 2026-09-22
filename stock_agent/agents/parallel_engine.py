@@ -18,6 +18,7 @@ from typing import Any, Callable
 import pandas as pd
 
 from ..data.providers import build_providers
+from ..data.exchange_calendar import completed_session_date
 from ..data.validation import ProviderFrame, normalize_ohlcv, pick_cross_checked_frame, validate_ohlcv
 from ..features.indicators import add_indicators
 
@@ -41,6 +42,8 @@ def parallel_fetch_symbols(
 
     Returns dict of symbol -> (frame, data_quality).
     """
+    if not demo:
+        end = min(end, completed_session_date())
     providers = build_providers(demo=demo)
 
     def fetch_one(symbol: str) -> tuple[str, pd.DataFrame | None, Any]:
