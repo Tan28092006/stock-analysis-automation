@@ -290,12 +290,20 @@ def test_dashboard_to_paper_ledger_end_to_end(tmp_path, monkeypatch):
         monkeypatch.setattr(module, "CACHE_PATH", tmp_path / f"{module.__name__}.json")
     monkeypatch.setattr(pos, "check_positions", lambda *a: [])
     monkeypatch.setattr(pos, "check_momentum_positions", lambda *a: [])
-    model = SimpleNamespace(meta={"model_version": "sha", "trained_at": "2026-07-01T00:00:00+00:00"}, predict=lambda fr: .6)
+    model = wp.WinProbModel({
+        "model": SimpleNamespace(predict_proba=lambda x: np.tile([.4, .6], (len(x), 1))),
+        "iso": SimpleNamespace(transform=lambda x: x), "features": wp.FEATURES,
+        "trained_at": "2026-07-01T00:00:00+00:00",
+        "training_metadata": {"training_protocol": "purged-eod-v2", "fit_label_end": "2026-05-01",
+                              "calibration_label_end": "2026-06-01", "evaluation_label_end": "2026-06-30"},
+    })
+    model.meta["model_version"] = "sha"
     monkeypatch.setattr(wp.WinProbModel, "load", lambda: model)
     mr_payload = mr.mr_scan(force=True)
     mom_payload = mom.momentum_scan(force=True)
     assert mr_payload["data_date"] == mom_payload["data_date"] == "2026-09-21"
     assert mr_payload["model"]["model_version"] == "sha"
+    assert mr_payload["model"]["available"] is True
     assert mom_payload["picks"][0]["symbol"] == "AAA"
     monkeypatch.setattr(forward, "datetime", SimpleNamespace(now=lambda tz: datetime(2026, 9, 21, 10, tzinfo=timezone.utc)))
     monkeypatch.setattr(forward, "LEDGER_PATH", tmp_path / "ledger.jsonl")
@@ -304,6 +312,11 @@ def test_dashboard_to_paper_ledger_end_to_end(tmp_path, monkeypatch):
     result = forward.score()
     assert result["quarantined"] == 0
     assert result["pending"] == result["ledger_rows"]
+    # Loading a legacy artifact must preserve rule output, but not probability buys.
+    model.meta["training_metadata"] = None
+    unverified = mr.mr_scan(force=True)
+    assert unverified["model"]["available"] is False
+    assert unverified["prob_buys"] == []
 
 
 def test_position_alerts_in_eod_payload_exclude_intraday(tmp_path, monkeypatch):
