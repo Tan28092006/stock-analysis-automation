@@ -126,3 +126,50 @@ def test_candidate_metrics_record_fixed_train_prior_baseline(monkeypatch):
     assert evaluation["threshold"] == .65
     assert evaluation["test_rows"] > 100
     assert len(artifact["training_metadata"]["evaluation_sha256"]) == 64
+
+
+def test_candidate_loader_rejects_unverified_or_tampered_release(tmp_path):
+    module = release_module()
+    result = module.stage_candidate({"model": None, "iso": None, "features": wp.FEATURES}, candidate_dir=tmp_path)
+    with pytest.raises(ValueError, match="eligible"):
+        module.load_candidate(Path(result["artifact"]), mode="shadow")
+    path = Path(result["artifact"])
+    path.write_bytes(path.read_bytes() + b"tampered")
+    with pytest.raises(ValueError, match="hash"):
+        module.load_candidate(path, mode="shadow")
+
+
+def test_candidate_loader_has_no_live_mode(tmp_path):
+    with pytest.raises(ValueError, match="mode"):
+        release_module().load_candidate(tmp_path / "none.pkl", mode="live")
+
+
+def test_verified_candidate_loads_explicitly_without_changing_default(tmp_path, monkeypatch):
+    module = release_module()
+    snapshot = {"verified": True, "manifest_path": str(tmp_path / "manifest.json"),
+                "manifest_sha256": "snapshot", "files": {"AAA": "hash"}}
+    monkeypatch.setattr(module, "verify_snapshot", lambda *args: snapshot)
+    result = module.stage_candidate({"model": None, "iso": None, "features": wp.FEATURES,
+                                     "evaluation": metrics()}, candidate_dir=tmp_path, snapshot=snapshot)
+    model = module.load_candidate(Path(result["artifact"]), mode="paper")
+    assert model.meta["release"]["paper_eligible"]
+    assert model.meta["model_version"] == result["artifact_sha256"]
+    assert wp.ARTIFACT_PATH == Path("data/models/win_prob_mr.pkl")
+
+
+def test_snapshot_verification_delegates_raw_source_equivalence(tmp_path, monkeypatch):
+    from stock_agent.data import reconciliation
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text('{}', encoding="utf-8")
+    def reject(path):
+        raise ValueError("CSV/source mismatch")
+    monkeypatch.setattr(reconciliation, "verify_snapshot", reject)
+    with pytest.raises(ValueError, match="CSV/source"):
+        release_module().verify_snapshot(manifest_path, tmp_path / "prices")
+
+
+def test_manifest_serialization_failure_does_not_leave_partial_artifact(tmp_path):
+    target = tmp_path / "bad.pkl"
+    with pytest.raises(ValueError):
+        release_module().stage_candidate({"evaluation": {"test_auc": np.nan}}, artifact_path=target)
+    assert not target.exists()
