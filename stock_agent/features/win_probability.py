@@ -2,14 +2,14 @@
 
 Loosen the entry gate to a broad dip-zone, label each historical candidate by the ACTUAL
 trade outcome (net of costs), train LightGBM on features known at signal close, and
-CALIBRATE (isotonic). The 2026-09-22 audit found incomplete labels, unpurged splits
-and no independent validation of the final classifier/calibrator pair. Historical
-research metrics are NOT evidence of clean out-of-sample calibration; see
-docs/audits/2026-09-22-architecture-and-leakage.md before retraining or promotion.
+CALIBRATE (isotonic). New training uses purged train/calibration/test date groups,
+mature labels and a frozen classifier/calibrator pair. The historical deployed
+artifact is unchanged and unverified; do not reinterpret its old research metrics
+as independent evaluation. See docs/audits/2026-09-22-training-remediation.md.
 
 Features are read from the SAME production indicator frame the signal engine scores
-(add_indicators output). This alone does not prove train/serve parity: the label's
-stop anchor differs from the production risk plan.
+(add_indicators output). Labels anchor stops to signal close, as does serving.
+Source provenance, adjustment basis and PIT universe remain separate data gates.
 """
 from __future__ import annotations
 
@@ -202,12 +202,12 @@ def _fit_candidates(df: pd.DataFrame) -> dict:
     model = lgb.LGBMClassifier(n_estimators=300, max_depth=4, learning_rate=0.03,
                                subsample=0.8, colsample_bytree=0.8, min_child_samples=40,
                                reg_lambda=1.0, random_state=42, verbose=-1)
-    model.fit(tr[FEATURES], tr["win"])
-    raw_cal = model.predict_proba(cal[FEATURES])[:, 1]
+    model.fit(_model_features(tr, FEATURES), tr["win"])
+    raw_cal = model.predict_proba(_model_features(cal, FEATURES))[:, 1]
     iso = IsotonicRegression(out_of_bounds="clip").fit(raw_cal, cal["win"])
     auc = float(roc_auc_score(cal["win"], raw_cal)) if cal["win"].nunique() > 1 else float("nan")
 
-    raw_test = model.predict_proba(test[FEATURES])[:, 1]
+    raw_test = model.predict_proba(_model_features(test, FEATURES))[:, 1]
     test_probability = iso.transform(raw_test)
     return {"model": model, "iso": iso, "features": FEATURES,
             "trained_at": datetime.now(timezone.utc).isoformat(),
@@ -222,6 +222,11 @@ def _fit_candidates(df: pd.DataFrame) -> dict:
                 evaluation_label_end=str(test.exit_date.max()),
                 universe_policy="available_files_not_point_in_time",
             )}
+
+
+def _model_features(frame: pd.DataFrame, features: list[str]) -> pd.DataFrame:
+    """Same fixed neutral fill at fit, calibration, evaluation and serving."""
+    return frame.reindex(columns=features).replace([np.inf, -np.inf], np.nan).fillna(0.0)
 
 
 class WinProbModel:
@@ -248,7 +253,6 @@ class WinProbModel:
         return cls._cache
 
     def predict(self, fr: dict) -> float:
-        x = pd.DataFrame([{k: fr.get(k, 0.0) for k in self.features}]).replace(
-            [np.inf, -np.inf], np.nan).fillna(0.0)
+        x = _model_features(pd.DataFrame([fr]), self.features)
         raw = float(self.model.predict_proba(x)[:, 1][0])
         return float(self.iso.transform([raw])[0])
