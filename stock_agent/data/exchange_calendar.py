@@ -45,7 +45,10 @@ HOSE_HOLIDAYS = {
     date(2025, 9, 1),
     date(2025, 9, 2),
     # 2026
+    # HOSE 2410/TB-SGDHCM (2025-12-25), HNX 5305/TB-SGDHN (2025-12-03).
+    # Working Saturdays are not trading sessions. Source links in the audit report.
     date(2026, 1, 1),
+    date(2026, 1, 2),
     date(2026, 2, 16),
     date(2026, 2, 17),
     date(2026, 2, 18),
@@ -54,6 +57,8 @@ HOSE_HOLIDAYS = {
     date(2026, 4, 27),
     date(2026, 4, 30),
     date(2026, 5, 1),
+    date(2026, 8, 31),
+    date(2026, 9, 1),
     date(2026, 9, 2),
 }
 
