@@ -140,17 +140,19 @@ def _rules_selector(rules: dict):
     return pick
 
 
-def _compute(recent_days: int, min_win_prob: float) -> dict:
+def _compute(recent_days: int, min_win_prob: float, *, prices_dir: Path | None = None,
+             use_model: bool = True, include_positions: bool = True) -> dict:
+    prices_dir = prices_dir if prices_dir is not None else PRICES_DIR
     rules = _load_rules()
     cfg = money_cfg(rules)
     rules_for = _rules_selector(rules)
-    frames = _load_frames(PRICES_DIR)
-    market = _market_state(PRICES_DIR, frames)
+    frames = _load_frames(prices_dir)
+    market = _market_state(prices_dir, frames)
 
     # win-probability model + context (regime / breadth / index 20d return by date)
-    model = wp.WinProbModel.load()
-    regime, idx_ret20 = wp._context(PRICES_DIR)
-    breadth = wp._breadth_map(frames)
+    model = wp.WinProbModel.load() if use_model else None
+    regime, idx_ret20 = wp._context(prices_dir) if model is not None else ({}, {})
+    breadth = wp._breadth_map(frames) if model is not None else {}
 
     def win_prob_at(feats: pd.DataFrame, i: int):
         if model is None:
@@ -173,6 +175,7 @@ def _compute(recent_days: int, min_win_prob: float) -> dict:
     if latest_date:
         cutoff = str(pd.Timestamp(latest_date) - pd.Timedelta(days=recent_days))[:10]
 
+    errors = {}
     for symbol, df in frames.items():
         try:
             srules, gate = rules_for(symbol)
@@ -211,7 +214,8 @@ def _compute(recent_days: int, min_win_prob: float) -> dict:
                         pay = _signal_payload(symbol, s, str(feats["date"].iloc[int(i)]), None)
                         pay["gate"] = gate
                         recent.append(pay)
-        except Exception:
+        except Exception as exc:
+            errors[symbol] = str(exc)
             continue
 
     buys.sort(key=lambda x: (-(x.get("win_prob") or 0), -(x.get("reward_risk") or 0)))
@@ -223,7 +227,7 @@ def _compute(recent_days: int, min_win_prob: float) -> dict:
     positions, sell_alerts = [], []
     try:
         from .position_manager import PositionStore, check_positions
-        positions = check_positions(PositionStore())
+        positions = check_positions(PositionStore()) if include_positions else []
         sell_alerts = [p for p in positions if p.get("live_status") == "SELL"]
     except Exception:
         pass
@@ -232,6 +236,8 @@ def _compute(recent_days: int, min_win_prob: float) -> dict:
         "rules_hash": compute_rules_hash(rules),
         "data_date": market.get("date"),
         "symbols_scanned": len(frames),
+        "scanned_symbols": sorted(frames),
+        "scan_errors": errors,
         "min_win_prob": min_win_prob,
         "money": {"account_nav": cfg["account_nav"], "risk_per_trade_pct": cfg["risk_per_trade_pct"],
                   "max_positions": cfg["max_positions"]},

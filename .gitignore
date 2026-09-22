@@ -44,3 +44,6 @@ catboost_info/
 /optimize_test.json
 /optimize_test_widen.json
 data/pipeline/eod_update.log
+
+# Isolated live-source snapshots and immutable paper records (local runtime state).
+data/paper/

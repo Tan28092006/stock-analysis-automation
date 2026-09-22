@@ -47,9 +47,9 @@ def _vn30() -> set:
         return set()
 
 
-def _market_vol() -> float:
+def _market_vol(prices_dir: Path | None = None) -> float:
     """VNINDEX 20-day realized vol, annualized (latest)."""
-    idx = PRICES_DIR / "VNINDEX.csv"
+    idx = (prices_dir if prices_dir is not None else PRICES_DIR) / "VNINDEX.csv"
     if not idx.exists():
         return TARGET_VOL
     df = read_eod_csv(idx)
@@ -76,14 +76,16 @@ def _rank(frames: dict) -> list[tuple]:
     return scored
 
 
-def _compute(top_n: int) -> dict:
+def _compute(top_n: int, *, prices_dir: Path | None = None,
+             include_positions: bool = True) -> dict:
+    prices_dir = prices_dir if prices_dir is not None else PRICES_DIR
     rules = load_json(MR_RULES_PATH)
     cfg = money_cfg(rules)
-    frames = _load_frames(PRICES_DIR)
-    market = _market_state(PRICES_DIR, frames)
+    frames = _load_frames(prices_dir)
+    market = _market_state(prices_dir, frames)
     vn30 = _vn30()
 
-    mvol = _market_vol()
+    mvol = _market_vol(prices_dir)
     exposure = min(1.0, TARGET_VOL / max(mvol, 1e-6))   # de-risk when vol high
     ranked = _rank(frames)
     top = ranked[:top_n]
@@ -106,7 +108,7 @@ def _compute(top_n: int) -> dict:
     positions, sell_alerts = [], []
     try:
         from .position_manager import PositionStore, check_momentum_positions
-        positions = check_momentum_positions(PositionStore(), buffer_syms, True)
+        positions = check_momentum_positions(PositionStore(), buffer_syms, True) if include_positions else []
         sell_alerts = [p for p in positions if p.get("live_status") == "SELL"]
     except Exception:
         pass
@@ -118,6 +120,8 @@ def _compute(top_n: int) -> dict:
         "active": True,           # always on; vol-targeting handles risk (no RISK_ON gate)
         "market": market,
         "top_n": top_n,
+        "scanned_symbols": sorted(frames),
+        "momentum_ineligible": sorted(set(frames) - {s for s, *_ in ranked}),
         "exposure_pct": round(exposure * 100, 0),
         "market_vol_pct": round(mvol * 100, 0),
         "buffer_symbols": sorted(buffer_syms),
