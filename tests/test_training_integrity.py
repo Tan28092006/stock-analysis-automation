@@ -65,6 +65,7 @@ class Spy:
 
     def predict_proba(self, x):
         self.predictions.append(set(x.index))
+        self.last_x = x.copy()
         return np.tile([.3, .7], (len(x), 1))
 
 
@@ -126,3 +127,87 @@ def test_mr_label_stop_is_anchored_to_signal_close(monkeypatch):
                         captured.append(stop) or (1, 110., "target", True))
     wp._label_trade(frame, 0)
     assert captured == [94.]
+
+
+def test_ensemble_requires_fitted_bounds_for_inference():
+    trainer = EnsembleTrainer()
+    trainer.feature_columns = ["feature_x"]
+    with pytest.raises(ValueError, match="preprocessing"):
+        trainer._prepare_features(pd.DataFrame({"feature_x": [1.]}))
+
+
+def test_ensemble_metadata_survives_save_load(tmp_path, monkeypatch):
+    trainer = spy_trainer(monkeypatch)
+    trainer.train(panel(), ["feature_x"])
+    path = tmp_path / "model.pkl"
+    trainer.save(path)
+    loaded = EnsembleTrainer.load(path)
+    assert loaded.training_metadata == trainer.training_metadata
+
+
+def test_legacy_models_store_and_reuse_train_bounds(monkeypatch):
+    train, val, test = _time_split(panel())
+    val = val.assign(feature_x=1e7)
+    test = test.assign(feature_x=1e8)
+    model = Spy()
+    monkeypatch.setattr(ml_models, "_build_estimator", lambda family: (model, None))
+    saved = []
+    monkeypatch.setattr(ml_models, "_save_artifact", lambda path, payload: saved.append(payload))
+    result = ml_models._train_one_family("spy", train, val, test, ["feature_x"], .5, "2026-09-22")
+    assert result.status == "trained"
+    assert saved[0]["winsorize_bounds"]["feature_x"][1] < 1000
+    assert model.last_x.feature_x.max() < 1000
+
+
+def test_mr_classifier_is_not_refit_after_calibration(monkeypatch):
+    import lightgbm
+    from sklearn.isotonic import IsotonicRegression
+    data = panel(500)
+    for col in wp.FEATURES:
+        data[col] = np.arange(len(data)) * .001
+    data["win"] = data.net_t2_win
+    fit_calls = []
+    class Model(Spy):
+        def fit(self, x, y, **kwargs):
+            fit_calls.append(set(x.index))
+            return super().fit(x, y, **kwargs)
+    model = Model()
+    monkeypatch.setattr(lightgbm, "LGBMClassifier", lambda **kw: model)
+    art = wp._fit_candidates(data)
+    assert len(fit_calls) == 1
+    assert all(not rows & fit_calls[0] for rows in model.predictions)
+    assert isinstance(art["iso"], IsotonicRegression)
+    assert art["training_metadata"]["calibration_label_end"] < art["training_metadata"]["evaluation_test_start"]
+    assert "test_brier" in art and "test_auc" in art
+
+
+def test_hpo_never_sees_outer_holdout_or_refits_global_bounds(monkeypatch):
+    import optuna, lightgbm, xgboost, catboost
+    trainer = spy_trainer(monkeypatch)
+    trainer.feature_columns = ["feature_x"]
+    data = panel()
+    cutoff = sorted(data.signal_date.unique())[96]
+    data.loc[data.signal_date >= cutoff, "feature_x"] = 1e9
+    for module, attr in ((lightgbm, "LGBMClassifier"), (xgboost, "XGBClassifier"), (catboost, "CatBoostClassifier")):
+        monkeypatch.setattr(module, attr, lambda **kw: Spy())
+    trial = SimpleNamespace(suggest_int=lambda name, low, high: low, suggest_float=lambda name, low, high, **kw: low)
+    study = SimpleNamespace(best_params={}, best_value=0., optimize=lambda objective, **kw: objective(trial))
+    monkeypatch.setattr(optuna, "create_study", lambda **kw: study)
+    trainer.run_hpo(data, n_trials=1)
+    heldout = set(data.index[data.signal_date >= cutoff])
+    assert Spy.instances
+    for model in Spy.instances:
+        assert not model.fit_rows & heldout
+        assert all(not rows & heldout for rows in model.predictions)
+        assert model.fitted_x.feature_x.max() < 1000
+
+
+def test_invalid_prices_fail_before_training(tmp_path):
+    from stock_agent.config import load_rules
+    from stock_agent.agents.parallel_engine import build_labeled_dataset_fast
+    f = pd.DataFrame({"date": pd.bdate_range("2025-01-01", periods=200),
+                      "open": 100., "high": 101., "low": 99., "close": 100., "volume": 1e6})
+    f.loc[0, "close"] = 0.
+    f.to_csv(tmp_path / "BAD.csv", index=False)
+    with pytest.raises(ValueError, match="BAD"):
+        build_labeled_dataset_fast(["BAD"], load_rules(), tmp_path)
