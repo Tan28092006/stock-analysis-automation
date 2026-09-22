@@ -312,3 +312,9 @@ def test_position_alerts_in_eod_payload_exclude_intraday(tmp_path, monkeypatch):
     monkeypatch.setattr(pos, "PRICES_DIR", tmp_path)
     bars().to_csv(tmp_path / "AAA.csv", index=False)
     assert pos._symbol_frame("AAA").date.iloc[-1] == "2026-09-21"
+
+
+@pytest.mark.parametrize("values", [[], ["bad", "d0"]])
+def test_eod_rejects_empty_or_entirely_invalid_dates(values):
+    from stock_agent.data.eod import completed_bars
+    assert completed_bars(pd.DataFrame({"date": values})).empty
