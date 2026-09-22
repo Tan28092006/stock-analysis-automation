@@ -54,7 +54,9 @@ def validate_candidate_target(artifact_path: Path | None) -> None:
 
 def verify_snapshot(manifest_path: Path, prices_dir: Path) -> dict:
     """Bind all consumed CSVs and provider responses to the immutable snapshot."""
+    from ..data.reconciliation import verify_snapshot as verify_market_snapshot
     manifest_path = Path(manifest_path).resolve()
+    verify_market_snapshot(manifest_path)
     raw = manifest_path.read_bytes()
     manifest = json.loads(raw)
     if manifest.get("kind") != "market_snapshot" or manifest.get("status") != "verified":
@@ -123,10 +125,48 @@ def stage_candidate(artifact: dict, *, candidate_dir: Path = CANDIDATE_DIR,
     manifest = {key: payload.get(key) for key in ("trained_at", "training_metadata", "evaluation",
                 "release", "source_snapshot", "code_provenance")}
     manifest["artifact_sha256"] = hashlib.sha256(raw).hexdigest()
+    manifest_text = json.dumps(manifest, indent=2, allow_nan=False)
     artifact_path.parent.mkdir(parents=True, exist_ok=True)
     with artifact_path.open("xb") as handle:
         handle.write(raw)
     with report_path.open("x", encoding="utf-8") as handle:
-        json.dump(manifest, handle, indent=2, allow_nan=False)
+        handle.write(manifest_text)
     return {"artifact": str(artifact_path), "artifact_sha256": manifest["artifact_sha256"],
             "release_manifest": str(report_path), "release": payload["release"]}
+
+
+def load_candidate(artifact_path: Path, *, mode: str = "paper"):
+    """Load only explicit locally trusted candidates; hashes are not a signature.
+
+    This checks release eligibility, not historical availability. Consumers must
+    separately call available_at for signal timestamps and log actual generation.
+    Never load downloaded or otherwise untrusted pickle files.
+    """
+    from .win_probability import WinProbModel
+    if mode not in {"paper", "shadow"}:
+        raise ValueError("Candidate mode must be paper or shadow; live is not approved")
+    artifact_path = Path(artifact_path)
+    manifest = json.loads(artifact_path.with_suffix(".release.json").read_text(encoding="utf-8"))
+    raw = artifact_path.read_bytes()
+    digest = hashlib.sha256(raw).hexdigest()
+    if digest != manifest.get("artifact_sha256"):
+        raise ValueError("Candidate artifact hash mismatch")
+    eligible_key = f"{mode}_eligible"
+    if not manifest.get("release", {}).get(eligible_key):
+        raise ValueError(f"Candidate not {mode} eligible")
+    snapshot = manifest.get("source_snapshot", {})
+    if not snapshot.get("verified") or not snapshot.get("manifest_path"):
+        raise ValueError("Candidate source snapshot not verified")
+    source_manifest = Path(snapshot["manifest_path"])
+    if verify_snapshot(source_manifest, source_manifest.parent / "prices") != snapshot:
+        raise ValueError("Candidate source snapshot changed")
+    recomputed = evaluate_candidate(manifest.get("evaluation", {}), snapshot_verified=True)
+    if not recomputed[eligible_key]:
+        raise ValueError(f"Candidate no longer {mode} eligible under current gates")
+    payload = pickle.loads(raw)
+    if payload.get("release") != manifest["release"] or payload.get("source_snapshot") != snapshot:
+        raise ValueError("Candidate release metadata mismatch")
+    model = WinProbModel(payload)
+    model.meta["model_version"] = digest
+    model.meta["candidate_mode"] = mode
+    return model
