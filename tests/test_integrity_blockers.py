@@ -225,3 +225,90 @@ def test_malformed_ledger_is_counted_not_silently_dropped(tmp_path, monkeypatch)
     result = ft.score()
     assert result["ledger_rows"] == 1
     assert result["quarantined"] == 1
+
+
+def test_yahoo_overreturned_intraday_bar_never_reaches_cache(tmp_path, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+    from stock_agent.data import providers
+    f = bars(100)
+    raw = f.rename(columns={c: c.title() for c in f.columns}).set_index("Date")
+    monkeypatch.setitem(sys.modules, "yfinance", SimpleNamespace(Ticker=lambda *a: SimpleNamespace(history=lambda **k: raw)))
+    monkeypatch.setattr(providers, "PRICE_CACHE_DIR", tmp_path)
+    monkeypatch.setattr(calendar, "completed_session_date", lambda now=None: date(2026, 9, 21))
+    result = providers.YahooProvider().history("AAA", date(2026, 1, 1), date(2026, 9, 22))
+    assert str(result.frame.date.max()) == "2026-09-21"
+    assert pd.read_csv(tmp_path / "AAA.csv").date.max() == "2026-09-21"
+
+
+def test_eod_refresh_replaces_existing_tail_but_rejects_intraday(tmp_path, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+    from stock_agent.pipeline import eod_update as job
+    monkeypatch.setattr(calendar, "completed_session_date", lambda now=None: date(2026, 9, 21))
+    monkeypatch.setattr(job, "_fetch_end_date", lambda: date(2026, 9, 21))
+    monkeypatch.setattr(job, "PRICES_DIR", tmp_path)
+    monkeypatch.setattr(job.time, "sleep", lambda *a: None)
+    old = bars(1, end="2026-09-21")
+    old.to_csv(tmp_path / "AAA.csv", index=False)
+    old.to_csv(tmp_path / "VNINDEX.csv", index=False)
+    new = bars(2)
+    new[["open", "high", "low", "close"]] *= 1.01
+    calls = []
+
+    def history(**kwargs):
+        calls.append(kwargs)
+        return new.rename(columns={"date": "time"})
+
+    monkeypatch.setitem(sys.modules, "vnstock", SimpleNamespace(
+        Vnstock=lambda: SimpleNamespace(stock=lambda **k: SimpleNamespace(quote=SimpleNamespace(history=history)))))
+    result = job.refresh_prices()
+    assert result["updated"] == 2
+    for symbol in ("AAA", "VNINDEX"):
+        written = pd.read_csv(tmp_path / f"{symbol}.csv")
+        assert written.date.tolist() == ["2026-09-21"]
+        assert written.close.iloc[0] == (101000 if symbol == "AAA" else 101)
+    assert all(c["start"] == "2026-09-21" for c in calls)
+
+
+def test_dashboard_to_paper_ledger_end_to_end(tmp_path, monkeypatch):
+    """Real rule scan -> temporary cache -> logger -> replay; no production state."""
+    from types import SimpleNamespace
+    import numpy as np
+    from stock_agent.features import momentum_scan as mom, position_manager as pos
+    from stock_agent.features import win_probability as wp
+    from stock_agent.pipeline import forward_test as forward
+    monkeypatch.setattr(calendar, "completed_session_date", lambda now=None: date(2026, 9, 21))
+    f = bars(360)
+    c = 100 + np.arange(len(f)) * .1 + np.sin(np.arange(len(f)))
+    for col in ("open", "high", "low", "close"):
+        f[col] = c + (1 if col == "high" else -1 if col == "low" else 0)
+    for symbol in ("AAA", "VNINDEX"):
+        f.to_csv(tmp_path / f"{symbol}.csv", index=False)
+    for module in (mr, mom):
+        monkeypatch.setattr(module, "PRICES_DIR", tmp_path)
+        monkeypatch.setattr(module, "CACHE_PATH", tmp_path / f"{module.__name__}.json")
+    monkeypatch.setattr(pos, "check_positions", lambda *a: [])
+    monkeypatch.setattr(pos, "check_momentum_positions", lambda *a: [])
+    model = SimpleNamespace(meta={"model_version": "sha", "trained_at": "2026-07-01T00:00:00+00:00"}, predict=lambda fr: .6)
+    monkeypatch.setattr(wp.WinProbModel, "load", lambda: model)
+    mr_payload = mr.mr_scan(force=True)
+    mom_payload = mom.momentum_scan(force=True)
+    assert mr_payload["data_date"] == mom_payload["data_date"] == "2026-09-21"
+    assert mr_payload["model"]["model_version"] == "sha"
+    assert mom_payload["picks"][0]["symbol"] == "AAA"
+    monkeypatch.setattr(forward, "datetime", SimpleNamespace(now=lambda tz: datetime(2026, 9, 21, 10, tzinfo=timezone.utc)))
+    monkeypatch.setattr(forward, "LEDGER_PATH", tmp_path / "ledger.jsonl")
+    monkeypatch.setattr(forward, "PRICES_DIR", tmp_path)
+    assert forward.log_recommendations(mr_payload, mom_payload)["appended"] >= 1
+    result = forward.score()
+    assert result["quarantined"] == 0
+    assert result["pending"] == result["ledger_rows"]
+
+
+def test_position_alerts_in_eod_payload_exclude_intraday(tmp_path, monkeypatch):
+    from stock_agent.features import position_manager as pos
+    monkeypatch.setattr(calendar, "completed_session_date", lambda now=None: date(2026, 9, 21))
+    monkeypatch.setattr(pos, "PRICES_DIR", tmp_path)
+    bars().to_csv(tmp_path / "AAA.csv", index=False)
+    assert pos._symbol_frame("AAA").date.iloc[-1] == "2026-09-21"
