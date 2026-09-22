@@ -298,3 +298,80 @@ def test_demo_daily_pipeline_cannot_write_production(monkeypatch):
     monkeypatch.setattr(runner, "_log_run", lambda *a: called.append("log"))
     assert runner.run()["status"] == "blocked"
     assert not called
+
+
+def test_failed_suite_does_not_erase_active_registry(tmp_path, monkeypatch):
+    path = tmp_path / "registry.json"
+    path.write_text('{"selected_model":"keep-me"}', encoding="utf-8")
+    monkeypatch.setattr(ml_models, "MODEL_REGISTRY_PATH", path)
+    result = ml_models.train_model_suite_from_dataset(pd.DataFrame(), {"ml": {}}, families=["logistic"])
+    assert result["status"] == "insufficient_data"
+    assert path.read_text(encoding="utf-8") == '{"selected_model":"keep-me"}'
+
+
+def test_single_inference_missing_value_uses_batch_neutral(monkeypatch):
+    trainer = spy_trainer(monkeypatch)
+    trainer.feature_columns = ["feature_rsi14"]
+    trainer.winsorize_bounds = {"feature_rsi14": (0., 100.)}
+    captured = []
+    monkeypatch.setattr(trainer, "_predict_proba_internal", lambda x: captured.append(x.iloc[0, 0]) or np.array([.5]))
+    trainer.predict(pd.DataFrame({"feature_rsi14": [np.nan]}))
+    trainer.predict_single({}, return_shap=False)
+    assert captured == [50., 50.]
+
+
+def test_readonly_audit_spy_exercises_current_contract():
+    from scripts.audit_data_integrity import audit_causality
+    result = audit_causality()
+    assert result["ensemble_evaluated_rows_seen_by_fit"] == 0
+    assert result["v2_past_regime_classes_changed_after_future_append"] == 0
+
+
+def test_temporal_contract_edge_cases():
+    from stock_agent.features.temporal_validation import label_times, mature_labeled, purged_time_split, purged_walk_forward
+    data = panel(10, 1)
+    with pytest.raises(ValueError, match="interval"):
+        label_times(data.assign(exit_date=pd.NaT))
+    with pytest.raises(ValueError, match="available"):
+        label_times(data.assign(label_available_date=data.signal_date))
+    with pytest.raises(ValueError, match="Duplicate"):
+        mature_labeled(pd.concat([data, data]))
+    with pytest.raises(ValueError, match="corporate"):
+        mature_labeled(data.assign(label_quality="possible_corporate_action"))
+    assert mature_labeled(data.assign(label_resolved=False)).empty
+    assert all(f.empty for f in purged_time_split(data.iloc[:1]))
+    assert all(f.empty for f in purged_time_split(data, fractions=(.1, .11)))
+    assert list(purged_walk_forward(data.iloc[:2], n_splits=5)) == []
+    _, end = label_times(data.assign(label_available_date=data.exit_date + pd.offsets.BDay(1)))
+    assert (end > data.exit_date).all()
+
+
+@pytest.mark.parametrize("trained,meta,signal,expected", [
+    ("2024-01-04T00:00:00+00:00", {}, "2024-01-05", True),
+    ("2024-01-06T00:00:00+00:00", {}, "2024-01-05", False),
+    ("2024-01-04T00:00:00", {}, "2024-01-05", False),
+    (None, {}, "2024-01-05", False),
+    ("2024-01-04T00:00:00+00:00", {"evaluation_label_end": "2024-01-06"}, "2024-01-05", False),
+    ("2024-01-04T00:00:00+00:00", {"fit_label_end": None}, "bad-date", False),
+])
+def test_model_vintage_boundary(trained, meta, signal, expected):
+    from stock_agent.features.temporal_validation import model_available_at, TRAINING_PROTOCOL
+    manifest = {"training_protocol": TRAINING_PROTOCOL, "fit_label_end": "2024-01-02", "evaluation_label_end": "2024-01-03", **meta}
+    assert model_available_at(manifest, trained, signal) == expected
+
+
+@pytest.mark.parametrize("defect", ["missing", "bad_date", "duplicate", "negative_volume", "nan", "bad_high", "bad_low"])
+def test_training_reader_rejects_invalid_contract(tmp_path, defect):
+    from stock_agent.data.training_quality import read_training_prices
+    f = pd.DataFrame({"date": ["2025-01-03", "2025-01-06"], "open": 100., "high": 101., "low": 99., "close": 100., "volume": 100.})
+    if defect == "missing": f = f.drop(columns="volume")
+    elif defect == "bad_date": f.loc[0, "date"] = "not-a-date"
+    elif defect == "duplicate": f.loc[1, "date"] = f.loc[0, "date"]
+    elif defect == "negative_volume": f.loc[0, "volume"] = -1.
+    elif defect == "nan": f.loc[0, "open"] = np.nan
+    elif defect == "bad_high": f.loc[0, "high"] = 90.
+    elif defect == "bad_low": f.loc[0, "low"] = 110.
+    path = tmp_path / "AAA.csv"
+    f.to_csv(path, index=False)
+    with pytest.raises(ValueError, match="AAA"):
+        read_training_prices(path)
