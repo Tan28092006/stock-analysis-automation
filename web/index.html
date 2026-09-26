@@ -809,7 +809,7 @@
     <!-- Fat-Pitch Hunter: Mean-Reversion (Bat day) panel -->
     <section id="mrCard" style="grid-column: 1 / -1;">
       <div class="section-head">
-        <h2>🎯 Bắt đáy — Mean-Reversion Hunter (VN100)</h2>
+        <h2>🎯 Bắt đáy — Mean-Reversion Hunter (VN30)</h2>
         <div style="display:flex; align-items:center; gap:10px;">
           <div class="status" id="mrStatus">Loading…</div>
           <button onclick="exportCard(this,'batday_buys')" title="Tải bảng kèo BUY thành CSV" style="min-height:28px; padding:0 10px; font-size:11px;">⬇ CSV</button>
@@ -2003,6 +2003,9 @@
 
     // ---- Regime Orchestrator: which engine to use now ----
     const REGIME_ADVICE = {
+      UNKNOWN: { emoji: "⚪", color: "rgba(148,163,184,0.12)", border: "#94a3b8",
+        head: "CHƯA ĐỦ DỮ LIỆU — không có nhận định giao dịch", rec: "none",
+        mom: "Chưa đánh giá được.", mr: "Chưa đánh giá được." },
       RISK_ON: { emoji: "🟢", color: "rgba(45,212,191,0.12)", border: "var(--teal,#2dd4bf)",
         head: "TĂNG KHỎE → ưu tiên 🚀 MOMENTUM (ăn bull)", rec: "momentum",
         mom: "Giữ / mở nhóm dẫn dắt.", mr: "Bắt đáy nghỉ — không có đáy để bắt (0 kèo là bình thường)." },
@@ -2015,8 +2018,8 @@
         mr: "Săn kèo capitulation + đảo chiều." },
     };
     function renderRegimeBanner(mkt) {
-      const st = mkt?.state || "GRIND";
-      const a = REGIME_ADVICE[st] || REGIME_ADVICE.GRIND;
+      const st = mkt?.state || "UNKNOWN";
+      const a = REGIME_ADVICE[st] || REGIME_ADVICE.UNKNOWN;
       const banner = document.getElementById("regimeBanner");
       banner.style.background = a.color; banner.style.borderColor = a.border;
       banner.innerHTML = `
@@ -2149,7 +2152,7 @@
 
     function renderPositions(data) {
       const pos = data.positions || [];
-      document.getElementById("mrPosCount").textContent = pos.length;
+      document.getElementById("mrPosCount").textContent = data.status === "blocked_data" ? "chưa kiểm tra" : pos.length;
       const sells = data.sell_alerts || [];
       const banner = document.getElementById("mrSellBanner");
       if (sells.length) {
@@ -2172,7 +2175,7 @@
               <td><button onclick="closePosition('${p.id}','${p.symbol}','${p.entry_date}','${p.kind||'mr'}')" style="min-height:22px;padding:0 8px;font-size:10px;border-radius:4px;">Đóng</button></td>
             </tr>`;
           }).join("")
-        : `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:14px;">Chưa ghi vị thế nào. Bấm "Ghi" ở một kèo bên dưới.</td></tr>`;
+        : `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:14px;">${data.status === 'blocked_data' ? 'Không đánh giá vị thế do dữ liệu lỗi; sổ vị thế đã lưu không bị thay đổi.' : 'Chưa ghi vị thế nào. Bấm "Ghi" ở một kèo bên dưới.'}</td></tr>`;
     }
 
     // "HÀNH ĐỘNG HÔM NAY" — plain buy/wait. A 7-crash study proved bottom-detection is a
@@ -2296,7 +2299,7 @@
             <td class="num">${mrFmt(r.take_profit)}</td>
             <td class="num">${r.reward_risk ?? "-"}</td>
           </tr>`).join("")
-        : `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:18px;">Không có kèo nào trong 120 ngày.</td></tr>`;
+        : `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:18px;">${data.status === 'blocked_data' ? 'Chưa kiểm tra lịch sử vì dữ liệu lỗi.' : 'Không có tín hiệu trong khoảng đã quét.'}</td></tr>`;
 
       renderPositions(data);
     }
@@ -2369,7 +2372,7 @@
 
       // momentum positions + sell banner
       const pos = d.positions || [], sells = d.sell_alerts || [];
-      document.getElementById("momPosCount").textContent = pos.length;
+      document.getElementById("momPosCount").textContent = d.status === "blocked_data" ? "chưa kiểm tra" : pos.length;
       const mb = document.getElementById("momSellBanner");
       if (sells.length) { mb.style.display="block"; mb.innerHTML = "🔔 CẢNH BÁO BÁN (Momentum): " + sells.map(s=>`${s.symbol} (${s.sell_reason})`).join(" · "); }
       else mb.style.display="none";
@@ -2390,7 +2393,7 @@
               <td><button onclick="closePosition('${p.id}','${p.symbol}','${p.entry_date}','momentum')" style="min-height:22px;padding:0 8px;font-size:10px;border-radius:4px;">Đóng</button></td>
             </tr>`;
           }).join("")
-        : `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:14px;">Chưa ghi vị thế. Bấm "Ghi" ở một mã bên dưới.</td></tr>`;
+        : `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:14px;">${d.status === 'blocked_data' ? 'Không đánh giá vị thế do dữ liệu lỗi; sổ vị thế đã lưu không bị thay đổi.' : 'Chưa ghi vị thế. Bấm "Ghi" ở một mã bên dưới.'}</td></tr>`;
     }
     async function openMomPosition(enc) {
       try {
