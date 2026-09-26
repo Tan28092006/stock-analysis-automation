@@ -135,6 +135,10 @@ def _compute(top_n: int, *, prices_dir: Path | None = None,
 
 
 def momentum_scan(top_n: int = DEFAULT_TOP_N, force: bool = False) -> dict:
+    from .scan_guard import readiness, blocked
+    status = readiness(PRICES_DIR)
+    if not status["data_ready"]:
+        return blocked(status, "quant_momentum_12_1")
     rules_hash = compute_rules_hash(load_json(MR_RULES_PATH))
     snapshot = scan_input_snapshot(PRICES_DIR)
     if not force and CACHE_PATH.exists():

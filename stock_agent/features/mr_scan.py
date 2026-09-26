@@ -276,6 +276,10 @@ def _compute(recent_days: int, min_win_prob: float, *, prices_dir: Path | None =
 def mr_scan(recent_days: int = 120, force: bool = False,
            min_win_prob: float = DEFAULT_MIN_WIN_PROB) -> dict:
     """Cached MR scan; recomputes when data date, rules, or the threshold change."""
+    from .scan_guard import readiness, blocked
+    status = readiness(PRICES_DIR)
+    if not status["data_ready"]:
+        return blocked(status, "mean_reversion_hybrid")
     rules_hash = compute_rules_hash(_load_rules())
     snapshot = scan_input_snapshot(PRICES_DIR)
     if not force and CACHE_PATH.exists():

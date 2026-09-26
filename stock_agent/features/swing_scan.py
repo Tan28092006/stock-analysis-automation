@@ -82,6 +82,10 @@ def _compute(rsi2_max: float = RSI2_MAX) -> dict:
 
 
 def swing_scan(force: bool = False) -> dict:
+    from .scan_guard import readiness, blocked
+    status = readiness(PRICES_DIR)
+    if not status["data_ready"]:
+        return blocked(status, "swing_rsi2")
     rules_hash = compute_rules_hash(load_json(MR_RULES_PATH))
     snapshot = scan_input_snapshot(PRICES_DIR)
     if not force and CACHE_PATH.exists():
