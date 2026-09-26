@@ -18,7 +18,8 @@ const document = {getElementById(id) {
 }};
 const context = {document, mrFmt: String, dataAgeBadge: () => '', Intl};
 vm.createContext(context);
-for (const name of ['renderActionToday', 'renderMom', 'renderSwing']) {
+vm.runInContext(html.slice(html.indexOf('    const REGIME_ADVICE ='), html.indexOf('    function renderRegimeBanner(')), context);
+for (const name of ['renderActionToday', 'renderMom', 'renderSwing', 'renderRegimeBanner']) {
   vm.runInContext(source(name), context);
 }
 const blocked = {status: 'blocked_data', active: false, market: {state: 'UNKNOWN'},
@@ -31,3 +32,7 @@ assert.match(nodes.get('momBody').innerHTML, /DỮ LIỆU KHÔNG HỢP LỆ/);
 context.renderSwing(blocked);
 assert.match(nodes.get('swingBody').innerHTML, /DỮ LIỆU KHÔNG HỢP LỆ/);
 console.log('PASS: 3 real UI render functions distinguish blocked data from no market signal');
+context.renderRegimeBanner({state: 'UNKNOWN'});
+const banner = nodes.get('regimeBanner');
+assert.match(banner.innerHTML + banner.textContent, /CHƯA ĐỦ DỮ LIỆU/);
+assert.doesNotMatch(banner.innerHTML, /CHỢ HẸP|P.win. cao/);
