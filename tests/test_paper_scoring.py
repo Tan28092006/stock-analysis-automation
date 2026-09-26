@@ -56,7 +56,7 @@ def test_scoring_fails_closed_for_corrupt_records_or_revised_history(tmp_path, d
     if defect == "malformed":
         path.write_text("{")
     elif defect == "tampered":
-        row = json.loads(path.read_text())
+        row = json.loads(path.read_text(encoding="utf-8"))
         row["recommendations"][0]["stop_loss"] = 1
         path.write_text(json.dumps(row))
     def revise(items):
