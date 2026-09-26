@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date
 import hashlib
 import json
 
@@ -87,3 +87,53 @@ def test_repair_only_invalid_row_when_neighbors_agree():
     unchanged, decisions = rec.reconcile_invalid_rows(old, disagree)
     assert unchanged.loc[1, "close"] == 0
     assert decisions[0]["status"] == "quarantine"
+
+
+def test_fetch_is_read_only_bounded_and_uses_explicit_cutoff(monkeypatch):
+    monkeypatch.setattr(rec, "completed_session_date", lambda: date(2026, 9, 21))
+    calls = []
+    class Response:
+        content = json.dumps(payload()).encode()
+        def raise_for_status(self): pass
+    def post(url, **kwargs):
+        calls.append((url, kwargs))
+        return Response()
+    monkeypatch.setattr(rec.requests, "post", post)
+    frame, source = rec.fetch_vci_history("fpt", date(2026, 9, 18), date(2026, 9, 22))
+    assert frame.date.iloc[-1] == date(2026, 9, 21)
+    assert source["raw_sha256"] == hashlib.sha256(source["raw_bytes"]).hexdigest()
+    assert calls[0][1]["json"]["symbols"] == ["FPT"]
+    assert calls[0][1]["timeout"] == (10, 30)
+    assert pd.Timestamp(calls[0][1]["json"]["to"], unit="s", tz="UTC") == pd.Timestamp("2026-09-21T17:00:00Z")
+    with pytest.raises(ValueError, match="symbol"):
+        rec.fetch_vci_history("../FPT", date(2026, 9, 18), date(2026, 9, 21))
+    with pytest.raises(ValueError, match="start"):
+        rec.fetch_vci_history("FPT", date(2026, 9, 23), date(2026, 9, 23))
+
+
+@pytest.mark.parametrize("symbols,minimum", [([], 1), (["FPT", "FPT"], 1), (["../FPT"], 1), (["FPT"], 0)])
+def test_snapshot_rejects_bad_contract_without_creating_output(tmp_path, monkeypatch, symbols, minimum):
+    monkeypatch.setattr(rec, "completed_session_date", lambda: date(2026, 9, 21))
+    with pytest.raises(ValueError):
+        rec.build_market_snapshot(symbols, tmp_path / "bad", date(2026, 9, 18), date(2026, 9, 21), min_rows=minimum)
+    assert not (tmp_path / "bad").exists()
+
+
+def test_verify_rejects_path_escape(tmp_path):
+    manifest = {"kind": "market_snapshot", "status": "verified", "symbols": ["FPT"],
+                "files": {"FPT": {"path": "../outside.csv", "sha256": "anything"}}}
+    path = tmp_path / "manifest.json"
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="escaped"):
+        rec.verify_snapshot(path)
+
+
+def test_repair_quarantines_edges_and_still_invalid_upstream():
+    valid = rec.parse_vci_history(payload(dates=("2026-09-17", "2026-09-18", "2026-09-21")), "FPT", date(2026, 9, 17), date(2026, 9, 21))
+    old = valid.copy(); old.loc[0, "close"] = 0
+    unchanged, decisions = rec.reconcile_invalid_rows(old, valid)
+    assert unchanged.loc[0, "close"] == 0
+    assert decisions[0]["status"] == "quarantine"
+    old = valid.copy(); old.loc[1, "close"] = 0
+    unchanged, decisions = rec.reconcile_invalid_rows(old, old)
+    assert unchanged.loc[1, "close"] == 0

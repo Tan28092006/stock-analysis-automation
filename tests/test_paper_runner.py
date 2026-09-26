@@ -57,9 +57,11 @@ def test_isolated_scans_dont_load_legacy_model_or_positions(tmp_path, monkeypatc
 
 def test_paper_commit_is_immutable_idempotent_and_exante(tmp_path):
     from stock_agent.pipeline.paper_runner import commit_paper_run
-    payload = {"session": "2026-09-21", "input_snapshot": "abc", "data_ready": True,
-               "source_verified": True, "mode": "paper", "recommendations": [], "rules_hash": "r"}
     now = datetime(2026, 9, 21, 10, tzinfo=timezone.utc)
+    from tests.test_market_runtime_hardening import make_snapshot
+    from stock_agent.pipeline.paper_runner import run_paper
+    manifest = make_snapshot(tmp_path / "snapshot")
+    payload = run_paper(manifest.parent / "prices", ["AAA"], manifest_path=manifest, now=now)
     result = commit_paper_run(payload, tmp_path, now=now)
     assert result["status"] == "recorded"
     path = Path(result["path"])

@@ -68,13 +68,25 @@ def fetch_vci_history(symbol: str, start: date, as_of: date) -> tuple[pd.DataFra
     payload = {"timeFrame": "ONE_DAY", "symbols": [symbol],
                "to": int(datetime.combine(cutoff + timedelta(days=1), daytime.min, VN_TIMEZONE).timestamp()),
                "countBack": len(pd.bdate_range(start, cutoff)) + 5}
-    response = requests.post(VCI_HISTORY_URL, json=payload, headers=HEADERS, timeout=(10, 30))
-    response.raise_for_status()
+    for attempt in range(1, 4):
+        try:
+            response = requests.post(VCI_HISTORY_URL, json=payload, headers=HEADERS, timeout=(10, 30))
+            response.raise_for_status()
+            break
+        except (requests.Timeout, requests.ConnectionError):
+            if attempt == 3:
+                raise
+            time.sleep(3.1 * attempt)
+        except requests.HTTPError as exc:
+            # Never retry rate limits/auth failures or malformed source data.
+            if attempt == 3 or exc.response is None or exc.response.status_code not in {500, 502, 503, 504}:
+                raise
+            time.sleep(3.1 * attempt)
     fetched_at = datetime.now(timezone.utc).isoformat()
     raw = response.content
     return parse_vci_history(json.loads(raw), symbol, start, cutoff), {
         "source": "VCI", "endpoint": VCI_HISTORY_URL, "fetched_at": fetched_at,
-        "request": payload, "raw_bytes": raw, "raw_sha256": _sha(raw)}
+        "request": payload, "raw_bytes": raw, "raw_sha256": _sha(raw), "attempts": attempt}
 
 
 def build_market_snapshot(symbols: list[str], output_dir: Path, start: date, as_of: date,

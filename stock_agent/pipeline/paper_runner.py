@@ -15,7 +15,7 @@ import pandas as pd
 from ..config import load_universe
 from ..data.exchange_calendar import (
     VN_TIMEZONE, completed_session_date, is_trading_day, next_trading_day,
-    trading_days_between,
+    symbol_trading_days_between,
 )
 from ..data.reconciliation import _invalid, build_market_snapshot, verify_snapshot
 from ..features import mr_scan, momentum_scan
@@ -64,7 +64,7 @@ def assess_market_data(prices_dir: Path, symbols: list[str], *, now=None) -> dic
                 raise ValueError("non-trading or incomplete/future session")
             if frame.date.iloc[-1] != session:
                 raise ValueError(f"stale: latest {frame.date.iloc[-1]}, expected {session}")
-            if set(trading_days_between(frame.date.iloc[0], session)) - set(frame.date):
+            if set(symbol_trading_days_between(symbol, frame.date.iloc[0], session)) - set(frame.date):
                 raise ValueError("missing internal trading sessions; investigate listing/suspension/source")
             if float(frame.volume.iloc[-1]) <= 0:
                 raise ValueError("latest session has no executable volume")
@@ -98,6 +98,13 @@ def commit_paper_run(payload: dict, output_dir: Path, *, now=None) -> dict:
     session = date.fromisoformat(payload["session"])
     if not _window(session, now):
         raise ValueError("Outside ex-ante recording window; preview only")
+    if not payload.get("snapshot_manifest"):
+        raise ValueError("Source manifest is required at the recording boundary")
+    manifest_path = Path(payload["snapshot_manifest"])
+    checked = _source(manifest_path.parent / "prices", manifest_path,
+                      payload.get("universe", []), payload["session"], now=now)
+    if any(checked[k] != payload.get(k) for k in checked):
+        raise ValueError("Paper run conflict: verified source identity changed")
     identity = _digest({k: payload.get(k) for k in (
         "session", "input_snapshot", "rules_hash", "code_hash", "universe", "recommendations", "model")})
     folder = Path(output_dir) / "runs" / str(session)
@@ -122,11 +129,15 @@ def commit_paper_run(payload: dict, output_dir: Path, *, now=None) -> dict:
         lock.rmdir()
 
 
-def _source(prices_dir: Path, manifest_path: Path | None, symbols: list[str], session: str) -> dict:
+def _source(prices_dir: Path, manifest_path: Path | None, symbols: list[str], session: str, *, now=None) -> dict:
     if manifest_path is None:
         raise ValueError("No source manifest: unverified local cache is preview-only")
     manifest_path = Path(manifest_path).resolve()
     manifest = verify_snapshot(manifest_path)
+    for stamp in [manifest["fetched_at"], manifest["completed_at"],
+                  *(item["fetched_at"] for item in manifest["files"].values())]:
+        if _now(datetime.fromisoformat(stamp)) > _now(now):
+            raise ValueError("Source fetched after the claimed prediction time")
     if Path(prices_dir).resolve() != manifest_path.parent / "prices":
         raise ValueError("Manifest is not bound to the supplied prices directory")
     if set(manifest["symbols"]) != set(symbols) | {"VNINDEX"} or manifest["as_of"] != session:
@@ -140,12 +151,13 @@ def _source(prices_dir: Path, manifest_path: Path | None, symbols: list[str], se
 
 def run_paper(prices_dir: Path, symbols: list[str], *, output_dir: Path = DEFAULT_OUTPUT,
               manifest_path: Path | None = None, record: bool = False, now=None) -> dict:
+    fixed_clock = now is not None
     now = _now(now)
     readiness = assess_market_data(prices_dir, symbols, now=now)
     result = {**readiness, "mode": "paper", "generated_at": now.isoformat(),
               "source_verified": False, "status": "blocked", "live_orders_enabled": False}
     try:
-        result.update(_source(prices_dir, manifest_path, symbols, readiness["session"]))
+        result.update(_source(prices_dir, manifest_path, symbols, readiness["session"], now=now))
     except Exception as exc:
         result["source_error"] = str(exc)
     if not readiness["data_ready"]:
@@ -172,11 +184,11 @@ def run_paper(prices_dir: Path, symbols: list[str], *, output_dir: Path = DEFAUL
                                    "Momentum returns are informational, not a funded portfolio.",
                                    "Current fixed universe; historical adjustment/PIT lineage unverified."]})
     if result["source_verified"]:
-        checked = _source(prices_dir, manifest_path, symbols, readiness["session"])
+        checked = _source(prices_dir, manifest_path, symbols, readiness["session"], now=now)
         if checked != {key: result[key] for key in checked}:
             raise ValueError("Source changed during scan")
     if record and result["source_verified"] and readiness["recording_window_open"]:
-        result.update(commit_paper_run(result, output_dir, now=now))
+        result.update(commit_paper_run(result, output_dir, now=now if fixed_clock else _now()))
     return result
 
 

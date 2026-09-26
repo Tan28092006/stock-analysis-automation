@@ -42,6 +42,8 @@ HOSE_HOLIDAYS = {
     date(2025, 4, 7),
     date(2025, 4, 30),
     date(2025, 5, 1),
+    # HNX notice 5386/TB-SGDHN; holiday swap, no trading on May 2.
+    date(2025, 5, 2),
     date(2025, 9, 1),
     date(2025, 9, 2),
     # 2026
@@ -100,3 +102,17 @@ def trading_days_between(start: date, end: date) -> list[date]:
             days.append(current)
         current += timedelta(days=1)
     return days
+
+
+# Verified exchange transfers, not missing-price imputation. Primary-source links
+# and inclusive suspension boundaries: docs/audits/2026-09-26-market-readiness.md.
+SYMBOL_NONTRADING_INTERVALS = {
+    "BSR": ((date(2025, 1, 7), date(2025, 1, 16)),),
+    "MCH": ((date(2025, 12, 18), date(2025, 12, 24)),),
+}
+
+
+def symbol_trading_days_between(symbol: str, start: date, end: date) -> list[date]:
+    intervals = SYMBOL_NONTRADING_INTERVALS.get(symbol, ())
+    return [day for day in trading_days_between(start, end)
+            if not any(left <= day <= right for left, right in intervals)]
