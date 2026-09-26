@@ -12,10 +12,9 @@ import pandas as pd
 from ..data.exchange_calendar import symbol_trading_days_between
 from ..data.reconciliation import verify_snapshot
 from ..features.mr_exit import simulate_mr_exit
-from .paper_runner import _digest, _source, _window
+from .paper_runner import IDENTITY_KEYS, _digest, _source, _window
 
 COST_PCT = .6
-IDENTITY_KEYS = ("session", "input_snapshot", "rules_hash", "code_hash", "universe", "recommendations", "model")
 
 
 def _outcome(signal: dict, frame: pd.DataFrame, session: str) -> dict:

@@ -21,6 +21,7 @@ from ..data.reconciliation import _invalid, build_market_snapshot, verify_snapsh
 from ..features import mr_scan, momentum_scan
 
 DEFAULT_OUTPUT = Path("data/paper")
+IDENTITY_KEYS = ("session", "input_snapshot", "rules_hash", "code_hash", "universe", "recommendations", "model")
 
 
 def _now(value: datetime | None = None) -> datetime:
@@ -105,8 +106,7 @@ def commit_paper_run(payload: dict, output_dir: Path, *, now=None) -> dict:
                       payload.get("universe", []), payload["session"], now=now)
     if any(checked[k] != payload.get(k) for k in checked):
         raise ValueError("Paper run conflict: verified source identity changed")
-    identity = _digest({k: payload.get(k) for k in (
-        "session", "input_snapshot", "rules_hash", "code_hash", "universe", "recommendations", "model")})
+    identity = _digest({k: payload.get(k) for k in IDENTITY_KEYS})
     folder = Path(output_dir) / "runs" / str(session)
     folder.mkdir(parents=True, exist_ok=True)
     lock = folder / ".write-lock"
@@ -118,6 +118,8 @@ def commit_paper_run(payload: dict, output_dir: Path, *, now=None) -> dict:
     try:
         if path.exists():
             previous = json.loads(path.read_text(encoding="utf-8"))
+            if _digest({k: previous.get(k) for k in IDENTITY_KEYS}) != previous.get("record_identity"):
+                raise ValueError("Existing paper record is corrupt; do not overwrite")
             if previous.get("record_identity") != identity:
                 raise ValueError("Paper run conflict: session already contains different inputs or decisions")
             return {"status": "already_recorded", "path": str(path.resolve())}
@@ -197,13 +199,14 @@ def main(argv=None) -> int:
     parser.add_argument("--refresh", action="store_true", help="Fetch a NEW source-backed snapshot")
     parser.add_argument("--run", action="store_true", help="Record only within the ex-ante EOD window")
     parser.add_argument("--check", action="store_true", help="Check/preview without recording")
+    parser.add_argument("--score", action="store_true", help="Score existing paper records only; preserve scan report")
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--prices-dir", type=Path)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args(argv)
     try:
-        if args.check and args.run:
-            raise ValueError("--check and --run are mutually exclusive")
+        if sum((args.check, args.run, args.score)) > 1:
+            raise ValueError("--check, --run and --score are mutually exclusive")
         symbols = list(load_universe()["symbols"])
         manifest = args.manifest
         prices_dir = args.prices_dir
@@ -219,6 +222,14 @@ def main(argv=None) -> int:
             if snapshot["status"] != "verified":
                 raise ValueError(f"Snapshot blocked: {snapshot['failures']}; inspect {manifest}")
         prices_dir = prices_dir or (manifest.parent / "prices" if manifest else Path("data/raw/prices_hist"))
+        if args.score:
+            if manifest is None:
+                raise ValueError("--score requires a verified source manifest or --refresh")
+            from .paper_scoring import score_paper_runs
+            scores = score_paper_runs(args.output_dir, prices_dir, manifest_path=manifest)
+            _atomic_json(args.output_dir / "scores/latest.json", scores)
+            print(json.dumps({k: scores[k] for k in ("status", "as_of", "pending", "resolved", "errors")}))
+            return 0 if scores["status"] == "ok" else 2
         result = run_paper(prices_dir, symbols, output_dir=args.output_dir,
                            manifest_path=manifest, record=args.run)
         _atomic_json(args.output_dir / "latest.json", result)
@@ -227,9 +238,17 @@ def main(argv=None) -> int:
                          ensure_ascii=False), flush=True)
         if result["status"] == "blocked" or not result["source_verified"]:
             return 2
+        if args.run:
+            from .paper_scoring import score_paper_runs
+            scores = score_paper_runs(args.output_dir, prices_dir, manifest_path=manifest)
+            _atomic_json(args.output_dir / "scores/latest.json", scores)
+            if scores["status"] != "ok":
+                print(f"SCORING BLOCKED: {scores['errors']}", flush=True)
+                return 2
         return 3 if args.run and result["status"] == "preview_only" else 0
     except Exception as exc:
-        _atomic_json(args.output_dir / "latest.json", {"status": "failed", "error": str(exc),
+        report = "scores/latest.json" if args.score else "latest.json"
+        _atomic_json(args.output_dir / report, {"status": "failed", "error": str(exc),
                                                       "generated_at": _now().isoformat()})
         print(f"FAILED: {exc}", flush=True)
         return 2
