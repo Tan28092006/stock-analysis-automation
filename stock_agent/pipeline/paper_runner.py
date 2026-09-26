@@ -123,7 +123,7 @@ def commit_paper_run(payload: dict, output_dir: Path, *, now=None) -> dict:
             if previous.get("record_identity") != identity:
                 raise ValueError("Paper run conflict: session already contains different inputs or decisions")
             return {"status": "already_recorded", "path": str(path.resolve())}
-        record = {**payload, "recorded_at": now.isoformat(), "record_identity": identity,
+        record = {**payload, "status": "recorded", "recorded_at": now.isoformat(), "record_identity": identity,
                   "recording_contract": "signal_day_16VN_to_next_session_09VN_v1"}
         _atomic_json(path, record)
         return {"status": "recorded", "path": str(path.resolve())}
