@@ -220,18 +220,20 @@ def reconcile(result: dict, frames: dict, initial: float) -> dict:
 
 
 def decision_summary(blocks: dict) -> dict:
+    # Numerical zero, NOT a tuned profitability threshold: 0.01 VND at 1bn NAV.
+    epsilon_pp = 1e-9
     primary = blocks['h1_2026']['scenarios']
     decisions = {}
     for variant in VARIANTS[1:]:
         normal = primary['normal'][variant]
         checks = dict(
-            h1_beats_vnindex=normal['summary']['net_excess_return_pp'] > 0,
-            h1_beats_control=normal['improvement_over_control_pp'] > 0,
-            both_stresses_improve=all(primary[s][variant]['improvement_over_control_pp'] > 0
+            h1_beats_vnindex=normal['summary']['net_excess_return_pp'] > epsilon_pp,
+            h1_beats_control=normal['improvement_over_control_pp'] > epsilon_pp,
+            both_stresses_improve=all(primary[s][variant]['improvement_over_control_pp'] > epsilon_pp
                                      for s in SCENARIOS[1:]),
-            improves_at_least_two_blocks=sum(b['scenarios']['normal'][variant]['improvement_over_control_pp'] > 0
+            improves_at_least_two_blocks=sum(b['scenarios']['normal'][variant]['improvement_over_control_pp'] > epsilon_pp
                                              for b in blocks.values()) >= 2,
-            primary_adjusted_interval_positive=normal['paired_vs_control']['ci_three_variants_pct'][0] > 0,
+            primary_adjusted_interval_positive=normal['paired_vs_control']['ci_three_variants_pct'][0] > epsilon_pp,
         )
         checks = {name: bool(value) for name, value in checks.items()}
         decisions[variant] = dict(checks=checks, promising_conditional_candidate=all(checks.values()),
@@ -292,6 +294,7 @@ def run_experiments(historical_manifest: Path, recent_manifest: Path, rules_path
         protocol=str(PROTOCOL.resolve()), protocol_sha256=sha256(PROTOCOL), rules=rules,
         trial_registry=dict(variants=list(VARIANTS), scenarios=list(SCENARIOS), blocks=list(BLOCKS),
                             total_replays=36, primary_comparisons=3, parameter_search=False),
+        numerical_zero_tolerance_pp=1e-9,
         blocks=blocks, decisions=decision_summary(blocks), live_promotion='blocked',
         limitations=[
             'Current fixed universe, not point-in-time membership; survivorship/selection bias remains.',
