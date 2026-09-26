@@ -271,12 +271,19 @@ def replay_mr(frames: dict, rules: dict, start: str, end: str, signals: dict | N
     return _result(broker, nav, skipped=skipped, signal_count=sum(len(v) for d, v in signals.items() if d in used_dates))
 
 
-def replay_momentum(frames: dict, rules: dict, start: str, end: str) -> dict:
+def replay_momentum(frames: dict, rules: dict, start: str, end: str, *,
+                    target_fn=None, entry_gate=None, execution_delay: int = 0) -> dict:
+    """Research callbacks receive prior-close prefixes only; defaults are unchanged."""
+    if execution_delay not in (0, 1):
+        raise ValueError('execution_delay must be zero or one additional session')
+    target_fn = momentum_targets if target_fn is None else target_fn
     frames, days, previous, rows = _inputs(frames, start, end)
     broker = Broker(rules)
     nav, rebalances = [], []
+    skipped_entries = []
     targets: dict[str, int] = {}
     retry_until = ''
+    execution_start = ''
     prior_nav = broker.initial
     for i, day in enumerate(days):
         broker.settle(day)
@@ -285,13 +292,14 @@ def replay_momentum(frames: dict, rules: dict, start: str, end: str) -> dict:
         if i == 0 or day[:7] != days[i - 1][:7]:
             prefixes = {s: f.loc[f['date'] <= prior].copy() for s, f in frames.items()
                         if prior in rows[s]}
-            weights, excluded = momentum_targets(prefixes, set(broker.positions))
+            weights, excluded = target_fn(prefixes, set(broker.positions))
             targets = {s: broker.round_qty(prior_nav * w / float(rows[s][prior]['close']))
                        for s, w in weights.items()}
-            retry_until = add_trading_days(date.fromisoformat(day), 3).isoformat()
-            rebalances.append(dict(signal_date=prior, first_execution=day, weights=weights,
+            execution_start = add_trading_days(date.fromisoformat(day), execution_delay).isoformat()
+            retry_until = add_trading_days(date.fromisoformat(execution_start), 3).isoformat()
+            rebalances.append(dict(signal_date=prior, first_execution=execution_start, weights=weights,
                                    targets=targets.copy(), ineligible=excluded))
-        if day <= retry_until:
+        if execution_start <= day <= retry_until:
             for symbol in list(broker.positions):
                 surplus = broker.quantity(symbol) - targets.get(symbol, 0)
                 if surplus > 0 and _fillable(bars[symbol], rows[symbol][prior]['close'],
@@ -300,6 +308,14 @@ def replay_momentum(frames: dict, rules: dict, start: str, end: str) -> dict:
             needed = {s: max(0, qty - broker.quantity(s)) for s, qty in targets.items()
                       if s in bars and _fillable(bars[s], rows[s][prior]['close'],
                                                 'BUY', rules['backtest']['price_limit_pct'])}
+            if entry_gate is not None:
+                prefixes = {s: f.loc[f['date'] <= prior].copy() for s, f in frames.items()
+                            if prior in rows[s]}
+                for symbol, qty in list(needed.items()):
+                    if qty and not entry_gate(symbol, prefixes):
+                        skipped_entries.append(dict(date=day, signal_date=prior,
+                                                    symbol=symbol, qty=qty, reason='entry_screen'))
+                        del needed[symbol]
             cost = sum(qty * float(bars[s]['open']) * (1 + broker.slip) * (1 + broker.buy_fee)
                        for s, qty in needed.items())
             scale = min(1.0, broker.cash / cost) if cost else 0.0
@@ -307,7 +323,8 @@ def replay_momentum(frames: dict, rules: dict, start: str, end: str) -> dict:
                 broker.buy(symbol, broker.round_qty(qty * scale), float(bars[symbol]['open']), day)
         nav.append(broker.mark(bars, day))
         prior_nav = nav[-1]['nav']
-    return _result(broker, nav, rebalances=rebalances)
+    extra = {'skipped_entries': skipped_entries} if entry_gate is not None else {}
+    return _result(broker, nav, rebalances=rebalances, **extra)
 
 
 def run_snapshot(manifest_path: Path, rules_path: Path, start: str, end: str) -> dict:
