@@ -22,6 +22,7 @@ def test_cli_run_scores_without_touching_record_on_retry(setup):
     assert r.main(args) == 0
     paper = out / "runs/2026-09-21/paper.json"
     before = paper.read_bytes()
+    assert json.loads(before)["status"] == "recorded"
     assert r.main(args) == 0
     assert paper.read_bytes() == before
     scores = json.loads((out / "scores/latest.json").read_text(encoding="utf-8"))
@@ -53,6 +54,20 @@ def test_cli_refresh_blocked_and_success(setup, monkeypatch):
     monkeypatch.setattr(r, "build_market_snapshot", lambda *a, **kw: {"status": "blocked", "failures": ["offline"]})
     assert r.main(["--refresh", "--run", "--output-dir", str(out)]) == 2
     assert json.loads((out / "latest.json").read_text())["status"] == "failed"
+    def refresh(symbols, folder, **kwargs):
+        make_snapshot(folder)
+        return {"status": "verified"}
+    monkeypatch.setattr(r, "build_market_snapshot", refresh)
+    assert r.main(["--refresh", "--run", "--output-dir", str(out)]) == 0
+
+
+def test_score_errors_are_visible_without_overwriting_scan(setup):
+    manifest, out = setup
+    args = ["--manifest", str(manifest), "--output-dir", str(out)]
+    assert r.main(args + ["--run"]) == 0
+    (out / "runs/2026-09-21/paper.json").write_text("{")
+    assert r.main(args + ["--score"]) == 2
+    assert r.main(["--score", "--output-dir", str(out)]) == 2
 
 
 def test_corrupted_existing_record_cannot_pass_idempotency(setup):

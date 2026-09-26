@@ -173,3 +173,42 @@ def test_manifest_serialization_failure_does_not_leave_partial_artifact(tmp_path
     with pytest.raises(ValueError):
         release_module().stage_candidate({"evaluation": {"test_auc": np.nan}}, artifact_path=target)
     assert not target.exists()
+
+
+def test_real_snapshot_binding_release_load_and_source_revision(tmp_path):
+    from tests.test_market_runtime_hardening import make_snapshot
+    module = release_module()
+    manifest = make_snapshot(tmp_path / "snapshot")
+    snapshot = module.verify_snapshot(manifest, manifest.parent / "prices")
+    assert snapshot["verified"] and set(snapshot["files"]) == {"AAA", "VNINDEX"}
+    staged = module.stage_candidate({"model": None, "iso": None, "features": wp.FEATURES,
+                                     "evaluation": metrics()}, candidate_dir=tmp_path / "models", snapshot=snapshot)
+    path = Path(staged["artifact"])
+    assert module.load_candidate(path).meta["candidate_mode"] == "paper"
+    (manifest.parent / "prices/EXTRA.csv").write_text("unexpected")
+    with pytest.raises(ValueError, match="inventory"):
+        module.verify_snapshot(manifest, manifest.parent / "prices")
+    (manifest.parent / "prices/EXTRA.csv").unlink()
+    data = json.loads(manifest.read_text())
+    data["annotation"] = "source metadata revised after training"
+    manifest.write_text(json.dumps(data))
+    with pytest.raises(ValueError, match="changed"):
+        module.load_candidate(path)
+
+
+def test_candidate_rechecks_metric_gates_and_existing_sidecar(tmp_path, monkeypatch):
+    module = release_module()
+    snapshot = {"verified": True, "manifest_path": str(tmp_path / "manifest.json")}
+    monkeypatch.setattr(module, "verify_snapshot", lambda *args: snapshot)
+    staged = module.stage_candidate({"model": None, "iso": None, "features": wp.FEATURES,
+                                     "evaluation": metrics()}, candidate_dir=tmp_path, snapshot=snapshot)
+    path = Path(staged["artifact"])
+    report = Path(staged["release_manifest"])
+    data = json.loads(report.read_text())
+    data["evaluation"]["test_auc"] = .1
+    report.write_text(json.dumps(data))
+    with pytest.raises(ValueError, match="current gates"):
+        module.load_candidate(path)
+    path.unlink()
+    with pytest.raises(FileExistsError, match="manifest"):
+        module.stage_candidate({}, artifact_path=path)
