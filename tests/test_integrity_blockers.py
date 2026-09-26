@@ -208,6 +208,8 @@ def test_old_dashboard_cache_is_never_reused(tmp_path, monkeypatch, module_name)
     from importlib import import_module
     from stock_agent.config import compute_rules_hash, load_json
     module = import_module(f"stock_agent.features.{module_name}")
+    from stock_agent.features import scan_guard
+    monkeypatch.setattr(scan_guard, "readiness", lambda p: {"data_ready": True})
     monkeypatch.setattr(module, "PRICES_DIR", tmp_path)
     monkeypatch.setattr(module, "CACHE_PATH", tmp_path / "cache.json")
     bars().to_csv(tmp_path / "VNINDEX.csv", index=False)
@@ -278,8 +280,13 @@ def test_dashboard_to_paper_ledger_end_to_end(tmp_path, monkeypatch):
     from stock_agent.features import momentum_scan as mom, position_manager as pos
     from stock_agent.features import win_probability as wp
     from stock_agent.pipeline import forward_test as forward
+    from stock_agent.pipeline import paper_runner
+    from stock_agent import config
+    from tests.test_paper_runner import prices
+    monkeypatch.setattr(config, "load_universe", lambda: {"symbols": ["AAA"]})
+    monkeypatch.setattr(paper_runner, "completed_session_date", lambda now=None: date(2026, 9, 21))
     monkeypatch.setattr(calendar, "completed_session_date", lambda now=None: date(2026, 9, 21))
-    f = bars(360)
+    f = prices(tmp_path, end=date(2026, 9, 21))
     c = 100 + np.arange(len(f)) * .1 + np.sin(np.arange(len(f)))
     for col in ("open", "high", "low", "close"):
         f[col] = c + (1 if col == "high" else -1 if col == "low" else 0)

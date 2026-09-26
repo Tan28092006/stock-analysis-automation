@@ -79,6 +79,8 @@ def test_corrupt_artifact_fails_closed_without_losing_rule_scan(scan_env, monkey
 
 
 def test_old_cached_probability_payload_is_not_reused(scan_env, monkeypatch, tmp_path):
+    from stock_agent.features import scan_guard
+    monkeypatch.setattr(scan_guard, 'readiness', lambda p: {'data_ready': True})
     path = tmp_path / 'cache.json'
     monkeypatch.setattr(mr, 'CACHE_PATH', path)
     monkeypatch.setattr(mr, 'PRICES_DIR', tmp_path)
