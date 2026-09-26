@@ -25,6 +25,7 @@ from . import win_probability as wp
 from .position_manager import money_cfg, suggest_size
 
 DEFAULT_MIN_WIN_PROB = 0.55
+MODEL_SERVING_CONTRACT = "explicit-ml-live-approval-override-v1"
 
 PRICES_DIR = Path("data/raw/prices_hist")
 MR_RULES_PATH = Path("configs/rules_mr.json")
@@ -140,6 +141,22 @@ def _rules_selector(rules: dict):
     return pick
 
 
+def _admitted_model(rules: dict, use_model: bool):
+    """Offline eligibility never grants permission to publish live probabilities."""
+    if not use_model or rules.get("ml", {}).get("enabled") is not True:
+        return None, "disabled"
+    try:
+        model = wp.WinProbModel.load()
+        if model is None:
+            return None, "missing_artifact"
+        if (model.meta.get("release") or {}).get("live_approved") is not True:
+            return None, "not_live_approved"
+        return model, "approved_asof_still_required"
+    except Exception:
+        # Do not expose artifact internals or drop the independent rule-only scan.
+        return None, "load_failed"
+
+
 def _compute(recent_days: int, min_win_prob: float, *, prices_dir: Path | None = None,
              use_model: bool = True, include_positions: bool = True) -> dict:
     prices_dir = prices_dir if prices_dir is not None else PRICES_DIR
@@ -150,7 +167,7 @@ def _compute(recent_days: int, min_win_prob: float, *, prices_dir: Path | None =
     market = _market_state(prices_dir, frames)
 
     # win-probability model + context (regime / breadth / index 20d return by date)
-    model = wp.WinProbModel.load() if use_model else None
+    model, admission = _admitted_model(rules, use_model)
     regime, idx_ret20 = wp._context(prices_dir) if model is not None else ({}, {})
     breadth = wp._breadth_map(frames) if model is not None else {}
 
@@ -192,7 +209,8 @@ def _compute(recent_days: int, min_win_prob: float, *, prices_dir: Path | None =
                 watches.append(pay)
 
             # probability track: loose dip candidate on the latest bar, ranked by P(win)
-            if fr_last is not None and wp.is_candidate(fr_last) and p_last is not None \
+            if rules.get("ml", {}).get("override_enabled") is True \
+                    and fr_last is not None and wp.is_candidate(fr_last) and p_last is not None \
                     and p_last >= min_win_prob and sig.decision != "BUY_SETUP":
                 pay = _signal_payload(symbol, sig, signal_date, p_last, cfg)
                 pay["decision"] = "PROB_BUY"; pay["gate"] = gate
@@ -242,7 +260,8 @@ def _compute(recent_days: int, min_win_prob: float, *, prices_dir: Path | None =
         "money": {"account_nav": cfg["account_nav"], "risk_per_trade_pct": cfg["risk_per_trade_pct"],
                   "max_positions": cfg["max_positions"]},
         "model": {"available": bool(model is not None and latest_date and model.available_at(latest_date)),
-                  "eligibility": "purged_protocol_and_asof_required",
+                  "admission": admission,
+                  "eligibility": "explicit_ml_live_approval_and_asof_required",
                   **({k: meta.get(k) for k in ("calib_auc", "base_win_rate", "trained_at", "n_candidates", "model_version", "test_auc", "test_brier", "training_metadata")} if model else {})},
         "market": market,
         "buys": buys,
@@ -267,6 +286,8 @@ def mr_scan(recent_days: int = 120, force: bool = False,
             if idx.exists():
                 latest_csv_date = str(read_eod_csv(idx)["date"].max())
             if (cached.get("rules_hash") == rules_hash
+                    and cached.get("model_serving_contract") == MODEL_SERVING_CONTRACT
+                    and cached.get("recent_days") == recent_days
                     and cached.get("input_snapshot") == snapshot
                     and cached.get("data_date") == latest_csv_date
                     and cached.get("min_win_prob") == min_win_prob):
@@ -282,6 +303,8 @@ def mr_scan(recent_days: int = 120, force: bool = False,
             pass
     payload = _compute(recent_days, min_win_prob)
     payload["input_snapshot"] = snapshot
+    payload["model_serving_contract"] = MODEL_SERVING_CONTRACT
+    payload["recent_days"] = recent_days
     try:
         CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         CACHE_PATH.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
