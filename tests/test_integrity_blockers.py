@@ -290,10 +290,15 @@ def test_dashboard_to_paper_ledger_end_to_end(tmp_path, monkeypatch):
         monkeypatch.setattr(module, "CACHE_PATH", tmp_path / f"{module.__name__}.json")
     monkeypatch.setattr(pos, "check_positions", lambda *a: [])
     monkeypatch.setattr(pos, "check_momentum_positions", lambda *a: [])
+    # Explicit test-only approval: production stays disabled and no artifact is promoted.
+    configured = mr._load_rules()
+    configured["ml"] = {"enabled": True, "override_enabled": True}
+    monkeypatch.setattr(mr, "_load_rules", lambda: configured)
     model = wp.WinProbModel({
         "model": SimpleNamespace(predict_proba=lambda x: np.tile([.4, .6], (len(x), 1))),
         "iso": SimpleNamespace(transform=lambda x: x), "features": wp.FEATURES,
         "trained_at": "2026-07-01T00:00:00+00:00",
+        "release": {"live_approved": True},
         "training_metadata": {"training_protocol": "purged-eod-v2", "fit_label_end": "2026-05-01",
                               "calibration_label_end": "2026-06-01", "evaluation_label_end": "2026-06-30"},
     })
