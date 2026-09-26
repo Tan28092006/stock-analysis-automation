@@ -10,7 +10,7 @@ from stock_agent.data import exchange_calendar as cal, reconciliation as rec
 from stock_agent.pipeline import paper_runner as runner
 
 
-def make_snapshot(root, symbols=("AAA",), end=date(2026, 9, 21)):
+def make_snapshot(root, symbols=("AAA",), end=date(2026, 9, 21), transform=None):
     start = date(2025, 2, 3)
     dates = cal.trading_days_between(start, end)
     def fetch(symbol, start, as_of):
@@ -19,6 +19,8 @@ def make_snapshot(root, symbols=("AAA",), end=date(2026, 9, 21)):
             "h": [10200 + i * 10 for i in range(len(dates))],
             "l": [9800 + i * 10 for i in range(len(dates))],
             "c": [10000 + i * 10 for i in range(len(dates))], "v": [1000000] * len(dates)}]).encode()
+        if transform:
+            raw = json.dumps(transform(json.loads(raw))).encode()
         return rec.parse_vci_history(json.loads(raw), symbol, start, as_of), {
             "raw_bytes": raw, "fetched_at": "2026-09-21T09:30:00+00:00"}
     rec.build_market_snapshot(list(symbols) + ["VNINDEX"], root, start, end, fetcher=fetch)
