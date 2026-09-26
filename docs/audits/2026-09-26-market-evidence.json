@@ -1,0 +1,60 @@
+{
+  "scope": "prospective paper observations only; no broker orders, live model promotion, raw-history replacement or legacy-ledger rewrite",
+  "session": "2026-09-25",
+  "recorded_at_vietnam": "2026-09-26T09:30:55+07:00",
+  "next_entry_session": "2026-09-28",
+  "snapshot": {
+    "path": "data/paper/snapshots/20260926T022757171239Z/manifest.json",
+    "sha256": "bf4a310704db4a2124f9b3e47ab59c3698347170f9f77d1853582018933d5ffd",
+    "source": "VCI",
+    "completed_at": "2026-09-26T02:30:52.360932+00:00",
+    "verified_files": 31,
+    "failures": 0,
+    "adjustment_basis": "provider_adjusted_as_retrieved_unverified",
+    "universe_policy": "current_fixed_universe_not_historical_pit"
+  },
+  "paper": {
+    "path": "data/paper/runs/2026-09-25/paper.json",
+    "sha256": "e9add52ee002aa06b6493cb60805e92a1dedb077a3da7deb40ee03871bdefc01",
+    "input_snapshot": "ba8301ccf39010697c0b9a46550d6a74dc374b9161fd45a20da0f439db6e2974",
+    "code_hash": "f7c36a7f5dd5718f46c43ca2d3a82d20fcbf5211099a154f0fa92bd70d1e8bd7",
+    "universe_scanned": 30,
+    "mr_buys": 0,
+    "mr_watches": 1,
+    "momentum_picks": 10,
+    "momentum_ineligible_short_history": ["TCX"],
+    "pending": 10,
+    "resolved": 0,
+    "score_errors": 0,
+    "model_mode": "rules_only",
+    "first_record_status_note": "Embedded status is the pre-commit preview label in the first format; actual timestamp, commit receipt and verified record identity are preserved. New code writes recorded."
+  },
+  "candidate": {
+    "path": "data/models/candidates/20260926T022835-b9bcb9cc6e/win_prob_mr.pkl",
+    "sha256": "d7d54849c4eb00a749666a9870dbe108b69a2073a8f527de616b7c49cc60bd84",
+    "release_manifest_sha256": "6f4b97f422e9bb7e0d7b253a5715a0386bb95b9e4c2459f3ac8290abf43436be",
+    "trained_at": "2026-09-26T02:28:34.886276+00:00",
+    "training_snapshot": "data/paper/snapshots/20260922T140208/manifest.json",
+    "mature_candidates": 1220,
+    "purged_fit_rows": 521,
+    "calibration_rows": 170,
+    "test_rows": 376,
+    "test_auc": 0.6301544877819548,
+    "test_brier": 0.2399437517109164,
+    "baseline_brier": 0.24302322819731131,
+    "test_ece": 0.09308079829428867,
+    "threshold": 0.65,
+    "paper_eligible": true,
+    "live_approved": false,
+    "available_for_signal_2026_09_25": false,
+    "deployed": false,
+    "decision": "Keep automated paper runner rule-only; aggregate gate pass does not override weak Q2 performance or missing prospective/PIT/execution evidence."
+  },
+  "scheduler": {
+    "name": "StockAgent_EOD_Update",
+    "configuration_changed": false,
+    "launcher_changed": true,
+    "last_inspected_result": 2,
+    "next_run_vietnam": "2026-09-28T17:05:00+07:00"
+  }
+}
