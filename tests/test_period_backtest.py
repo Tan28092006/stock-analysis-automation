@@ -44,13 +44,13 @@ def test_next_open_entry_and_end_mark_not_forced_liquidation(rules):
 def test_t3_lock_stop_first_and_gap_fill(rules):
     frame = prices()
     frame.loc[1:4, ['low', 'high']] = [80, 120]
-    frame.loc[4, 'open'] = 85
+    frame.loc[4, 'open'] = 96
     result = bt.replay_mr({'AAA': frame, 'VNINDEX': prices()}, rules,
-                          '2026-01-01', '2026-01-09', {'2025-12-31': [order()]})
+                          '2026-01-01', '2026-01-09', {'2025-12-31': [order(stop=97)]})
     sell = result['fills'][1]
     assert sell['date'] == '2026-01-08'
     assert sell['reason'] == 'stop'
-    assert sell['price'] == pytest.approx(85 * .999)
+    assert sell['price'] == pytest.approx(96 * .999)
     assert result['metrics']['win_rate_pct'] == 0
 
 

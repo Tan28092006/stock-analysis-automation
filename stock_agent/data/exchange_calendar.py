@@ -28,6 +28,8 @@ HOSE_HOLIDAYS = {
     date(2024, 2, 13),
     date(2024, 2, 14),
     date(2024, 4, 18),
+    # HNX holiday-swap notice 1977: https://www.hnx.vn/vi-vn/chi-tiet-lich-nghi-gd-60018631.html
+    date(2024, 4, 29),
     date(2024, 4, 30),
     date(2024, 5, 1),
     date(2024, 9, 2),

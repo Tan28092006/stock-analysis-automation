@@ -204,12 +204,11 @@ def _inputs(frames: dict, start: str, end: str) -> tuple:
 
 
 def _fillable(bar: dict, previous_close: float, side: str, limit_pct: float) -> bool:
-    if float(bar['volume']) <= 0:
-        return False
+    # Conservative opening-price gate; NEVER inspect the later high/low/volume.
+    # Adjusted previous close is only a proxy for official reference price.
     change = float(bar['open']) / previous_close - 1
-    locked = float(bar['high']) == float(bar['low'])
-    return not (locked and ((side == 'BUY' and change >= limit_pct / 100)
-                           or (side == 'SELL' and change <= -limit_pct / 100)))
+    return not ((side == 'BUY' and change >= limit_pct / 100)
+                or (side == 'SELL' and change <= -limit_pct / 100))
 
 
 def _result(broker: Broker, nav: list, **extra) -> dict:
