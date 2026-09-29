@@ -186,9 +186,11 @@ def run(config: dict, manifest_path: Path, timeline_path: Path, rules_path: Path
     config = validate_request(config)
     output.mkdir(parents=True, exist_ok=False)
     _write_json(output / 'request.json', dict(request=config, created_at=datetime.now(timezone.utc).isoformat(),
-        inputs={name: dict(path=str(p.resolve()), sha256=rh.sha256(p))
+        inputs={name: dict(path=str(p.resolve()))
                 for name, p in [('manifest', manifest_path), ('timeline', timeline_path), ('rules', rules_path)]}))
     try:
+        _write_json(output / 'input_hashes.json', {str(p.resolve()): rh.sha256(p)
+                                                for p in (manifest_path, timeline_path, rules_path)})
         result = evaluate(config, manifest_path, timeline_path, rules_path)
         _write_json(output / 'result.json', result)
         lines = ['# Strategy lab — research only', '', f"Period: {config['start']} to {config['end']}",
