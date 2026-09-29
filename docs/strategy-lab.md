@@ -129,6 +129,8 @@ tạm, không giao dịch hoặc sửa dữ liệu vận hành.
 Chạy đo riêng đạt 25/25, coverage cả nhánh của `scripts/strategy_lab.py` đạt
 97%. Artifact coverage: `data/paper/experiments/20260929_lab_focused.coverage`.
 Snapshot nguồn chạy mẫu đã được xác minh lại sau thí nghiệm và vẫn hợp lệ.
+Hồi quy toàn repo: **369 test đạt**, 23 cảnh báo, 200,17 giây;
+`data/paper/experiments/20260929_tests.xml`. Không có test lỗi hoặc bị bỏ qua.
 
 Nâng cấp này chỉ bổ sung backend chạy nghiên cứu và cấu hình ví dụ. Các chặn
 dashboard đã làm trước được giữ nguyên; không cập nhật giá online, không phục hồi
