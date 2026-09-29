@@ -1,0 +1,9 @@
+{
+  "start": "2026-01-01",
+  "end": "2026-06-30",
+  "capital": 100000000,
+  "mr_profiles": ["vn30", "strict"],
+  "momentum_variants": ["baseline"],
+  "scenarios": ["normal", "double_cost"],
+  "mr_overrides": {}
+}
