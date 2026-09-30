@@ -100,3 +100,59 @@ def test_legacy_migration_keeps_raw_hash_and_never_enters_default_panel(tmp_path
     assert migrated['buy_value_vnd'] == 1e9
     assert migrated['available_at'] is None
     assert ff.load_flows(root=tmp_path/'store').empty
+
+
+def test_health_does_not_call_stale_or_incomplete_universe_ready(tmp_path):
+    ff.collect_flows(['MBB'], root=tmp_path, fetcher=lambda s,k:payload(), clock=lambda:NOW, sleep=lambda _:None)
+    assert ff.health(['MBB'], root=tmp_path, now=NOW)['status'] == 'ready'
+    report = ff.health(['MBB','ACB'], root=tmp_path, now=NOW)
+    assert report['status'] == 'partial'
+    assert report['missing_latest']['foreign'] == ['ACB']
+    assert ff.health(['MBB'], root=tmp_path, now=NOW.replace(day=1, month=10))['status'] != 'ready'
+
+
+def test_health_detects_history_gap_between_successful_downloads(tmp_path):
+    ff.collect_flows(['MBB'], root=tmp_path, fetcher=lambda s,k:payload('2026-09-28'), clock=lambda:NOW.replace(day=28), sleep=lambda _:None)
+    ff.collect_flows(['MBB'], root=tmp_path, fetcher=lambda s,k:payload(), clock=lambda:NOW, sleep=lambda _:None)
+    report = ff.health(['MBB'], root=tmp_path, now=NOW)
+    assert '2026-09-29' in report['gaps']['foreign:MBB']
+    assert report['status'] == 'partial'
+
+
+def test_response_observed_later_than_commit_is_invalid(tmp_path):
+    times = iter([NOW, NOW.replace(hour=12), NOW.replace(hour=12), NOW])
+    with pytest.raises(ValueError, match='Clock'):
+        ff.collect_flows(['MBB'],root=tmp_path,fetcher=lambda s,k:payload(),clock=lambda:next(times),sleep=lambda _:None)
+
+
+def test_identical_rerun_is_panel_idempotent_but_revisions_retained(tmp_path):
+    for _ in range(2):
+        ff.collect_flows(['MBB'],root=tmp_path,fetcher=lambda s,k:payload(),clock=lambda:NOW,sleep=lambda _:None)
+    assert len(ff.load_flows(root=tmp_path,as_of=NOW)) == 1
+    assert len(ff.verified_records(tmp_path)) == 4
+
+
+def test_conflicting_duplicate_session_is_quarantined_entirely():
+    data = json.loads(payload()); second = dict(data[1][0]); second['BuyVal']=2
+    data[1].append(second)
+    rows, rejected = ff.normalize_chart(json.dumps(data).encode(),'MBB','foreign',NOW)
+    assert rows == [] and rejected[0]['reason']=='duplicate_session'
+
+
+def test_transient_failure_retries_and_empty_payload_is_not_success(tmp_path):
+    calls=[]
+    def fetch(s,k):
+        calls.append(k)
+        if len(calls)==1:
+            raise TimeoutError()
+        return payload()
+    result=ff.collect_flows(['MBB'],root=tmp_path/'retry',fetcher=fetch,clock=lambda:NOW,sleep=lambda _:None)
+    assert result['status']=='ready' and len(calls)==3
+    result=ff.collect_flows(['MBB'],root=tmp_path/'empty',fetcher=lambda s,k:b'[[],[]]',clock=lambda:NOW,sleep=lambda _:None)
+    assert result['status']=='blocked' and result['rows']==0 and len(result['errors'])==2
+
+
+def test_unfinished_run_is_visible_as_blocked_health(tmp_path):
+    (tmp_path/'runs'/'interrupted'/'raw').mkdir(parents=True)
+    report = ff.health(['MBB'], root=tmp_path, now=NOW)
+    assert report['status']=='blocked' and report['incomplete_runs']==['interrupted']
