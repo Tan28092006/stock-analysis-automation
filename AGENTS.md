@@ -6,6 +6,13 @@
 - Verify with tests when behavior changes.
 - Avoid touching the trading pipeline unless the task explicitly asks for it.
 
+## Strategy research regression gate
+- For MR/momentum signals, selection, exits, sizing, costs, calendar, or data-contract changes, register the hypothesis before examining new results in `configs/research/research_gate_v1.json` (version the protocol when changing its design).
+- Run the causality/accounting tests and the complete pinned-snapshot suite: `python -m scripts.research_gate --manifest <verified-manifest> --output <new-directory>`.
+- Preserve all required crisis/calendar blocks, controls, one-rule ablations, cost/delay stresses and source hashes. Missing evidence is BLOCKED; `--validate` alone is not a backtest pass.
+- Read `docs/audits/2026-09-30-research-gate-spec.md` and `docs/audits/2026-09-30-strategy-reassessment.md` before interpreting results. Already inspected history is development data, never an untouched holdout.
+- A green engineering run does not approve trading or deployment. Require separate prospective evidence and execution/data readiness; legacy foreign rows without provenance remain quarantined.
+
 ## Workspace conventions
 - The repo is a VN30 stock-agent platform; agent-packaging files live alongside it without changing runtime behavior.
 - Use `AGENTS.md` for durable instruction context.

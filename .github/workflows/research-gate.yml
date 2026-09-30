@@ -1,0 +1,49 @@
+name: Strategy research regression gate
+on:
+  pull_request:
+    paths: ['stock_agent/**', 'scripts/**', 'configs/**', 'tests/**', '.github/workflows/research-gate.yml']
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'numpy>=1.26,<2' 'pandas>=2.2,<3' scipy requests python-dotenv scikit-learn pytest coverage
+      - run: python -m scripts.research_gate --validate
+      - run: python -m pytest tests/test_research_gate.py tests/test_foreign_flow_research.py tests/test_research_replay_contract.py tests/test_period_backtest.py tests/test_period_backtest_boundaries.py tests/test_momentum_hypotheses.py tests/test_historical_universe.py tests/test_exchange_calendar.py -q
+  pinned-data-replay:
+    needs: contracts
+    runs-on: ubuntu-latest
+    env:
+      SNAPSHOT_RUN_ID: ${{ vars.RESEARCH_SNAPSHOT_RUN_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require explicitly pinned input artifact
+        run: |
+          if [ -z "$SNAPSHOT_RUN_ID" ]; then
+            echo 'BLOCKED: configure RESEARCH_SNAPSHOT_RUN_ID for artifact research-snapshot-v1; missing data is not a pass.'
+            exit 1
+          fi
+      - uses: actions/download-artifact@v4
+        with:
+          name: research-snapshot-v1
+          path: research-input
+          run-id: ${{ vars.RESEARCH_SNAPSHOT_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: pip install 'numpy>=1.26,<2' 'pandas>=2.2,<3' scipy requests python-dotenv scikit-learn pytest
+      - run: python -m scripts.research_gate --manifest research-input/manifest.json --output research-output
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: research-output-${{ github.run_id }}
+          path: research-output
+          if-no-files-found: error
