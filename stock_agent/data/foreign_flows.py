@@ -179,6 +179,7 @@ def collect_flows(symbols, *, root=STORE, fetcher=None, clock=None, sleep=time.s
     symbols = symbols_contract(symbols)
     clock = clock or (lambda: datetime.now(timezone.utc))
     started = aware(clock())
+    collector_hash = sha(Path(__file__).read_bytes())
     cutoff = completed_session_date(started)
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
@@ -212,8 +213,9 @@ def collect_flows(symbols, *, root=STORE, fetcher=None, clock=None, sleep=time.s
                         raw_path = f'raw/{kind}_{symbol}.json'
                         if not isinstance(raw, bytes) or len(raw) > MAX_RESPONSE:
                             raise ValueError('Invalid response')
-                        (run/raw_path).write_bytes(raw)
                         rows, bad = normalize_chart(raw, symbol, kind, observed, cutoff=cutoff)
+                        # Persist only structurally valid market JSON, never login/error HTML.
+                        (run/raw_path).write_bytes(raw)
                         sources.append(dict(symbol=symbol, investor=kind, path=raw_path, sha256=sha(raw),
                                             observed_at=observed.isoformat()))
                         records.extend(rows)
@@ -231,6 +233,8 @@ def collect_flows(symbols, *, root=STORE, fetcher=None, clock=None, sleep=time.s
                             sleep(2 ** (attempt + 1))
                 sleep(.65)
         completed = aware(clock())
+        if completed < started or any(aware(s['observed_at']) > completed for s in sources):
+            raise ValueError('Clock moved backwards before commit')
         for row in records:
             row['available_at'] = max(aware(row['observed_at']), completed).isoformat()
         missing = {k: sorted(set(symbols) - {r['symbol'] for r in records if r['investor'] == k and r['date'] == str(cutoff)}) for k in KINDS}
@@ -254,7 +258,7 @@ def collect_flows(symbols, *, root=STORE, fetcher=None, clock=None, sleep=time.s
                         records_sha256=sha(canonical), rows=len(records), missing_latest=missing,
                         gaps=gaps, coverage=coverage, errors=errors, quarantine_rows=len(quarantine),
                         quarantined_intraday_rows=sum(r['reason']=='incomplete_or_future_session' for r in quarantine),
-                        strategy_approved=False, collector_sha256=sha(Path(__file__).read_bytes()))
+                        strategy_approved=False, collector_sha256=collector_hash)
         atomic_json(run/'manifest.json', manifest)
         summary = {**manifest, 'manifest_path':str((run/'manifest.json').resolve()), 'manifest_sha256':sha((run/'manifest.json').read_bytes())}
         atomic_json(root/'latest_status.json', summary)
@@ -281,6 +285,9 @@ def verified_records(root=STORE):
         manifest = json.loads(path.read_text(encoding='utf-8'))
         if manifest.get('schema_version') != 2:
             raise ValueError('Unsupported flow manifest schema')
+        started, completed = aware(manifest['started_at']), aware(manifest['completed_at'])
+        if completed < started or any(not started <= aware(s['observed_at']) <= completed for s in manifest['sources']):
+            raise ValueError('Invalid manifest clock chronology')
         expected = []
         for source in manifest['sources']:
             raw = _bound_file(path.parent, source['path'], source['sha256'])
@@ -295,6 +302,34 @@ def verified_records(root=STORE):
             raise ValueError('Canonical rows do not match raw source/provenance')
         records.extend(actual)
     return records
+
+
+def health(symbols, *, root=STORE, now=None):
+    """Recompute freshness and gaps across all committed vintages, not last status alone."""
+    symbols = symbols_contract(symbols)
+    now = aware(now)
+    cutoff = completed_session_date(now)
+    root = Path(root)
+    rows = [r for r in verified_records(root) if aware(r['available_at']) <= now and r['date'] <= str(cutoff)]
+    missing, gaps, coverage = {}, {}, {}
+    for kind in KINDS:
+        missing[kind] = []
+        for symbol in symbols:
+            days = sorted({r['date'] for r in rows if r['symbol']==symbol and r['investor']==kind})
+            key = f'{kind}:{symbol}'
+            if not days or days[-1] != str(cutoff):
+                missing[kind].append(symbol)
+            if days:
+                coverage[key] = dict(first=days[0],last=days[-1],sessions=len(days))
+                absent = sorted({str(d) for d in trading_days_between(date.fromisoformat(days[0]),cutoff)} - set(days))
+                if absent:
+                    gaps[key] = absent
+    unfinished = sorted(p.name for p in (root/'runs').glob('*') if p.is_dir() and not (p/'manifest.json').exists())
+    ready = not any(missing.values()) and not gaps and not unfinished
+    return dict(status='ready' if ready else ('partial' if rows else 'blocked'),
+                expected_session=str(cutoff), checked_at=now.isoformat(), rows=len(rows),
+                missing_latest=missing,gaps=gaps,coverage=coverage,incomplete_runs=unfinished,
+                collection_in_progress=(root/'.collect-lock').exists(),strategy_approved=False)
 
 
 def load_flows(*, root=STORE, as_of=None):

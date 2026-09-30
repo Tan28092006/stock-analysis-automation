@@ -28,6 +28,11 @@ def main(argv=None):
             result = ff.health(args.symbols or collection_symbols(), root=args.root)
         else:
             result = ff.collect_flows(args.symbols or collection_symbols(), root=args.root)
+            if result['status'] == 'ready':
+                current = ff.health(args.symbols or collection_symbols(), root=args.root)
+                result['status'] = current['status']
+                result['gaps'] = current['gaps']
+                result['missing_latest'] = current['missing_latest']
         # Keep terminal/log output short; detailed errors, dates and hashes are on disk.
         keys = ('status','expected_session','rows','normalized_rows','quarantined_rows','date_recovered_rows',
                 'missing_latest','gaps','manifest_path','rows_path','errors','quarantine_rows','quarantined_intraday_rows')

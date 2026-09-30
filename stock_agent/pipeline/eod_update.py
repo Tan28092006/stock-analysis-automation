@@ -6,9 +6,8 @@ Steps (each fail-soft so one bad provider never kills the run):
   1. Incremental price refresh: append missing recent sessions to every CSV in
      data/raw/prices_hist (VN100 + VNINDEX) via vnstock VCI. Only completed sessions
      are fetched (before 16:00 VN time the end date is yesterday).
-  2. Foreign/prop flow harvest: Vietstock per-symbol chart endpoints give the last
-     ~20 daily sessions; run daily, the JSONL accumulates gap-free history forward.
-  3. Foreign room snapshot via vnstock price_board (adds room/ownership columns).
+  2. Foreign/prop flow harvest: shared dated v2 collector, raw hashes and availability.
+  3. Undated price-board room snapshots are disabled pending source session proof.
   4. Rebuild the dashboard mean-reversion scan cache so the web UI opens fresh.
 
 All output goes to stdout; redirect to data/pipeline/eod_update.log in the task.
@@ -18,28 +17,14 @@ from __future__ import annotations
 import io
 import json
 import os
-import random
-import re
 import time
-import urllib.parse
-import urllib.request
-import http.cookiejar
 from contextlib import redirect_stdout
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pathlib import Path
 from ..data.exchange_calendar import completed_session_date
 from ..data.eod import completed_bars
 
 PRICES_DIR = Path("data/raw/prices_hist")
-FOREIGN_DIR = Path("data/raw/foreign")
-
-VIETSTOCK_REFERER = "https://finance.vietstock.vn/MBB/thong-ke-giao-dich.htm"
-VIETSTOCK_ENDPOINTS = {
-    "ndtnn_chart": ("https://finance.vietstock.vn/data/KQGDGiaoDichNDTNNChartByStock",
-                    {"type": "1", "isRealTime": "false"}),
-    "tudoanh_chart": ("https://finance.vietstock.vn/data/KQGDGiaoDichTuDoanhChartByStock",
-                      {"type": "1"}),
-}
 
 
 def _symbols() -> list[str]:

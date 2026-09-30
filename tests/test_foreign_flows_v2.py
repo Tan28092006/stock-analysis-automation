@@ -195,3 +195,41 @@ def test_legacy_chart_keeps_unknown_session_and_bad_json_quarantined(tmp_path):
     assert report['normalized_rows']==1 and report['quarantined_rows']==1
     row=json.loads(Path(report['rows_path']).read_text().strip())
     assert row['date'] is None and row['research_only'] is True
+
+
+def test_public_http_client_bounds_requests_and_does_not_persist_tokens(monkeypatch):
+    import requests
+    calls=[]
+    class Response:
+        text='<form id="__CHART_AjaxAntiForgeryForm"><input name="__RequestVerificationToken" value="test-only-token"></form>'
+        content=payload()
+        def raise_for_status(self): pass
+    class Session:
+        headers={}
+        def get(self,url,**kw):
+            calls.append(('get',url,kw)); return Response()
+        def post(self,url,**kw):
+            calls.append(('post',url,kw)); return Response()
+        def close(self): calls.append(('close',))
+    monkeypatch.setattr(requests,'Session',Session)
+    client=ff.VietstockClient()
+    assert client.fetch('MBB','foreign')==payload()
+    assert calls[0][2]['timeout']==(10,25)
+    assert calls[1][2]['timeout']==(10,25)
+    assert calls[1][2]['data']['isRealTime']=='false'
+    client.close(); assert calls[-1]==('close',)
+
+
+def test_invalid_source_timestamp_and_cutoff_rejected():
+    with pytest.raises(ValueError): ff.source_time('not-a-date')
+    with pytest.raises(ValueError):
+        ff.normalize_chart(payload(),'MBB','foreign',NOW,cutoff=NOW.replace(day=1,month=10).date())
+    with pytest.raises(ValueError): ff.symbols_contract([])
+    with pytest.raises(ValueError): ff.symbols_contract(['MBB','MBB'])
+
+
+def test_compatibility_snapshot_fails_on_partial_status(monkeypatch):
+    monkeypatch.setattr(ff,'collect_flows',lambda symbols:dict(status='partial',rows=0))
+    with pytest.raises(ValueError): ff.snapshot_today(['MBB'])
+    monkeypatch.setattr(ff,'collect_flows',lambda symbols:dict(status='ready',rows=2))
+    assert ff.snapshot_today(['MBB'])==2

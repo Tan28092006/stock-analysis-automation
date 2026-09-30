@@ -72,8 +72,8 @@ class DailyRunner:
         }
 
         try:
-            # Stage 0: Snapshot today's foreign flows (forward accumulator — history for
-            # khoi ngoai features builds itself daily; failure must never block the run)
+            # Stage 0: Shared dated/provenance-aware foreign and proprietary collector.
+            # Preserve its explicit partial/blocked status independently of later stages.
             if not self.demo:
                 self.on_progress("FLOWS", "Snapshotting foreign flows (khoi ngoai)...")
                 try:
