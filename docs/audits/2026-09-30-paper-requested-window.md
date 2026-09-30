@@ -232,3 +232,46 @@ price/missing-session changes, or relabel informational returns as funded P&L.
 No scoring condition or derived score has changed during this review. Any
 implementation first requires registry entry, explicit refusal cases and
 RED/GREEN/CI evidence; the existing strict quarantine remains in force.
+
+## Preregistered outcome-only volume revision contract
+
+Registered September 30, 2026, before implementation or rescoring archived
+outcomes: `paper_volume_revision_outcomes_v1_20260930`. This explicitly extends
+the earlier requested-window policy, not its original verification evidence.
+User journey: inspect delayed observations of an immutable paper decision even
+when a later source changes only positive historical volumes. No signal is
+regenerated, no trade is added, and no old decision or source bytes are replaced.
+
+Acceptance contract:
+
+- Continue verifying both source vintages, the ex-ante record, exact requested
+  dates and all non-volume columns. Missing dates, price/other-column revisions,
+  source corruption, duplicates and invalid risk plans remain run-atomic errors.
+- Only finite, strictly positive original AND outcome historical volume may
+  differ. Positive/zero transitions remain errors. No fitted size tolerance:
+  increases and decreases of any positive magnitude are reported, not hidden.
+- Record each revised date with original/outcome volume, symbol and original
+  run path. Deduplicate counts within a run across MR and momentum tracks.
+  Each scored observation exposes `decision_inputs_revised`; this is NOT a
+  declaration that the revised inputs would have generated the same decision.
+- Reports with accepted revisions use `ok_with_revisions`, not plain `ok`.
+  Any invalid run takes precedence as `blocked`; discard that run's staged
+  outcomes AND warnings, retaining the explicit error. Other valid runs remain
+  separately visible. CLI prints revision counts for score-only and run modes.
+- Existing MR simulation, future-bar volume checks, costs, settlement assumptions
+  and informational momentum return do not change. Actual execution and funded
+  portfolio P&L remain unverified. No price or missing-session relaxation.
+- Synthetic RED/GREEN tests cover both tracks, pending/resolved outcomes,
+  increase/decrease/large revisions, refusal boundaries, atomicity, duplicate
+  counts and byte-for-byte original evidence preservation. CLI end-to-end tests
+  use synthetic sources, with no network, fresh real scan or broker access.
+- Run all contract tests and all 2,618 pinned research paths. Their economics
+  must remain unchanged within the existing cross-platform 1e-12 tolerance.
+  If examining archived paper outcomes after validation, preserve the previous
+  blocked score and write a separately versioned report, not a hindsight record.
+
+This is a measurement/data contract, not a new profit hypothesis. The twelve
+already observed source revisions above are development evidence motivating
+the contract; they are not an untouched validation sample. Provider finality,
+feature/sizing sensitivity, paper/replay parity and live eligibility are not
+resolved by allowing a flagged descriptive outcome measurement.

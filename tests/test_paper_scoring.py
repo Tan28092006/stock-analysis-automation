@@ -10,13 +10,14 @@ from stock_agent.data import reconciliation as rec
 from tests.test_market_runtime_hardening import make_snapshot
 
 
-def record(tmp_path, track="mr"):
-    manifest = make_snapshot(tmp_path / "original")
+def record(tmp_path, track="mr", *, tracks=None, transform=None):
+    manifest = make_snapshot(tmp_path / "original", transform=transform)
     now = datetime(2026, 9, 21, 10, tzinfo=timezone.utc)
     payload = runner.run_paper(manifest.parent / "prices", ["AAA"], manifest_path=manifest, now=now)
     close = float(pd.read_csv(manifest.parent / "prices/AAA.csv").close.iloc[-1])
-    payload["recommendations"] = [{"track": track, "symbol": "AAA", "date": "2026-09-21", "close": close,
-        "entry_reference": close, "stop_loss": close - 500, "take_profit": close + 2000, "max_hold_days": 15}]
+    payload["recommendations"] = [{"track": selected, "symbol": "AAA", "date": "2026-09-21", "close": close,
+        "entry_reference": close, "stop_loss": close - 500, "take_profit": close + 2000, "max_hold_days": 15}
+        for selected in (tracks or [track])]
     runner.commit_paper_run(payload, tmp_path / "out", now=now)
     return manifest
 
@@ -91,9 +92,9 @@ def test_no_records_is_an_empty_observation_set(tmp_path):
     assert result["status"] == "ok"
 
 
-def rolling_snapshot(root, start=date(2025, 2, 5), transform=None, symbols=("AAA",)):
+def rolling_snapshot(root, start=date(2025, 2, 5), transform=None, symbols=("AAA",), end=date(2026, 9, 25)):
     """Keep absolute prices fixed while changing the provider request boundary."""
-    full = make_snapshot(root / "full", symbols=symbols, end=date(2026, 9, 25))
+    full = make_snapshot(root / "full", symbols=symbols, end=end)
 
     def fetch(symbol, requested_start, end):
         source = json.loads((full.parent / "raw" / f"{symbol}.json").read_bytes())
@@ -101,10 +102,10 @@ def rolling_snapshot(root, start=date(2025, 2, 5), transform=None, symbols=("AAA
             source = transform(source)
         raw = json.dumps(source).encode()
         return rec.parse_vci_history(source, symbol, requested_start, end), {
-            "raw_bytes": raw, "fetched_at": "2026-09-25T10:00:00+00:00"}
+            "raw_bytes": raw, "fetched_at": f"{end}T10:00:00+00:00"}
 
     rec.build_market_snapshot(list(symbols) + ["VNINDEX"], root / "rolling", start,
-                              date(2026, 9, 25), min_rows=1, fetcher=fetch)
+                              end, min_rows=1, fetcher=fetch)
     return root / "rolling/manifest.json"
 
 
@@ -155,14 +156,14 @@ def test_requested_prefix_roll_preserves_outcomes_and_archived_evidence(tmp_path
     assert {p: p.read_bytes() for p in evidence} == before
 
 
-@pytest.mark.parametrize("column", ["o", "h", "l", "c", "v"])
-def test_rolled_request_does_not_excuse_real_shared_history_revisions(tmp_path, column):
+@pytest.mark.parametrize("column", ["o", "h", "l", "c"])
+def test_rolled_request_does_not_excuse_shared_price_revisions(tmp_path, column):
     from stock_agent.pipeline.paper_scoring import score_paper_runs
     record(tmp_path)
 
     def revise(items):
         if items[0]["symbol"] == "AAA":
-            items[0][column][-5] += 1  # Signal date, also tests GAS-style volume revisions.
+            items[0][column][-5] += 1  # Signal date; prices remain exact-match.
         return items
 
     current = rolling_snapshot(tmp_path / "current", transform=revise)
@@ -217,11 +218,107 @@ def test_one_actual_revision_quarantines_the_entire_run_after_valid_rolled_signa
     runner.commit_paper_run(payload, tmp_path / "out", now=now)
 
     def revise_second(items):
+        if items[0]["symbol"] == "AAA":
+            items[0]["v"][-5] += 1  # Accepted only if the rest of this run is valid.
         if items[0]["symbol"] == "BBB":
-            items[0]["v"][-5] += 1
+            items[0]["c"][-5] += 1
         return items
 
     current = rolling_snapshot(tmp_path / "current", transform=revise_second, symbols=symbols)
     result = score_paper_runs(tmp_path / "out", current.parent / "prices", manifest_path=current)
     assert result["status"] == "blocked" and not result["records"]
     assert "BBB" in result["errors"][0]["error"]
+    assert result["revision_warnings"] == []
+    assert result["volume_revision_rows"] == result["volume_revision_runs"] == 0
+
+
+def revise_volume(items, value, day="2026-09-21"):
+    if items[0]["symbol"] == "AAA":
+        index = next(i for i, stamp in enumerate(items[0]["t"])
+                     if str(pd.Timestamp(stamp, unit="s").date()) == day)
+        items[0]["v"][index] = value
+    return items
+
+
+@pytest.mark.parametrize("track", ["mr", "momentum"])
+@pytest.mark.parametrize("end", [date(2026, 9, 25), date(2026, 10, 21)])
+@pytest.mark.parametrize("volume", [999999, 1000001, 100000000])
+def test_positive_volume_revisions_flag_but_do_not_change_sealed_outcomes(
+        tmp_path, monkeypatch, track, end, volume):
+    from stock_agent.pipeline.paper_scoring import score_paper_runs
+    original = record(tmp_path, track=track)
+    # Synthetic forward clock only; never request future bars from a provider.
+    monkeypatch.setattr(rec, "completed_session_date", lambda: end)
+    baseline = rolling_snapshot(tmp_path / "baseline", end=end)
+    revised = rolling_snapshot(tmp_path / "revised", end=end,
+                               transform=lambda rows: revise_volume(rows, volume))
+    evidence = [tmp_path / "out/runs/2026-09-21/paper.json"]
+    evidence += [p for parent in (original.parent, baseline.parent, revised.parent)
+                 for p in parent.rglob("*") if p.is_file()]
+    before = {p: p.read_bytes() for p in evidence}
+
+    def no_scan(*args, **kwargs):
+        pytest.fail("Scoring must not regenerate the original signal")
+
+    monkeypatch.setattr(runner.mr_scan, "_compute", no_scan)
+    monkeypatch.setattr(runner.momentum_scan, "_compute", no_scan)
+    control = score_paper_runs(tmp_path / "out", baseline.parent / "prices", manifest_path=baseline)
+    result = score_paper_runs(tmp_path / "out", revised.parent / "prices", manifest_path=revised)
+    assert result["status"] == "ok_with_revisions" and not result["errors"]
+    assert control["status"] == "ok" and control["revision_warnings"] == []
+    assert result["volume_revision_rows"] == result["volume_revision_runs"] == 1
+    warning = result["revision_warnings"][0]
+    assert warning == {"path": str(evidence[0]), "symbol": "AAA", "date": "2026-09-21",
+                       "original_volume": 1000000, "outcome_volume": volume}
+    row, expected = result["records"][0].copy(), control["records"][0].copy()
+    check, unchanged = row.pop("history_check"), expected.pop("history_check")
+    assert check["revision_policy"] == "positive_volume_only_v1"
+    assert check["decision_inputs_revised"] is True and check["volume_revision_rows"] == 1
+    assert unchanged["decision_inputs_revised"] is False
+    assert row == expected
+    assert row["status"] == ("resolved" if end.month == 10 else "pending")
+    assert result["assumptions"]["actual_execution_verified"] is False
+    assert result["assumptions"]["portfolio_pnl"] is False
+    assert {p: p.read_bytes() for p in evidence} == before
+
+
+def test_revision_counts_are_per_symbol_date_not_per_strategy(tmp_path):
+    from stock_agent.pipeline.paper_scoring import score_paper_runs
+    record(tmp_path, tracks=["mr", "momentum"])
+
+    def revision(rows):
+        revise_volume(rows, 2000000, day="2026-09-18")
+        return revise_volume(rows, 999999)
+
+    revised = rolling_snapshot(tmp_path / "revised", transform=revision)
+    result = score_paper_runs(tmp_path / "out", revised.parent / "prices", manifest_path=revised)
+    assert result["status"] == "ok_with_revisions" and len(result["records"]) == 2
+    assert result["volume_revision_rows"] == 2 and result["volume_revision_runs"] == 1
+    assert [w["date"] for w in result["revision_warnings"]] == ["2026-09-18", "2026-09-21"]
+    assert all(r["history_check"]["volume_revision_rows"] == 2 for r in result["records"])
+
+
+@pytest.mark.parametrize("original_volume,outcome_volume", [(0, 1000000), (1000000, 0), (0, 0)])
+def test_zero_volume_cannot_be_revised_into_or_out_of_tradability(tmp_path, original_volume, outcome_volume):
+    from stock_agent.pipeline.paper_scoring import score_paper_runs
+    # A past zero-volume bar is source-valid; the signal bar must still be liquid.
+    day = "2026-08-03"
+    record(tmp_path, transform=lambda rows: revise_volume(rows, original_volume, day))
+    current = rolling_snapshot(tmp_path / "current", transform=lambda rows: revise_volume(rows, outcome_volume, day))
+    result = score_paper_runs(tmp_path / "out", current.parent / "prices", manifest_path=current)
+    if original_volume == outcome_volume:
+        assert result["status"] == "ok" and len(result["records"]) == 1
+    else:
+        assert result["status"] == "blocked" and result["records"] == []
+    assert result["revision_warnings"] == []
+
+
+@pytest.mark.parametrize("column,value", [("volume", -1), ("volume", float("nan")),
+                                         ("volume", float("inf")), ("extra", 2)])
+def test_history_comparison_refuses_invalid_volume_or_nonvolume_change(column, value):
+    from stock_agent.pipeline.paper_scoring import _check_history
+    old = pd.DataFrame({"date": ["2026-09-21"], "close": [10000], "volume": [1000000], "extra": [1]})
+    frame = old.copy()
+    frame.loc[0, column] = value
+    with pytest.raises(ValueError, match="history revision"):
+        _check_history(old, frame, symbol="AAA", requested_start="2026-09-21", session="2026-09-21")

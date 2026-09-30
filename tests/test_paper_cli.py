@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 import json
+import subprocess
+import sys
 
 import pytest
 
@@ -97,3 +99,55 @@ def test_cli_scores_rolled_source_without_rewriting_signal(tmp_path):
     scores = json.loads((out / "scores/latest.json").read_text(encoding="utf-8"))
     assert scores["pending"] == 1 and scores["resolved"] == 0
     assert scores["records"][0]["history_check"]["archived_prefix_rows_not_reobserved"] == 2
+
+
+@pytest.mark.parametrize("mode", ["--score", "--run", "subprocess"])
+def test_cli_exposes_volume_revisions_without_recomputing_old_signal(tmp_path, monkeypatch, capsys, mode):
+    from tests.test_paper_scoring import record, revise_volume, rolling_snapshot
+    record(tmp_path, track="momentum")
+    current = rolling_snapshot(tmp_path / "current", transform=lambda rows: revise_volume(rows, 999999))
+    out = tmp_path / "out"
+    scan = out / "latest.json"
+    scan.write_text('{"scan":"keep"}', encoding="utf-8")
+    paper = out / "runs/2026-09-21/paper.json"
+    before_scan, before_paper = scan.read_bytes(), paper.read_bytes()
+
+    def no_scan(*args, **kwargs):
+        pytest.fail("Score-only must not run a signal scan")
+
+    # --run exercises CLI integration with an already-completed synthetic run.
+    completed = {"status": "recorded", "source_verified": True}
+    monkeypatch.setattr(r, "run_paper", (lambda *a, **kw: completed) if mode == "--run" else no_scan)
+    args = ["--manifest", str(current), "--output-dir", str(out)]
+    if mode == "subprocess":
+        process = subprocess.run([sys.executable, "-m", "stock_agent.pipeline.paper_runner", *args, "--score"],
+                                 text=True, capture_output=True, timeout=60)
+        assert process.returncode == 0, process.stderr + process.stdout
+        printed = process.stdout
+    else:
+        assert r.main(args + [mode]) == 0
+        printed = capsys.readouterr().out
+    assert "ok_with_revisions" in printed and "volume_revision_rows" in printed
+    scores = json.loads((out / "scores/latest.json").read_text(encoding="utf-8"))
+    assert scores["status"] == "ok_with_revisions" and scores["volume_revision_rows"] == 1
+    assert scores["pending"] == 1 and scores["resolved"] == 0
+    assert paper.read_bytes() == before_paper
+    if mode != "--run":
+        assert scan.read_bytes() == before_scan
+
+
+@pytest.mark.parametrize("mode", ["--score", "--run"])
+def test_cli_still_blocks_shared_price_revision(tmp_path, monkeypatch, mode):
+    from tests.test_paper_scoring import record, rolling_snapshot
+    record(tmp_path)
+
+    def revise_price(rows):
+        if rows[0]["symbol"] == "AAA":
+            rows[0]["c"][-5] += 1
+        return rows
+
+    current = rolling_snapshot(tmp_path / "current", transform=revise_price)
+    monkeypatch.setattr(r, "run_paper", lambda *a, **kw: {"status": "recorded", "source_verified": True})
+    assert r.main(["--manifest", str(current), "--output-dir", str(tmp_path / "out"), mode]) == 2
+    result = json.loads((tmp_path / "out/scores/latest.json").read_text(encoding="utf-8"))
+    assert result["status"] == "blocked" and result["errors"] and not result["records"]
