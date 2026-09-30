@@ -6,8 +6,8 @@ from stock_agent.pipeline import foreign_refresh as job
 
 def test_scheduled_universe_keeps_collection_and_current_trading_names():
     symbols = job.collection_symbols()
-    assert len(symbols) == 102
-    assert {'MCH','TCX','ACB','ANV','VTP'} <= set(symbols)
+    assert len(symbols) == 105
+    assert {'MCH','TAL','TCX','VCK','VPX','ACB','ANV','VTP','DXS','HDC','IMP','SCS','SZC'} <= set(symbols)
 
 
 def test_job_returns_nonzero_on_partial_and_status_is_visible(tmp_path, monkeypatch, capsys):
