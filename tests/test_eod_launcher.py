@@ -32,7 +32,7 @@ def test_scheduled_launcher_never_mutates_git_or_publishes():
     assert not any(line.startswith("git ") for line in _commands())
 
 
-def _run_stub(tmp_path: Path, exit_code: int):
+def _run_stub(tmp_path: Path, exit_code: int, flow_exit: int = 0):
     # Fail before execution on the old launcher; never run the production job.
     test_scheduled_launcher_routes_to_isolated_paper_runner()
     test_scheduled_launcher_never_mutates_git_or_publishes()
@@ -47,9 +47,11 @@ def _run_stub(tmp_path: Path, exit_code: int):
         "raise SystemExit(int(os.environ['VN30_TEST_EXIT']))\n",
         encoding="utf-8",
     )
+    (module_dir / "foreign_refresh.py").write_text(
+        "import os\nprint('FLOW_STUB')\nraise SystemExit(int(os.environ['VN30_TEST_FLOW_EXIT']))\n", encoding='utf-8')
     launcher = root / LAUNCHER.name
     shutil.copyfile(LAUNCHER, launcher)
-    env = {**os.environ, "VN30_PYTHON": sys.executable, "VN30_TEST_EXIT": str(exit_code)}
+    env = {**os.environ, "VN30_PYTHON": sys.executable, "VN30_TEST_EXIT": str(exit_code), "VN30_TEST_FLOW_EXIT": str(flow_exit)}
     result = subprocess.run(
         ["cmd.exe", "/d", "/c", str(launcher)], cwd=tmp_path,
         env=env, capture_output=True, text=True, timeout=20, check=False,
@@ -74,4 +76,19 @@ def test_scheduled_launcher_success_logs_output_and_uses_own_directory(tmp_path)
     assert f"STUB_CWD={root}" in log
     assert "STUB_ARGS=--refresh --run" in log
     assert "STUB_STDERR" in log
+
+
+@pytest.mark.skipif(os.name != 'nt', reason='Windows launcher integration')
+def test_flow_failure_still_runs_paper_but_never_reports_total_success(tmp_path):
+    result, log, _ = _run_stub(tmp_path, 0, 6)
+    assert result.returncode == 6
+    assert 'FLOW_STUB' in log and 'STUB_ARGS=--refresh --run' in log
+    assert 'SUCCESS' not in log
+
+
+def test_flow_collector_is_wired_before_paper():
+    commands = _commands()
+    flow = next(i for i,line in enumerate(commands) if '-m stock_agent.pipeline.foreign_refresh' in line)
+    paper = next(i for i,line in enumerate(commands) if '-m stock_agent.pipeline.paper_runner' in line)
+    assert flow < paper
 
