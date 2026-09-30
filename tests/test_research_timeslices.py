@@ -140,3 +140,67 @@ def test_ci_cannot_skip_timeslices():
     workflow = Path('.github/workflows/research-gate.yml').read_text(encoding='utf-8')
     assert 'python -m scripts.research_timeslices' in workflow
     assert 'tests/test_research_timeslices.py' in workflow
+
+
+def parents(tmp_path):
+    from pathlib import Path
+    from scripts import research_gate as gate, momentum_books as books
+    manifest = tmp_path/'manifest.json'
+    manifest.write_text('{}')
+    trial = dict(reconciliation=dict(max_nav_error_vnd=0.), replay=replay())
+    blocks = {name: dict(mr={v:copy.deepcopy(trial) for v in gate.MR},
+        momentum={v:copy.deepcopy(trial) for v in gate.MOMENTUM}, universe_equal=copy.deepcopy(trial),
+        stresses={s:{v:copy.deepcopy(trial) for v in ('mr_bracket','mr_fixed15','momentum_baseline')}
+                  for s in books.SCENARIOS[1:]}) for name in gate.load_registry()['blocks']}
+    paths = ['scripts/research_gate.py','scripts/period_backtest.py','configs/rules_mr.json',
+             'scripts/momentum_books.py','configs/research/research_gate_v1.json']
+    common = dict(status='research_complete_live_blocked', manifest_sha256=gate.digest(manifest),
+                  source_hashes={p:gate.digest(Path(p)) for p in paths})
+    parent = dict(**copy.deepcopy(common), registry=gate.load_registry(), blocks=blocks)
+    book = dict(**copy.deepcopy(common), protocol=books.load_protocol(), trial_count=180,
+        blocks={name:dict(trials={s:{v:copy.deepcopy(trial) for v in books.VARIANTS}
+                                for s in books.SCENARIOS}) for name in blocks})
+    return parent, book, manifest
+
+
+def test_all_44_parent_trials_retained_without_duplicate_book_baseline(tmp_path):
+    a,b,m = parents(tmp_path)
+    trials = lab().verify_parents(a,b,m)
+    assert len(trials) == 44
+    assert 'mr/no_confirmation/normal' in trials
+    assert 'books/quality/double_cost' in trials
+    assert 'momentum/universe_equal/normal' in trials
+    assert 'books/baseline/normal' not in trials
+
+
+@pytest.mark.parametrize('issue', ['registry','status','manifest','source','source_missing','book_block',
+                                 'book_count','book_variant','book_scenario'])
+def test_parent_missing_or_drifted_evidence_is_blocked(tmp_path,issue):
+    a,b,m = parents(tmp_path)
+    if issue == 'registry': a['registry']['seed'] = 1
+    if issue == 'status': a['status'] = 'running'
+    if issue == 'manifest': b['manifest_sha256'] = 'tampered'
+    if issue == 'source': a['source_hashes']['scripts/period_backtest.py'] = 'tampered'
+    if issue == 'source_missing': b['source_hashes'] = {}
+    if issue == 'book_block': del b['blocks']['panic_2022']
+    if issue == 'book_count': b['trial_count'] = 179
+    if issue == 'book_variant': del b['blocks']['continuous']['trials']['normal']['weekly']
+    if issue == 'book_scenario': del b['blocks']['continuous']['trials']['double_cost']
+    with pytest.raises(ValueError): lab().verify_parents(a,b,m)
+
+
+@pytest.mark.parametrize('strategy,scenario', [('typo/baseline','normal'),('mr/bracket','typo')])
+def test_cash_runner_rejects_unregistered_input(rules,strategy,scenario):
+    with pytest.raises(ValueError): lab().cash_reference({},rules,None,{},'a','b',strategy,scenario)
+
+
+def test_html_displays_both_starting_modes_and_escapes_untrusted_labels():
+    m = lab().attribute_slice(replay(),replay()['nav'],100.,'2026-01-05','2026-01-07')
+    block = dict(id='test',kind='regime',regime='<script>alert(1)</script>',start='2026-01-05',end='2026-01-07',
+        sessions=3,regime_sessions=dict(uptrend=0,downtrend=3,transition=0),
+        carry={s+'/normal':m for s in lab().REFERENCES},
+        cash_restart={s+'/normal':dict(metrics=m) for s in lab().REFERENCES})
+    report = lab().render_report(dict(slices=[block],protocol=lab().load_protocol()))
+    assert '<script>' not in report and '&lt;script&gt;' in report
+    assert 'Danh mục liên tục' in report and 'tiền mặt' in report
+    assert 'results.json' in report and 'regime_labels.json' in report
