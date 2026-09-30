@@ -201,3 +201,45 @@ def test_unknown_variant_and_scenario_fail_closed(market):
         run(market, 'optimized_after_seeing_result')
     with pytest.raises(ValueError):
         run(market, scenario='free_fills')
+
+
+def test_future_listing_does_not_block_or_enter_an_earlier_window(market):
+    frames, _, _, i = market
+    rally(market)
+    frames['BBB'] = frames['BBB'].iloc[i + 35:].reset_index(drop=True)
+    result = run(market)
+    assert all(f['symbol'] == 'AAA' for f in buys(result))
+    assert result['funnel']['history_unavailable'] > 0
+
+
+def test_partial_exit_retains_latch_and_never_spends_receivable(market):
+    frames, _, _, i = market
+    set_bar(frames['AAA'], i, 10200.)
+    set_bar(frames['AAA'], i + 1, 9500., opening=10200.)
+    frames['AAA'].loc[i + 1:, 'volume'] = 20000.
+    for j in range(i + 2, i + 12):
+        set_bar(frames['AAA'], j, 10200., volume=20000.)
+    result = run(market, length=10)
+    sells = [f for f in result['fills'] if f['side'] == 'SELL']
+    assert len(sells) >= 2
+    assert len({f['signal_date'] for f in sells}) == 1
+    assert all(f['qty'] <= f['adv_cap_qty'] for f in sells)
+    assert len(buys(result)) == 1
+    reconcile(result, frames, market[1]['backtest']['initial_capital'])
+
+
+def test_delayed_add_cancelled_by_new_exit(market):
+    frames, _, _, i = market
+    rally(market, offset=0)
+    frames['AAA']['volume'] = 100000.
+    set_bar(frames['AAA'], i + 7, 9000., opening=10725.)
+    result = run(market, 'pyramiding55', 'delay_one_session', length=9)
+    assert result['funnel'].get('cancelled_by_exit', 0) > 0
+
+
+def test_buy_caps_are_hard_and_do_not_rebalance_down(market):
+    rally(market)
+    result = run(market, 'pyramiding55', length=20)
+    assert sum(f['qty'] * f['price'] for f in buys(result)) < market[1]['backtest']['initial_capital'] * .21
+    assert result['funnel'].get('weight', 0) > 0
+    assert not [f for f in result['fills'] if f['side'] == 'SELL']
