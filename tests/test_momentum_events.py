@@ -40,7 +40,7 @@ def set_bar(frame, i, close, *, opening=None, volume=1_000_000.):
 def rally(market, *, offset=1, count=20):
     frames, _, _, i = market
     for j in range(count):
-        set_bar(frames['AAA'], i + offset + j, 10200 + 150 * j)
+        set_bar(frames['AAA'], i + offset + j, 10200 + 75 * j)
     return i + offset
 
 
@@ -118,6 +118,7 @@ def test_prefix_invariance(market):
 
 def test_adds_only_up_not_counted_as_new_and_capped_four_units(market):
     rally(market)
+    market[0]['AAA']['volume'] = 100000.
     result = run(market, 'pyramiding55', length=20)
     orders = buys(result)
     assert [f['intent_kind'] for f in orders] == ['new', 'add', 'add', 'add']
