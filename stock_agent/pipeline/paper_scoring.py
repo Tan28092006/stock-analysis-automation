@@ -104,15 +104,30 @@ def score_paper_runs(output_dir: Path, prices_dir: Path, *, manifest_path: Path)
                 seen.add(key)
                 old = pd.read_csv(original_path.parent / "prices" / f"{symbol}.csv")
                 frame = pd.read_csv(prices_dir / f"{symbol}.csv")
-                # Any revision to the original feature history quarantines this run;
-                # do not mix adjusted future prices with an older signal price basis.
-                matched = frame.set_index("date").reindex(old.date).reset_index()
-                pd.testing.assert_frame_equal(old, matched, check_dtype=False, check_exact=True)
+                # Rolling requests intentionally omit an archived leading prefix.
+                # Use the requested boundary, never the first returned date: missing
+                # requested bars and any shared OHLCV revision still quarantine the run.
+                requested_start = current["start"]
+                if requested_start > session:
+                    raise ValueError(f"{symbol}: outcome request starts after the signal session")
+                required = old.loc[old.date >= requested_start].reset_index(drop=True)
+                matched = frame.set_index("date").reindex(required.date).reset_index()
+                try:
+                    pd.testing.assert_frame_equal(required, matched, check_dtype=False, check_exact=True)
+                except AssertionError as exc:
+                    raise ValueError(f"{symbol}: history revision or missing session inside requested overlap") from exc
                 segment = frame[frame.date >= session]
                 expected = {str(d) for d in symbol_trading_days_between(symbol, date.fromisoformat(session), date.fromisoformat(current["as_of"]))}
                 if set(segment.date) != expected:
                     raise ValueError(f"{symbol}: missing outcome sessions")
-                staged.append(_outcome(signal, frame, session))
+                outcome = _outcome(signal, frame, session)
+                outcome["history_check"] = {
+                    "contract": "requested_window_v1", "requested_start": requested_start,
+                    "original_start": str(old.date.iloc[0]),
+                    "compared_rows": len(required),
+                    "archived_prefix_rows_not_reobserved": len(old) - len(required),
+                }
+                staged.append(outcome)
             result["records"].extend(staged)
         except Exception as exc:
             result["errors"].append({"path": str(path), "error": f"{type(exc).__name__}: {exc}"})
