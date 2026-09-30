@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "holdout": false,
+  "future_boundary": "2026-10-01",
+  "primary_inference_block": "continuous",
+  "min_sessions": 252,
+  "min_mr_closed_trades": 30,
+  "alpha": 0.05,
+  "bootstrap_blocks": [20,40],
+  "seed": 20260930,
+  "momentum": ["baseline","market_adjusted","reversal_entry","own_portfolio_vol","equal_weight","no_buffer","positive_only","market_trend","formation_6_1","high_52w"],
+  "mr": ["bracket","fixed15","no_rsi","no_band","no_confirmation","no_rr","no_cloud","no_vsa","strict","fixed5","fixed10","fixed20"],
+  "scenarios": ["normal","double_cost","delay_one_session"],
+  "blocks": {
+    "recent_6m": {"start":"2026-04-01","end":"2026-09-29","role":"overlapping_diagnostic"},
+    "panic_2022": {"start":"2022-09-01","end":"2022-12-30","role":"calendar"},
+    "year_2023": {"start":"2023-01-01","end":"2023-12-29","role":"calendar"},
+    "year_2024": {"start":"2024-01-01","end":"2024-12-31","role":"calendar"},
+    "year_2025": {"start":"2025-01-01","end":"2025-12-31","role":"calendar"},
+    "year_2026_ytd": {"start":"2026-01-01","end":"2026-09-29","role":"calendar"},
+    "tariffs_2025": {"start":"2025-04-01","end":"2025-06-30","role":"overlapping_diagnostic"},
+    "war_2026": {"start":"2026-03-01","end":"2026-04-30","role":"overlapping_diagnostic"},
+    "rebound_2022": {"start":"2022-12-01","end":"2023-01-31","role":"overlapping_diagnostic"},
+    "continuous": {"start":"2022-09-01","end":"2026-09-29","role":"primary_development"}
+  },
+  "controls": ["cash","VNINDEX_price_gross","lagged_exposure_matched_index","equal_weight_pit_vn30"],
+  "notes": [
+    "Every block begins with cash; continuous run tests actual path dependence.",
+    "MR one-gate ablations keep bracket exits; fixed5/10/15/20 change only exit policy/horizon.",
+    "Double costs and one-session delay run for both MR reference exits and momentum baseline in every block.",
+    "Primary family = all nonbaseline variants plus two baseline-vs-index comparisons; other blocks diagnostic only.",
+    "Bonferroni paired circular bootstrap at 20 AND 40 sessions; no claim of global correction for unknown past trials.",
+    "No historical result can certify live eligibility without fill, corporate-action and prospective checks."
+  ]
+}
