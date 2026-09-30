@@ -70,7 +70,7 @@ def test_partial_collection_is_visible_and_never_zero_fills(tmp_path):
     result = ff.collect_flows(['MBB', 'AAA'], root=tmp_path, fetcher=fetch, clock=lambda: NOW, sleep=lambda _: None)
     assert result['status'] == 'partial'
     assert result['missing_latest']['foreign'] == ['AAA']
-    assert set(ff.load_flows(root=tmp_path)['symbol']) == {'MBB'}
+    assert set(ff.load_flows(root=tmp_path, as_of=NOW)['symbol']) == {'MBB'}
     assert 'do not log tokens' not in json.dumps(result)
 
 

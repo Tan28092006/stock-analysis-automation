@@ -47,3 +47,4 @@ data/pipeline/eod_update.log
 
 # Isolated live-source snapshots and immutable paper records (local runtime state).
 data/paper/
+data/foreign_flows_v2/
