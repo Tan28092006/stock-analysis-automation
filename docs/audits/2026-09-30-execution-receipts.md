@@ -37,6 +37,10 @@ execution-price rejection. Cancel requests do not themselves prove cancellation.
   board-lot, price-band and resource checks precede admission. Declared provenance
   is not independently authenticated market data. Historical adjusted snapshots
   cannot silently be relabeled as certified raw prices.
+- The resource snapshot must be from the plan-creation date, not a stale earlier
+  cash balance. The reference observation must be from the target session date.
+  This contract checks the declared tick grid; it does not certify historical
+  exchange-specific tick schedules or allow adjusted-price tick rounding.
 - Cash available must be net of other reservations; sellable quantity must be
   net of reserved shares. This is a **single-plan boundary**, not a batch allocator
   or whole-account solvency proof. Require an explicit fee reserve rate for buys;
@@ -53,10 +57,17 @@ execution-price rejection. Cancel requests do not themselves prove cancellation.
   terminal acknowledgement, before order validity or above fixed quantity. Expiry
   needs a receipt at/after validity end; absence of records is unconfirmed, not
   inferred zero fills or a successful cancellation.
+- CANCELLED, REJECTED and EXPIRED receipts must contain an integer
+  `cumulative_filled_quantity` exactly equal to the supplied individual fills.
+  Otherwise a missing fill could incorrectly become a clean terminal audit.
+  Actual buy cash debits including recorded fees cannot exceed the declared cash.
 - BUY fills cannot exceed the limit; SELL fills cannot be below it. Fills must
   satisfy declared band/tick/board-lot checks. Record actual fees and signed cash
   movement, not modeled slippage. A validated receipt file is not cryptographic
   broker authentication, funded-account P&L, or live strategy eligibility.
+  Plan timestamps are also supplied evidence, not an independent pre-market
+  timestamp seal. `fully_reconciled` means only that the supplied single-order
+  lifecycle reaches a consistent terminal state, not verified account history.
 - CLI reads supplied JSON files and exclusively creates one audit output. No
   overwrites, network writes, fresh market fetch or private data committed. User
   supplies records only if/when they want actual execution reconciled.
@@ -74,3 +85,39 @@ Completion of this boundary does not establish profitability or activate v1.
 Still required: strategy-to-order parity with a tested executable strategy, raw
 reference/quote lineage, portfolio-wide reservations, authentic broker receipt
 provenance and prospective net outcomes. The broader user goal stays unachieved.
+
+## Local use and implementation evidence
+
+```text
+python -m scripts.execution_audit --plan <fixed-plan.json> --receipts <broker-receipts.json> --as-of <timezone-aware-cutoff> --output <new-audit.json>
+```
+
+The plan schema is illustrated by the **synthetic** `plan` fixture in
+`tests/test_execution_receipts.py`; its `event` helper shows normalized receipts.
+No real account data is present in these fixtures. Receipt files are JSON arrays,
+not daily OHLC files. The CLI retains exact input-byte and implementation hashes,
+rejects duplicate JSON keys/nonfinite numbers, caps each input at 8 MiB and uses
+exclusive output creation. Invalid evidence or an existing output exits 2;
+valid supplied evidence exits 0, even when its truthful state is `unconfirmed`.
+An exit 0 is never a trading or profit approval.
+
+- `7421708`: 44 executed RED cases for missing implementation; preregistration
+  and schema expectations committed before implementation.
+- `e5b6d2e`: same 44 GREEN; immutable plan/receipt content validation.
+- `04bd210`: 12 executed RED cases (terminal cumulative quantity, stale cash,
+  malformed kind types, fee overdraft and missing CLI/CI), 46 existing cases green.
+- `e0920ca`: all 58 GREEN, including subprocess CLI round trip; terminal fixtures
+  extended to supply the newly required cumulative totals, not to bypass checks.
+- `6906119`: 68 GREEN with additional schema/lifecycle/error-path tests. Coverage
+  on 235 statements: core 100%, CLI 98%, combined 99%; the uncovered line is the
+  module entry-point invocation, separately exercised by the subprocess test.
+
+Full repository verification: **644 passed**, 23 existing dependency/test-fixture
+warnings, 180.34 seconds. Both modules and both test modules compile; diff whitespace
+check passes. No installed Pyright/Ruff modules were found, so type/lint passes are
+not claimed. Filename-only secret-pattern scan of the four new Python files found
+no known key patterns; it is not a comprehensive security certification.
+
+The unchanged 2,618-replay regression remains required on this source revision.
+No new return metric or actual broker fill was evaluated. Existing strategies,
+live pipeline, ML, refresh schedules, user logs/cache and UI are unchanged.
