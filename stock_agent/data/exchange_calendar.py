@@ -124,6 +124,9 @@ def trading_days_between(start: date, end: date) -> list[date]:
 # Verified exchange transfers, not missing-price imputation. Primary-source links
 # and inclusive suspension boundaries: docs/audits/2026-09-26-market-readiness.md.
 SYMBOL_NONTRADING_INTERVALS = {
+    # Issuer: last HNX October 5, first HOSE October 11 (2021).
+    # https://www.shb.com.vn/shb-chinh-thuc-giao-dich-co-phieu-tren-hose-tu-ngay-11-10/
+    "SHB": ((date(2021, 10, 6), date(2021, 10, 10)),),
     "BSR": ((date(2025, 1, 7), date(2025, 1, 16)),),
     "MCH": ((date(2025, 12, 18), date(2025, 12, 24)),),
 }
