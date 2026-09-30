@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "evaluation_extensions": [{"id":"vnindex_timeslices_v1_20260930","protocol":"configs/research/timeslices_v1.json","expectation":"Expose net performance by causal VNINDEX trend episode and fixed half-year, especially 2026 H1; preserve every parent trial and distinguish cash restart from inherited holdings. No strategy optimization or automatic promotion."}],
   "strategy_hypotheses": [{"id":"momentum_books_v1_20260930","protocol":"configs/research/momentum_books_v1.json","expectation":"Separate order frequency from book-inspired signal quality; retain all original windows and 290 baseline replays; no automatic promotion."}],
   "data_contract_hypotheses": [{"id":"foreign_v2_20260930","contract":"docs/audits/2026-09-30-foreign-data-contract.md","expectation":"Unit/session/provenance corrections; all price-only portfolio replays unchanged; no foreign signal promoted."}],
   "holdout": false,
