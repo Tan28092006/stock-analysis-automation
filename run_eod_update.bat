@@ -10,7 +10,7 @@ if not exist "data\pipeline" exit /b 2
 if not defined VN30_PYTHON set "VN30_PYTHON=C:\Users\acer\anaconda3\python.exe"
 
 echo ===== EOD PAPER run %date% %time% ===== >> "data\pipeline\eod_update.log" 2>&1
-"%VN30_PYTHON%" -m stock_agent.pipeline.foreign_refresh >> "data\pipeline\eod_update.log" 2>&1
+"%VN30_PYTHON%" -m stock_agent.pipeline.foreign_refresh --retry-stale >> "data\pipeline\eod_update.log" 2>&1
 set "VN30_FLOW_EXIT=%errorlevel%"
 "%VN30_PYTHON%" -m stock_agent.pipeline.paper_runner --refresh --run >> "data\pipeline\eod_update.log" 2>&1
 set "VN30_RUN_EXIT=%errorlevel%"

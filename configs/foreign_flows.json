@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "collection_policy": "prior_collected_100_plus_current_configured_universe",
-  "symbols": ["ACB","ANV","BAF","BCM","BID","BMP","BSI","BSR","BVH","BWE","CII","CMG","CTD","CTG","CTR","CTS","DBC","DCM","DGW","DIG","DPM","DSE","DXG","DXS","EIB","EVF","FPT","FRT","FTS","GAS","GEE","GEX","GMD","GVR","HAG","HCM","HDB","HDC","HDG","HHV","HPG","HSG","HT1","IMP","KBC","KDC","KDH","KOS","LPB","MBB","MSB","MSN","MWG","NAB","NKG","NLG","NT2","NVL","OCB","PAN","PC1","PDR","PHR","PLX","PNJ","POW","PVD","PVT","REE","SAB","SBT","SCS","SHB","SIP","SJS","SSB","SSI","STB","SZC","TCB","TCH","TPB","VCB","VCG","VCI","VGC","VHC","VHM","VIB","VIC","VIX","VJC","VND","VNM","VPB","VPI","VPL","VRE","VSC","VTP"],
-  "note": "Collection basket only, not a historical trading universe. Union configs/universe_vn30.json at runtime."
+  "collection_policy": "prior_collected_100_plus_july_2026_names_and_current_configured_universe",
+  "symbols": ["ACB","ANV","BAF","BCM","BID","BMP","BSI","BSR","BVH","BWE","CII","CMG","CTD","CTG","CTR","CTS","DBC","DCM","DGW","DIG","DPM","DSE","DXG","DXS","EIB","EVF","FPT","FRT","FTS","GAS","GEE","GEX","GMD","GVR","HAG","HCM","HDB","HDC","HDG","HHV","HPG","HSG","HT1","IMP","KBC","KDC","KDH","KOS","LPB","MBB","MCH","MSB","MSN","MWG","NAB","NKG","NLG","NT2","NVL","OCB","PAN","PC1","PDR","PHR","PLX","PNJ","POW","PVD","PVT","REE","SAB","SBT","SCS","SHB","SIP","SJS","SSB","SSI","STB","SZC","TAL","TCB","TCH","TCX","TPB","VCB","VCG","VCI","VCK","VGC","VHC","VHM","VIB","VIC","VIX","VJC","VND","VNM","VPB","VPI","VPL","VPX","VRE","VSC","VTP"],
+  "note": "Collection basket only, not a historical trading universe. Keep retired names; union configs/universe_vn30.json at runtime. July additions documented in foreign-data-contract; no retrospective membership dates inferred."
 }
