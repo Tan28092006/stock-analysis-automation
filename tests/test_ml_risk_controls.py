@@ -79,7 +79,7 @@ class TestMLRiskControls:
         assert processed_new["feature_return_1d"].iloc[0] == lower
         assert processed_new["feature_return_1d"].iloc[2] == upper
 
-    def test_dynamic_threshold_adjustments(self):
+    def test_dynamic_threshold_adjustments(self, tmp_path, monkeypatch):
         # Mock signal with different regimes and volatilities
         class MockSignal:
             def __init__(self, features, evidence):
@@ -96,6 +96,12 @@ class TestMLRiskControls:
         # We need a mock trainer registered or cached
         from unittest.mock import MagicMock
         import stock_agent.features.ml_models as ml_mod
+
+        # This unit test must not require a trained registry in the developer's
+        # ignored data directory or pick up local symbol-threshold overrides.
+        monkeypatch.chdir(tmp_path)
+        registry = tmp_path / 'synthetic_ensemble_registry.json'
+        monkeypatch.setattr(ml_mod, 'ENSEMBLE_REGISTRY_PATH', registry)
         
         mock_trainer = MagicMock()
         mock_trainer.predict_single.return_value = (0.6, {
@@ -108,14 +114,18 @@ class TestMLRiskControls:
                                           "fit_label_end": "2026-05-01", "evaluation_label_end": "2026-06-01"}
         
         # Inject mock trainer
-        ml_mod._cached_ensemble_trainer = mock_trainer
+        monkeypatch.setattr(ml_mod, '_cached_ensemble_trainer', mock_trainer)
         
         # Test Case 1: Normal regime and typical volatility
         signal_normal = MockSignal(
             features={"atr_pct": 0.025, "regime_trend": 1.0, "regime_vol_class": 1.0},
             evidence=[RuleEvidence(evidence_id="rule:ema_trend", name="EMA Trend", passed=True, points=10.0, detail="Passed")]
         )
+        unavailable = _predict_ensemble("FPT", signal_normal, rules, ml_rules)
+        assert unavailable.status == 'unavailable' and unavailable.threshold is None
+        registry.write_text('{}', encoding='utf-8')
         res_normal = _predict_ensemble("FPT", signal_normal, rules, ml_rules)
+        assert res_normal.status == 'available'
         # Expected: base 0.55 + vol_adjust(0) + regime_adjust(0) = 0.55
         assert abs(res_normal.threshold - 0.55) < 0.001
         assert res_normal.passed is True  # prob 0.6 >= threshold 0.55
@@ -134,5 +144,4 @@ class TestMLRiskControls:
         assert abs(res_bear_vol.threshold - 0.70) < 0.005
         assert res_bear_vol.passed is False  # prob 0.6 < threshold 0.70
         
-        # Clear cache
-        ml_mod.clear_ensemble_cache()
+        # monkeypatch restores the previous cache even when an assertion fails.

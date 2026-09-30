@@ -22,6 +22,7 @@ jobs:
       - run: python -m pytest tests/test_momentum_events.py tests/test_momentum_event_suite.py -q
       - run: python -m pytest tests/test_execution_receipts.py tests/test_execution_audit_cli.py -q
       - run: python -m pytest tests/test_foreign_refresh_retry.py -q
+      - run: python -m pytest tests/test_ml_risk_controls.py -q
       - run: python -m pytest tests/test_pinned_market_fixtures.py -q
       - run: python -m pytest tests/test_paper_scoring.py tests/test_paper_runner.py tests/test_paper_cli.py tests/test_market_runtime_hardening.py -q
       - run: python -m pytest tests/test_research_gate.py tests/test_foreign_flow_research.py tests/test_foreign_flows_v2.py tests/test_foreign_refresh.py tests/test_eod_launcher.py tests/test_momentum_books.py tests/test_research_replay_contract.py tests/test_period_backtest.py tests/test_period_backtest_boundaries.py tests/test_momentum_hypotheses.py tests/test_historical_universe.py tests/test_exchange_calendar.py -q
