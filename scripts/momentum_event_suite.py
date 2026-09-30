@@ -77,13 +77,14 @@ def evaluate_panel(frames: dict, rules: dict, timeline: Timeline, blocks: dict, 
             item = dict(replay=replay, summary=summary, reconciliation=reconciliation,
                         activity=replay['activity'], funnel=replay['funnel'])
             if name == primary:
+                item['portfolio_history'] = gate.position_history(replay, frames)
+            if name == primary == 'continuous':
                 returns = rh.daily_returns(replay['nav'], initial)
                 item['vs_index'] = inference(returns, market)
                 item['vs_exposure_index'] = inference(returns, exposure_index)
-                item['portfolio_history'] = gate.position_history(replay, frames)
             block['trials'][trial] = item
             out['replay_count'] += 1
-        if name == primary:
+        if name == primary == 'continuous':
             for trial, item in block['trials'].items():
                 variant, scenario = trial.split('/')
                 if variant != 'daily55':
