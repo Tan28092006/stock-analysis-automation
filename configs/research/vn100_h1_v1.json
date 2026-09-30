@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "hypothesis_id": "vn100_h1_v1_20260930",
+  "holdout": false,
+  "live_eligible": false,
+  "start": "2026-01-01",
+  "end": "2026-06-30",
+  "membership_start": "2025-12-31",
+  "snapshot_sha256": "c9d046ff5d1c336284c2fc8a1bd07abc2e63c84d2493ce508a8d16bf132d7148",
+  "universes": {
+    "VN30": "configs/research/vn30_membership_2022_2026.json",
+    "VN100": "configs/research/vn100_membership_2026_h1.json"
+  },
+  "event": {"id":"war_2026", "kind":"event", "start":"2026-03-01", "end":"2026-04-30"},
+  "scenarios": ["normal", "double_cost", "delay_one_session"],
+  "lagged_adv_sessions": 20,
+  "participation_warning_pct": 1.0,
+  "bootstrap_blocks": [20, 40],
+  "family": 88,
+  "min_inference_sessions": 252,
+  "invariants": [
+    "Only historical eligible universe differs between paired portfolios. Same immutable snapshot, prior-close signals, next-open execution, N=10, buffer=20, cadence, costs, capital, lot size and T+3.",
+    "MR uses the existing VN30 overrides for BOTH universes. No simultaneous looser entry thresholds or parameter search. Newly listed momentum names require the existing 254 bars.",
+    "44 independent H1 paths per universe: every registered MR/momentum ablation, equal-weight universe control, reference cost/delay stresses and nonduplicate book paths.",
+    "Every causal H1 VNINDEX episode and March-April event is retained: 9 independent reference restarts per universe and attribution of all 44 unchanged H1 paths. No empty/downtrend invented if MA200 identifies none.",
+    "H1 restarts use the SAME available prehistory for both universes; compare the fresh VN30 path to old evidence separately because differing warmup can affect recursive indicators.",
+    "Audit fill size against prior 20-session average volume. The 1% warning is a capacity diagnostic, NOT an execution cap or proof of auction fills; no current/future volume used in lagged ADV.",
+    "Positive net profit, excess over VNINDEX and improvement versus paired VN30 are separate flags. Negative returns cannot pass a profit flag.",
+    "Paired block-bootstrap diagnostics on H1 only: 44 VN100-vs-VN30 and 44 VN100-vs-index comparisons, family 88, blocks 20/40. H1 is shorter than 252 sessions; no statistical promotion.",
+    "Retain full existing 290, 180 and 530 VN30 regression runs in CI. A standalone universe result is not a full regression or CI pass.",
+    "No historical VN100 claim outside H1; corporate actions, manual PIT coverage, executable order-book prices and live execution parity remain limitations. No production activation."
+  ]
+}
