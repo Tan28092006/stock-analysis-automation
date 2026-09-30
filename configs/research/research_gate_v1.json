@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "data_contract_hypotheses": [{"id":"foreign_v2_20260930","contract":"docs/audits/2026-09-30-foreign-data-contract.md","expectation":"Unit/session/provenance corrections; all price-only portfolio replays unchanged; no foreign signal promoted."}],
   "holdout": false,
   "future_boundary": "2026-10-01",
   "primary_inference_block": "continuous",
