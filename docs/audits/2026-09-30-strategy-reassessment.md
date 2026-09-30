@@ -13,6 +13,21 @@ All cash, receivables, share lots and NAV were independently reconciled. Maximum
 observed error was below 0.000001 VND. A second deterministic run and coverage
 instrumentation are retained separately; hashes distinguish evidence vintages.
 
+Verified final evidence:
+
+- `data/paper/research_gate/20260930/run_v2/results.json`: all 290 trial blocks
+  exactly equal to run_v1 (including trades, daily NAV and statistical outputs).
+- Snapshot manifest SHA256: `21b2deff6694a2a7218c861a681524b91f311617fc1e84de0598fc8001e155d0`.
+- Results SHA256: `f06685fedaffcdf080ccb1a3aabc59a8e5d32c4ce5f96c6fa42ee9b1759aec80`.
+- Every recorded source hash matches the final source content; zero drift.
+- Final complete test suite: **423 passed**, 23 dependency/test-fixture warnings,
+  63.85 seconds. No failed or skipped tests.
+- Unit/integration + full-replay coverage: research_gate 93%, foreign_flow_research
+  96%, combined 94%. This is not a claim that synthetic unit tests alone cover 94%.
+- User-facing local artifact: `data/paper/research_gate/20260930/report_final/report.html`;
+  alongside it are the NAV chart and separate daily-portfolio/fills/closed-lot
+  exports for each baseline strategy. The chart was visually checked.
+
 ## Latest six months
 
 Window 2026-04-01–2026-09-29; separate VND1bn initial cash, no opening holdings,
@@ -61,6 +76,15 @@ evidence. Scaling to small actual capital is not linear because of board lots.
 Continuous momentum beats VNINDEX's +38.857% by 4.579 percentage points over the
 whole period, with -27.438% drawdown versus index -28.772%. This is neither a
 4.579% annual alpha estimate nor a statistically established improvement.
+
+Doubling modeled commissions, tax and slippage reduces continuous momentum to
+**+36.665%**, below the gross price index. MR brackets fall to +4.488%, fixed15
+to +0.330%. A one-session delay gives momentum +48.455%, brackets +7.917%,
+fixed15 +3.018%; delay is a sensitivity test, not a newly selected timing rule.
+Recent-six-month top three positive momentum contributors (VIC, STB, BSR) account
+for **59.09% of gross positive P&L**. Continuously, VIC/HDB/MBB account for 42.68%.
+This denominator excludes losing contributions; it is not net return or a
+portfolio weight. Exact signed contributions reconcile to total portfolio P&L.
 
 - Removing MR confirmation: -21.050% in late 2022, -30.606% continuously. This
   is economically concerning falling-knife exposure. It is not a causal proof
