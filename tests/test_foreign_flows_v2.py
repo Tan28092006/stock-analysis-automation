@@ -156,3 +156,42 @@ def test_unfinished_run_is_visible_as_blocked_health(tmp_path):
     (tmp_path/'runs'/'interrupted'/'raw').mkdir(parents=True)
     report = ff.health(['MBB'], root=tmp_path, now=NOW)
     assert report['status']=='blocked' and report['incomplete_runs']==['interrupted']
+
+
+def test_unexpected_html_is_not_archived_as_market_raw(tmp_path):
+    ff.collect_flows(['MBB'],root=tmp_path,fetcher=lambda s,k:b'<html>private-session-token</html>',clock=lambda:NOW,sleep=lambda _:None)
+    assert not list((tmp_path/'runs').glob('*/raw/*.json'))
+
+
+def test_market_schema_rejects_aggregates_fractional_volume_and_unknown_kind():
+    data=json.loads(payload()); data[1][0]['Quarter']=3
+    rows,bad=ff.normalize_chart(json.dumps(data).encode(),'MBB','foreign',NOW)
+    assert not rows and bad[0]['reason']=='not_daily'
+    data=json.loads(payload()); data[1][0]['BuyVol']=100.5
+    assert not ff.normalize_chart(json.dumps(data).encode(),'MBB','foreign',NOW)[0]
+    with pytest.raises(ValueError):
+        ff.normalize_chart(payload(),'MBB','unknown',NOW)
+
+
+def test_manifest_canonical_and_path_tamper_block(tmp_path):
+    result=ff.collect_flows(['MBB'],root=tmp_path,fetcher=lambda s,k:payload(),clock=lambda:NOW,sleep=lambda _:None)
+    manifest=Path(result['manifest_path']); data=json.loads(manifest.read_text())
+    data['sources'][0]['path']='../../outside.json'; manifest.write_text(json.dumps(data))
+    with pytest.raises(ValueError,match='path'):
+        ff.load_flows(root=tmp_path,as_of=NOW)
+
+
+def test_zero_activity_is_explicit_and_differs_from_missing_data():
+    data=json.loads(payload())
+    data[1][0].update(BuyVal=0,SellVal=0,BuyVol=0,SellVol=0)
+    rows,bad=ff.normalize_chart(json.dumps(data).encode(),'MBB','foreign',NOW)
+    assert rows[0]['net_value_vnd']==0 and bad==[]
+
+
+def test_legacy_chart_keeps_unknown_session_and_bad_json_quarantined(tmp_path):
+    legacy=tmp_path/'legacy'; legacy.mkdir()
+    (legacy/'ndtnn_chart.jsonl').write_text(json.dumps(dict(date='2026-09-20',symbol='MBB',buy_val=1,sell_val=.5,buy_vol=100,sell_vol=50))+'\ninvalid')
+    report=ff.migrate_legacy(legacy,tmp_path/'store',now=NOW)
+    assert report['normalized_rows']==1 and report['quarantined_rows']==1
+    row=json.loads(Path(report['rows_path']).read_text().strip())
+    assert row['date'] is None and row['research_only'] is True
