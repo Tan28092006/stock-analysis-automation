@@ -71,6 +71,10 @@ implementation is `8234c28`. All **43** paper scoring, runner, CLI and runtime
 hardening tests pass together. Statement coverage for `paper_scoring.py` is
 **88%** (101 statements, 12 uncovered). Tests retain exact checks for all five
 OHLCV fields, including real volume revisions; no comparison tolerance changed.
+The complete local suite then passed: **545 tests**, 23 warnings, 129.85 seconds.
+Warnings are reported rather than suppressed; no failed or skipped tests were
+converted into a pass. Fresh remote pinned-snapshot replay evidence is required
+for this source revision and is not inferred from the earlier VN100 CI badge.
 
 After those tests passed, a read-only score of the September 29 snapshot checked
 194 original-source/record/report file hashes before and after: no changes.
