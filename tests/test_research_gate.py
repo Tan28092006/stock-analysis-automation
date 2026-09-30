@@ -65,3 +65,66 @@ def test_historical_membership_contains_removed_crash_names():
 def test_unknown_variant_is_not_silently_baseline():
     with pytest.raises(ValueError, match='Unknown'):
         gate.momentum_targets({'VNINDEX': prices()}, set(), 'typo')
+
+
+def test_registry_cannot_drop_a_required_crisis_to_turn_green(tmp_path):
+    data = gate.load_registry()
+    del data['blocks']['panic_2022']
+    path = tmp_path / 'registry.json'
+    path.write_text(json.dumps(data))
+    with pytest.raises(ValueError, match='required'):
+        gate.load_registry(path)
+
+
+@pytest.mark.parametrize('variant', gate.MOMENTUM + ('universe_equal',))
+def test_research_momentum_variants_execute_and_reconcile(variant, rules):
+    from tests.test_momentum_hypotheses import inputs
+    frames = inputs()
+    if variant == 'market_trend':
+        frames['VNINDEX']['close'] = np.linspace(100, 200, len(frames['VNINDEX']))
+    timeline = Timeline(dict(coverage_start='2024-01-01', coverage_end='2025-12-31',
+        initial_known_on='2024-01-01', member_count=2, initial_members=['AAA','BBB'], changes=[]))
+    result = gate.run_one(frames, rules, timeline, {}, '2025-01-01', '2025-02-03', 'momentum', variant)
+    assert result['summary']['buys'] > 0
+    assert result['reconciliation']['max_nav_error_vnd'] < 1e-5
+
+
+def test_mr_bank_baseline_matches_production_scorer_and_future_invariance(rules):
+    from tests.test_momentum_hypotheses import inputs
+    from scripts import period_backtest as bt
+    frames = inputs()
+    # Force an oversold down-bar absorption candidate, with adequate history.
+    f = frames['AAA']
+    f.loc[280:285, ['open','high','low','close']] *= np.linspace(.98,.7,6)[:,None]
+    f.loc[285, 'volume'] = 30e6
+    timeline = Timeline(dict(coverage_start='2024-01-01', coverage_end='2025-12-31',
+        initial_known_on='2024-01-01', member_count=2, initial_members=['AAA','BBB'], changes=[]))
+    bank = gate.mr_signal_bank(frames, rules, timeline)
+    baseline = {d: [{k:v for k,v in o.items() if k != 'original_signal_date'} for o in orders]
+                for d,orders in bank['bracket'].items()}
+    assert baseline == bt.mr_signals(frames, rules)
+    assert sum(len(v) for v in bank['no_confirmation'].values()) > 0
+    boundary = frames['AAA'].iloc[286]['date']
+    shortened = {s:f.loc[f['date'] <= boundary] for s,f in frames.items()}
+    prefix_bank = gate.mr_signal_bank(shortened, rules, timeline)
+    assert prefix_bank == {v:{d:o for d,o in days.items() if d <= boundary} for v,days in bank.items()}
+
+
+@pytest.mark.parametrize('scenario', ['normal','double_cost','delay_one_session'])
+def test_mr_research_scenarios_do_not_change_frozen_signal_or_cash(scenario, rules):
+    timeline = Timeline(dict(coverage_start='2025-12-01', coverage_end='2026-02-01',
+        initial_known_on='2025-12-01', member_count=1, initial_members=['AAA'], changes=[]))
+    bank = {'fixed15': {'2025-12-31': [order()]}}
+    result = gate.run_one({'AAA': prices(), 'VNINDEX': prices()}, rules, timeline, bank,
+                         '2026-01-01', '2026-01-12', 'mr', 'fixed15', scenario)
+    assert result['reconciliation']['max_nav_error_vnd'] < 1e-5
+    assert result['replay']['fills'][0]['date'] == ('2026-01-06' if scenario == 'delay_one_session' else '2026-01-05')
+
+
+def test_positive_gate_and_market_trend_can_hold_cash():
+    from tests.test_momentum_hypotheses import inputs
+    frames = inputs()
+    for f in frames.values():
+        f['close'] = np.exp(np.linspace(5, 4, len(f)))
+    assert gate.momentum_targets(frames, set(), 'positive_only')[0] == {}
+    assert gate.momentum_targets(frames, set(), 'market_trend')[0] == {}

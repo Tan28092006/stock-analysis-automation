@@ -49,3 +49,10 @@ def test_inventory_report_is_strict_json_and_uses_period_key(tmp_path):
     assert files['ndtnn_monthly']['duplicate_rows'] == 0
     assert units['matched_volume_and_unit_converted_value'] == 1
     json.dumps(dict(files=files, units=units), allow_nan=False)
+
+
+def test_aggregate_period_bounds_are_chronological(tmp_path):
+    (tmp_path / 'ndtnn_monthly.jsonl').write_text('\n'.join(json.dumps(dict(symbol='AAA', period=p)) for p in ['12/2025','01/2026']))
+    files, _, _ = flow.inventory(tmp_path)
+    assert files['ndtnn_monthly']['first'] == '12/2025'
+    assert files['ndtnn_monthly']['last'] == '01/2026'
