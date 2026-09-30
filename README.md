@@ -4,7 +4,9 @@
 [![ML](https://img.shields.io/badge/ML-LightGBM%20%7C%20Isotonic%20Calibration-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
 [![Data](https://img.shields.io/badge/Data-vnstock%20%7C%20yfinance-00C4CC?style=for-the-badge)](https://github.com/thinh-vu/vnstock)
 
-Hệ thống nghiên cứu **lướt sóng T+ cho thị trường Việt Nam (VN100)**, gồm các nhánh rules, momentum và xác suất mean-reversion. Tín hiệu dự kiến chạy **cuối phiên (EOD)**, không real-time.
+Hệ thống nghiên cứu **lướt sóng T+ cho thị trường Việt Nam**, gồm các nhánh rules, momentum và mean-reversion. Universe giao dịch hiện tại theo `configs/universe_vn30.json`; universe thu thập dữ liệu có thể rộng hơn. Tín hiệu chạy **cuối phiên (EOD)**, không real-time.
+
+> **Mốc bằng chứng 30/09/2026:** xem [290 replay PIT và giới hạn thống kê](docs/audits/2026-09-30-strategy-reassessment.md), [chẩn đoán tần suất lệnh và nghiên cứu momentum từ sách](docs/audits/2026-09-30-momentum-books.md), [vận hành khối ngoại tự động](docs/FOREIGN-FLOWS.md). Kết quả cũ bên dưới không thay thế các báo cáo này. Chưa có chiến lược được chứng nhận lợi thế tiền thật; ML đang tắt.
 
 > **Kiểm toán 22/09/2026: CHƯA ĐẠT gate dữ liệu/leakage.** Đã tìm thấy đánh giá ensemble in-sample, preprocessing nhìn tương lai, nhãn MR chưa chín và thiếu provenance ledger. Các số backtest/calibration dưới đây là kết quả nghiên cứu cũ, không phải hiệu quả đã chứng nhận ngoài mẫu. Xem [báo cáo kiến trúc, bằng chứng và điều kiện trước retrain](docs/audits/2026-09-22-architecture-and-leakage.md). Sửa universe/EOD/ledger không đồng nghĩa model đã sạch; chưa retrain hoặc thay artifact trong đợt kiểm toán này.
 
@@ -13,26 +15,27 @@ Hệ thống nghiên cứu **lướt sóng T+ cho thị trường Việt Nam (VN
 > [!IMPORTANT]
 > Công cụ nghiên cứu cá nhân, **không phải lời khuyên đầu tư**, không tự đặt lệnh.
 
-> **Triết lý:** không một tín hiệu đơn nào thắng mọi chế độ. Bull → đi theo đà (momentum); crash → bắt đáy (mean-reversion); chợ hẹp → cầm tiền. Hệ đọc regime và **chỉ đúng công cụ**, thay vì gom mọi đề xuất lại (dễ đánh momentum ngay đợt sập).
+> **Giả thuyết nghiên cứu:** hiệu quả có thể khác theo regime. Banner thị trường không chứng minh đã chọn đúng chiến lược; momentum hiện tại không có hard gate RISK_ON. Bắt đáy cũng không bảo đảm kiếm tiền trong panic.
 
 ---
 
 ## 1. Hai động cơ + một điều phối
 
 ### 🚀 CORE — Momentum (ăn bull)
-Quant-grade momentum, ưu tiên khi RISK_ON:
+Momentum rule-only; chưa chứng minh lợi thế thống kê vượt VNINDEX:
 - **12-1 momentum** (return t-252 → t-21, bỏ tháng gần nhất vì đảo chiều ngắn hạn).
-- **Trọng số nghịch-vol** (risk parity) — mã vol thấp tỷ trọng cao hơn.
+- **Trọng số nghịch-vol** — mã vol thấp tỷ trọng cao hơn; không phải covariance-based risk parity.
 - **Vol-targeting** — exposure = target_vol / vol thị trường → tự giảm khi vol cao.
 - **Buffering** — giữ tới khi rớt khỏi top-2N (giảm turnover/phí).
+- Replay chuẩn tái cân bằng theo tháng; picks trên dashboard là danh sách ứng viên, không phải 10 lệnh mới mỗi ngày. Cảnh báo thoát trên dashboard kiểm tra hằng ngày, chưa đồng nhất với replay tháng. Nhánh tuần/tín hiệu sách mới chỉ có trong research.
 - Backtest VN30 (fill mở-cửa, phí 0.4%): trên rổ **30 mã VN30 hiện tại áp ngược** cho FULL +157–190%, Sharpe ~0.9. **⚠️ Đây là số survivorship-inflated** — kiểm bằng rổ *point-in-time* (top-30 theo giá trị giao dịch, membership xoay theo thời gian) thì thực tế chỉ **~+33%, Sharpe ~0.3, DD ~−56%**, xấp xỉ index. Coi các số cố định-rổ là **cận trên lạc quan**, không phải kỳ vọng thực.
 
 ### 🎯 SATELLITE — Bắt đáy / Mean-Reversion (crash alpha)
 "Thợ săn kèo béo" — chỉ bắn khi có capitulation + đảo chiều, thoát nhanh:
 - **Cổng cứng**: RSI14<30 (VN30: <35) + chạm dải BB dưới + (nến đảo chiều & climax volume | VSA stopping-volume) + RR≥0.5 (room về Kijun) + mây Ichimoku không chặn.
-- **Rủi ro**: stop 3×ATR (bảo hiểm dao rơi), target Kijun, giữ ≤15 phiên, khóa T+2.
-- **Lớp ML — P(win)**: meta-labeling (LightGBM + isotonic calibration) gán xác suất thắng *ex-ante* (không leak); calibrate thật (P≥55% → thắng ~56%).
-- Backtest: 2022 crash **hòa vốn** khi VNINDEX −34%; YTD-2026 **+6.7%** khi index +4.1%.
+- **Rủi ro**: stop 3×ATR, target Kijun, time exit 15 phiên; không bảo đảm thoát khi sàn/không thanh khoản. Replay chuẩn dùng T+3 bảo thủ; UI và replay vẫn có khác biệt execution cần xử lý trước triển khai.
+- **Lớp ML — P(win)**: `ml.enabled=false`, `override_enabled=false`. Artifact cũ không được xem là xác suất thắng ex-ante đã chứng nhận.
+- Replay PIT 30/09: MR bracket cuối 2022 −1,738%, YTD-2026 +5,011%; đọc đúng cửa sổ, phí và dữ liệu trong báo cáo, không thay bằng số nghiên cứu legacy.
 
 ### 🧭 Regime Orchestrator
 Đọc chế độ từ **VNINDEX vs EMA50 + breadth** (% cổ phiếu trên SMA20):
@@ -40,16 +43,16 @@ Quant-grade momentum, ưu tiên khi RISK_ON:
 | Chế độ | Điều kiện | Khuyến nghị |
 |---|---|---|
 | 🟢 RISK_ON | index > EMA50 & breadth ≥ 40% | ưu tiên Momentum |
-| 🔴 PANIC | index < EMA50 | ưu tiên Bắt đáy (momentum tạm dừng) |
+| 🔴 PANIC | index < EMA50 | cảnh báo thị trường yếu; không tự tắt momentum |
 | 🟡 GRIND | index > EMA50 nhưng breadth yếu | thận trọng, ưu tiên tiền mặt |
 
-Dashboard hiện banner khuyến nghị + **làm mờ engine không phù hợp** — bạn phán quyết cuối.
+Banner chỉ là ngữ cảnh giao diện, không thay thế rule hoặc điều kiện kiểm định chiến lược.
 
 ---
 
-## 2. Kết quả backtest (trung thực, đã kiểm chứng out-of-sample)
+## 2. Kết quả backtest legacy (không được chứng nhận out-of-sample)
 
-Đọc regime đúng mọi năm, hai engine bù nhau:
+Bảng dưới giữ để truy vết nghiên cứu cũ, không chứng minh hai engine bù nhau hoặc đọc đúng regime:
 
 | Năm | Regime hệ phát hiện | VNINDEX | 🚀 Momentum | 🎯 Bắt đáy |
 |---|---|---|---|---|
@@ -60,7 +63,7 @@ Dashboard hiện banner khuyến nghị + **làm mờ engine không phù hợp**
 
 > ⚠️ **Cột Momentum tính trên rổ VN30 hiện tại áp ngược → survivorship-inflated.** Trên rổ point-in-time (membership xoay) các con số này yếu hơn đáng kể và momentum chỉ xấp xỉ index. Đọc cùng §6.
 
-**Sự thật đã chấp nhận:** không timing nào thắng buy-and-hold trong siêu bull. Giá trị của hệ là **tham gia bull + cứu vốn/thêm alpha trong crash + kiểm soát drawdown**. Nhiều "cải tiến" hào nhoáng đã bị backtest chặt **loại bỏ** vì overfit: kill-switch EMA200, filter bear, factor high52w, "follow khối ngoại", **circuit-breaker %-giảm-nhanh** (whipsaw), và **excess-momentum gate** (chỉ thắng trên đúng rổ survivor, biến mất khi test point-in-time/VN100/random-subset).
+Các giả thuyết market gate, high52w và khối ngoại đã có kết quả không ổn định giữa các giai đoạn. Điều đó không chứng minh chúng luôn vô dụng hoặc baseline luôn tốt; dùng protocol hiện tại, đối chứng và phí thực tế để đánh giá. Không có bảo đảm cứu vốn trong crash hoặc luôn vượt buy-and-hold.
 
 ---
 
