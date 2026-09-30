@@ -178,3 +178,33 @@ def test_sell_limit_direction_and_cashflow(plan):
     assert audit(plan,good)['recorded_cashflow_vnd']==1_058_440
     with pytest.raises(ValueError):
         audit(plan,[event(plan,1,'ACCEPTED'),event(plan,2,'FILL',price_vnd=10400)])
+
+
+def test_terminal_receipt_must_reconcile_broker_cumulative_fill(plan):
+    # A cancellation ACK can conceal a missing fill unless its cumulative total
+    # is compared with the individual fills actually supplied.
+    records = [event(plan,1,'ACCEPTED'), event(plan,2,'CANCELLED')]
+    with pytest.raises(ValueError, match='cumulative'):
+        audit(plan, records)
+    records[-1]['cumulative_filled_quantity'] = 100
+    with pytest.raises(ValueError, match='cumulative'):
+        audit(plan, records)
+    records[-1]['cumulative_filled_quantity'] = 0
+    assert audit(plan, records)['fully_reconciled']
+
+
+def test_stale_resource_snapshot_is_not_current_buying_power(plan):
+    plan['resources']['as_of'] = '2026-09-01T08:00:00+07:00'
+    with pytest.raises(ValueError):
+        lab().validate_plan(plan)
+
+
+@pytest.mark.parametrize('value', [[], {}, 1, None])
+def test_invalid_event_kind_types_fail_with_validation_error(plan, value):
+    with pytest.raises(ValueError):
+        audit(plan, [dict(event(plan,1,'ACCEPTED'),kind=value)])
+
+
+def test_actual_fees_cannot_silently_overdraw_declared_cash(plan):
+    with pytest.raises(ValueError, match='cash'):
+        audit(plan,[event(plan,1,'ACCEPTED'),event(plan,2,'FILL',fee_vnd=3_000_000)])
