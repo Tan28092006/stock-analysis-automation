@@ -31,6 +31,8 @@ def event(plan, seq, kind, **changes):
         observed_at=f'2026-10-01T09:{seq:02}:01+07:00', source_sha256='c'*64)
     if kind == 'FILL':
         row.update(quantity=100, price_vnd=10400, fee_vnd=1560)
+    if kind in ('CANCELLED', 'REJECTED', 'EXPIRED'):
+        row['cumulative_filled_quantity'] = 0
     row.update(changes)
     return row
 
@@ -106,7 +108,7 @@ def test_partial_fill_cashflow_and_exact_duplicate_are_idempotent(plan):
 
 def test_cancel_request_does_not_prevent_subsequent_fill_until_ack(plan):
     records = [event(plan,1,'ACCEPTED'), event(plan,2,'CANCEL_REQUEST'),
-               event(plan,3,'FILL'), event(plan,4,'CANCELLED')]
+               event(plan,3,'FILL'), event(plan,4,'CANCELLED',cumulative_filled_quantity=100)]
     r = audit(plan, records)
     assert r['state'] == 'cancelled' and r['fully_reconciled']
     assert r['recorded_filled_quantity'] == 100
@@ -184,6 +186,7 @@ def test_terminal_receipt_must_reconcile_broker_cumulative_fill(plan):
     # A cancellation ACK can conceal a missing fill unless its cumulative total
     # is compared with the individual fills actually supplied.
     records = [event(plan,1,'ACCEPTED'), event(plan,2,'CANCELLED')]
+    records[-1].pop('cumulative_filled_quantity')
     with pytest.raises(ValueError, match='cumulative'):
         audit(plan, records)
     records[-1]['cumulative_filled_quantity'] = 100

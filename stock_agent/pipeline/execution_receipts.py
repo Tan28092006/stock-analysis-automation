@@ -9,7 +9,7 @@ import copy
 import hashlib
 import json
 import re
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from stock_agent.data.exchange_calendar import is_trading_day
@@ -109,7 +109,8 @@ def validate_plan(plan: dict) -> dict:
     _hash(reference['source_sha256'])
     observed = _time(reference['observed_at'])
     resource_time = _time(resources['as_of'])
-    if observed > created or observed.date() != start.date() or resource_time > created:
+    if (observed > created or observed.date() != start.date() or resource_time > created
+            or resource_time.date() != created.date()):
         raise ValueError('Unavailable or wrong-session reference/resources')
     # The declared tick is a contract input, not a hardcoded historical exchange rule.
     _price(reference['reference_price_vnd'], reference)
@@ -141,9 +142,15 @@ def audit_receipts(plan: dict, events: list[dict], *, as_of: str) -> dict:
     unique, sequences, order_ids = {}, set(), set()
     duplicates = 0
     for event in events:
-        if not isinstance(event, dict) or event.get('kind') not in KINDS:
+        if (not isinstance(event, dict) or not isinstance(event.get('kind'), str)
+                or event['kind'] not in KINDS):
             raise ValueError('Unsupported receipt kind')
-        _fields(event, EVENT_FIELDS | ({'quantity', 'price_vnd', 'fee_vnd'} if event['kind'] == 'FILL' else set()), 'receipt')
+        extra = {'quantity', 'price_vnd', 'fee_vnd'} if event['kind'] == 'FILL' else set()
+        if event['kind'] in ('CANCELLED', 'REJECTED', 'EXPIRED'):
+            extra = {'cumulative_filled_quantity'}
+            if not extra <= event.keys():
+                raise ValueError('Terminal receipt missing cumulative filled quantity')
+        _fields(event, EVENT_FIELDS | extra, 'receipt')
         for key in ('event_id', 'order_id'):
             _text(event[key], key)
         _hash(event['source_sha256'])
@@ -173,6 +180,10 @@ def audit_receipts(plan: dict, events: list[dict], *, as_of: str) -> dict:
         if when < last_time or state in TERMINAL:
             raise ValueError('Out-of-order or post-terminal event')
         last_time = when
+        if kind in ('CANCELLED', 'REJECTED', 'EXPIRED'):
+            cumulative = _integer(event['cumulative_filled_quantity'], positive=False)
+            if cumulative != filled:
+                raise ValueError('Terminal cumulative quantity disagrees with supplied fills')
         if kind == 'ACCEPTED':
             if state != 'unconfirmed' or when > end:
                 raise ValueError('Invalid acceptance transition')
@@ -206,6 +217,8 @@ def audit_receipts(plan: dict, events: list[dict], *, as_of: str) -> dict:
                 filled += qty
                 fees += fee
                 cashflow += qty * px * (-1 if plan['side'] == 'BUY' else 1) - fee
+                if plan['side'] == 'BUY' and -cashflow > _number(plan['resources']['cash_available_vnd']):
+                    raise ValueError('Recorded fills overdraw declared available cash')
                 state = 'filled' if filled == plan['quantity'] else (
                     'cancel_pending' if state == 'cancel_pending' else 'partially_filled')
     return dict(schema_version=1, plan_sha256=digest, as_of=as_of, state=state,
