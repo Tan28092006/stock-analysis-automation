@@ -77,10 +77,9 @@ class DailyRunner:
             if not self.demo:
                 self.on_progress("FLOWS", "Snapshotting foreign flows (khoi ngoai)...")
                 try:
-                    from ..config import load_universe
-                    from ..data.foreign_flows import snapshot_today
-                    n_flows = snapshot_today([s.upper() for s in load_universe()["symbols"]])
-                    result["stages"]["foreign_flows"] = {"rows": n_flows}
+                    from .foreign_refresh import collection_symbols
+                    from ..data.foreign_flows import collect_flows
+                    result["stages"]["foreign_flows"] = collect_flows(collection_symbols())
                 except Exception as exc:
                     result["stages"]["foreign_flows"] = {"status": "error", "error": str(exc)}
 
