@@ -91,9 +91,9 @@ def test_no_records_is_an_empty_observation_set(tmp_path):
     assert result["status"] == "ok"
 
 
-def rolling_snapshot(root, start=date(2025, 2, 5), transform=None):
+def rolling_snapshot(root, start=date(2025, 2, 5), transform=None, symbols=("AAA",)):
     """Keep absolute prices fixed while changing the provider request boundary."""
-    full = make_snapshot(root / "full", end=date(2026, 9, 25))
+    full = make_snapshot(root / "full", symbols=symbols, end=date(2026, 9, 25))
 
     def fetch(symbol, requested_start, end):
         source = json.loads((full.parent / "raw" / f"{symbol}.json").read_bytes())
@@ -103,7 +103,7 @@ def rolling_snapshot(root, start=date(2025, 2, 5), transform=None):
         return rec.parse_vci_history(source, symbol, requested_start, end), {
             "raw_bytes": raw, "fetched_at": "2026-09-25T10:00:00+00:00"}
 
-    rec.build_market_snapshot(["AAA", "VNINDEX"], root / "rolling", start,
+    rec.build_market_snapshot(list(symbols) + ["VNINDEX"], root / "rolling", start,
                               date(2026, 9, 25), min_rows=1, fetcher=fetch)
     return root / "rolling/manifest.json"
 
@@ -202,3 +202,26 @@ def test_ci_runs_the_paper_operational_contracts():
     workflow = Path(".github/workflows/research-gate.yml").read_text(encoding="utf-8")
     for filename in ("tests/test_paper_scoring.py", "tests/test_paper_cli.py", "tests/test_market_runtime_hardening.py"):
         assert filename in workflow
+
+
+def test_one_actual_revision_quarantines_the_entire_run_after_valid_rolled_signal(tmp_path):
+    from stock_agent.pipeline.paper_scoring import score_paper_runs
+    symbols = ["AAA", "BBB"]
+    original = make_snapshot(tmp_path / "original", symbols=symbols)
+    now = datetime(2026, 9, 21, 10, tzinfo=timezone.utc)
+    payload = runner.run_paper(original.parent / "prices", symbols, manifest_path=original, now=now)
+    payload["recommendations"] = [
+        {"track": "momentum", "symbol": symbol, "date": "2026-09-21",
+         "close": float(pd.read_csv(original.parent / "prices" / f"{symbol}.csv").close.iloc[-1])}
+        for symbol in symbols]
+    runner.commit_paper_run(payload, tmp_path / "out", now=now)
+
+    def revise_second(items):
+        if items[0]["symbol"] == "BBB":
+            items[0]["v"][-5] += 1
+        return items
+
+    current = rolling_snapshot(tmp_path / "current", transform=revise_second, symbols=symbols)
+    result = score_paper_runs(tmp_path / "out", current.parent / "prices", manifest_path=current)
+    assert result["status"] == "blocked" and not result["records"]
+    assert "BBB" in result["errors"][0]["error"]

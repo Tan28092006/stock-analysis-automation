@@ -81,3 +81,19 @@ def test_corrupted_existing_record_cannot_pass_idempotency(setup):
     path.write_text(json.dumps(previous))
     with pytest.raises(ValueError, match="corrupt"):
         r.commit_paper_run(payload, out, now=now)
+
+
+def test_cli_scores_rolled_source_without_rewriting_signal(tmp_path):
+    from tests.test_paper_scoring import record, rolling_snapshot
+    record(tmp_path, track="momentum")
+    out = tmp_path / "out"
+    scan = out / "latest.json"
+    scan.write_text('{"scan": "preserve-existing-report"}', encoding="utf-8")
+    paper = out / "runs/2026-09-21/paper.json"
+    before_scan, before_paper = scan.read_bytes(), paper.read_bytes()
+    current = rolling_snapshot(tmp_path / "current")
+    assert r.main(["--manifest", str(current), "--output-dir", str(out), "--score"]) == 0
+    assert scan.read_bytes() == before_scan and paper.read_bytes() == before_paper
+    scores = json.loads((out / "scores/latest.json").read_text(encoding="utf-8"))
+    assert scores["pending"] == 1 and scores["resolved"] == 0
+    assert scores["records"][0]["history_check"]["archived_prefix_rows_not_reobserved"] == 2
