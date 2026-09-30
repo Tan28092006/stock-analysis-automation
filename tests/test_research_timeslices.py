@@ -204,3 +204,46 @@ def test_html_displays_both_starting_modes_and_escapes_untrusted_labels():
     assert '<script>' not in report and '&lt;script&gt;' in report
     assert 'Danh mục liên tục' in report and 'tiền mặt' in report
     assert 'results.json' in report and 'regime_labels.json' in report
+
+
+def test_cli_end_to_end_on_synthetic_market_preserves_both_modes(tmp_path,monkeypatch,rules):
+    """Exercise CLI, real replay/accounting and exports; only data provenance is stubbed."""
+    from scripts import research_gate as gate
+    module = lab()
+    f = inputs()
+    from datetime import date
+    from stock_agent.data.exchange_calendar import trading_days_between
+    days = [d.isoformat() for d in trading_days_between(date(2023,11,1),date(2025,12,31))]
+    for frame in f.values(): frame['date'] = days[:len(frame)]
+    timeline_data = dict(coverage_start='2024-01-01',coverage_end='2025-12-31',initial_known_on='2024-01-01',
+                         member_count=2,initial_members=['AAA','BBB'],changes=[])
+    timeline_path = tmp_path/'timeline.json'
+    timeline_path.write_text(json.dumps(timeline_data),encoding='utf-8')
+    monkeypatch.setattr(gate,'TIMELINE',timeline_path)
+    start,end = '2025-01-02','2025-01-10'
+    protocol = module.load_protocol()
+    protocol.update(start=start,end=end)
+    monkeypatch.setattr(module,'load_protocol',lambda:protocol)
+    manifest = tmp_path/'manifest.json'
+    files = {}
+    for symbol,frame in f.items():
+        frame.to_csv(tmp_path/(symbol+'.csv'),index=False)
+        files[symbol] = dict(path=symbol+'.csv')
+    manifest.write_text('{}')
+    monkeypatch.setattr(module,'verify_snapshot',lambda _:dict(files=files))
+    trial = gate.run_one(f,rules,Timeline(timeline_data),{},start,end,'momentum','baseline')
+    parent_trials = {s+'/normal':copy.deepcopy(trial) for s in module.REFERENCES}
+    monkeypatch.setattr(module,'verify_parents',lambda *args:parent_trials)
+    monkeypatch.setattr(gate,'mr_signal_bank',lambda *args:{'bracket':{},'fixed15':{}})
+    parent_path,book_path = tmp_path/'parent.json',tmp_path/'books.json'
+    for path in (parent_path,book_path): path.write_text('{}')
+    output = tmp_path/'result'
+    module.main(['--manifest',str(manifest),'--gate-results',str(parent_path),
+                 '--book-results',str(book_path),'--output',str(output)])
+    result = json.loads((output/'results.json').read_text())
+    assert result['status'] == 'timeslices_complete_not_live_profit'
+    assert result['partition_reconciled']
+    assert result['cash_trial_count'] == 9*len(result['slices'])
+    assert set(b['kind'] for b in result['slices']) == {'calendar','regime'}
+    assert (output/'report.html').exists() and (output/'regime_labels.json').exists()
+    with pytest.raises(FileExistsError): module.run_suite(manifest,parent_path,book_path,output)
