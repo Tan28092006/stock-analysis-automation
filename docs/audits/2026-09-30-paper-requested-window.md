@@ -275,3 +275,63 @@ already observed source revisions above are development evidence motivating
 the contract; they are not an untouched validation sample. Provider finality,
 feature/sizing sensitivity, paper/replay parity and live eligibility are not
 resolved by allowing a flagged descriptive outcome measurement.
+
+### Implementation and local verification
+
+- RED checkpoint `8be690d`: 24 intended failures, 32 passes on paper scoring/CLI.
+  Fixture-only issues (synthetic future clock and a historical zero-volume bar)
+  were corrected before this checkpoint; they are not counted as valid RED.
+- GREEN checkpoint `aab449b`: the identical target passed all 56 tests in 51.77s.
+  `447975d` then removed a fixture dtype warning; four refusal tests passed.
+- Full local suite at `447975d`: **683 passed**, 23 pre-existing warnings,
+  201.54s. No failed or skipped tests. Compile checks and `git diff --check` pass.
+- Operational coverage run: 67 tests passed in 84.90s; scorer 90%, runner 91%,
+  combined 91% (309 statements, 29 missing). Every new history-comparison and
+  revision-reporting statement is covered. This is statement coverage, not a
+  claim of complete branch coverage or certification of every pre-existing path.
+- Existing CI already includes both changed test files. The latest patch still
+  requires its complete 2,618-path CI replay and independent economic comparison;
+  neither local unit tests nor protocol validation substitute for that evidence.
+
+Coverage JSON: `data/paper/paper_volume_revision_verification/coverage.json`,
+SHA256 `95ab122effcaadc1d6be5334b8bdab102050ca00ca77660af0c20f47528c40d3`.
+
+### Offline archived observations under the new contract
+
+After local verification, a separately versioned report was generated at
+`data/paper/paper_volume_revision_verification/archived_outcomes_v1/scores.json`.
+It uses the already preserved September 30 outcome snapshot identified above:
+no provider request, new signal scan or broker interaction. The previous
+`data/paper/scores/latest.json` remains unchanged and still records the old
+strict-policy result; it has not been silently replaced.
+
+The new report is `ok_with_revisions`: four original runs, **40 pending momentum
+observations**, zero resolved, zero not-entered and zero errors. These are ten
+informational picks per session across September 25/28/29/30, not 40 independent
+stocks, new entries, filled orders or funded positions. No MR observation is
+present in these four records. All 21-session outcomes are still immature;
+there is no forward profit estimate yet.
+
+Three unique recommended-symbol revisions are flagged, all GAS: September 25,
+28 and 29, with original/outcome volumes listed in the reconciliation above.
+The scorer compares the requested history of **recommended symbols only**,
+not every field used by the entire scanner/universe. This scope explains three
+warnings versus twelve revisions in the earlier all-31-files audit. A false
+`decision_inputs_revised` on one observation means no permitted volume revision
+in that compared symbol/window, not proof that all scanner inputs are invariant.
+
+All **260** enumerated input/source/record/latest-report/cache files matched
+their pre-scoring SHA256 values afterward. Output evidence:
+
+- Scores SHA256:
+  `6c7827b576c4b20e37a729818337230aef0302579e0069ad684a24638320abb6`.
+- `verification.json` SHA256:
+  `bedf118ce8328e5ff1f74fe731b0c0b1760521187ad1bbb088702e34d46bcad2`;
+  contains all input hashes, source hashes, revision scope and Git `447975d`.
+- Offline generator: `data/paper/paper_volume_revision_verification/audit_archived.py`,
+  SHA256 `64c9fd451ec94a18d493f1ea25c87f6569525e7b3fd76bc85a637d9a8637305a`.
+  Its destination is exclusive; an existing report directory is never replaced.
+
+The retained original decision vintage remains authoritative. No hindsight
+signal recomputation, newly manufactured orders or strategy/model promotion
+occurred. Provider finality and execution readiness remain separate blockers.
