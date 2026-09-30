@@ -211,3 +211,32 @@ def test_invalid_event_kind_types_fail_with_validation_error(plan, value):
 def test_actual_fees_cannot_silently_overdraw_declared_cash(plan):
     with pytest.raises(ValueError, match='cash'):
         audit(plan,[event(plan,1,'ACCEPTED'),event(plan,2,'FILL',fee_vnd=3_000_000)])
+
+
+@pytest.mark.parametrize('field,value', [('schema_version',True),('schema_version',2),
+    ('symbol','abc'),('signal_id',''),('strategy_id','bad\nidentifier'),
+    ('created_at','not-a-time'),('limit_price_vnd','10500')])
+def test_schema_and_identifier_types_are_explicit(plan,field,value):
+    plan[field]=value
+    with pytest.raises(ValueError):
+        lab().validate_plan(plan)
+
+
+def test_nontrading_session_and_invalid_audit_envelope(plan):
+    weekend=copy.deepcopy(plan)
+    for key in ['created_at','valid_from','valid_until']:
+        weekend[key]=weekend[key].replace('2026-10-01','2026-10-03')
+    with pytest.raises(ValueError,match='trading'):
+        lab().validate_plan(weekend)
+    with pytest.raises(ValueError):
+        audit(plan,{},cutoff='2026-10-01T08:00:00+07:00')
+
+
+def test_invalid_lifecycle_transitions_do_not_become_success(plan):
+    a=event(plan,1,'ACCEPTED')
+    for extra in [event(plan,2,'ACCEPTED'),event(plan,2,'REJECTED'),
+                  event(plan,2,'FILL',occurred_at='2026-10-01T09:00:00+07:00')]:
+        with pytest.raises(ValueError):
+            audit(plan,[a,extra])
+    with pytest.raises(ValueError):
+        audit(plan,[a,event(plan,2,'CANCEL_REQUEST'),event(plan,3,'CANCEL_REQUEST')])

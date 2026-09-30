@@ -70,3 +70,16 @@ def test_ci_retains_every_replay_and_adds_receipt_tests():
     assert 'test_execution_audit_cli.py' in workflow
     for name in ['research_gate','momentum_books','research_timeslices','universe_expansion','momentum_event_suite']:
         assert 'python -m scripts.'+name in workflow
+
+
+def test_main_function_reports_summary_and_safe_error(tmp_path,plan,capsys):
+    p,e=inputs(tmp_path,plan)
+    out=tmp_path/'out.json'
+    args=['--plan',str(p),'--receipts',str(e),'--as-of','2026-10-01T16:00:00+07:00',
+          '--output',str(out)]
+    lab().main(args)
+    assert json.loads(capsys.readouterr().out)['state']=='partially_filled'
+    with pytest.raises(SystemExit) as exc:
+        lab().main(args)
+    assert exc.value.code==2
+    assert 'BLOCKED' in capsys.readouterr().err
