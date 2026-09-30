@@ -100,3 +100,47 @@ Preserved reports live under
 The real volume differences remain a source-reconciliation requirement. Their
 cause is not established by this fix. Neither historical snapshots nor recorded
 decisions were rewritten, and no daily bar was fabricated.
+
+## Fresh remote engineering gate
+
+[Run 36689514737](https://github.com/Tan28092006/stock-analysis-automation/actions/runs/36689514737)
+completed successfully in both jobs for pushed source
+`788401f12dc4b22e5587e8a635a1d2b062728270`: all contract tests and **1,196**
+pinned replays (290 parent + 180 books + 530 timeslices + 196 VN30/VN100).
+The replay job took 17m43s. This is not a validation-only job or an inference
+from the preceding CI badge. Subsequent local edits at `8e40c9c` change only
+AGENTS.md and the VN100 audit, not any runtime, research, test, config or CI code.
+
+GitHub reports artifact `research-output-36689514737`, ID `11086355816`, size
+18,552,542 bytes and archive digest
+`686946613d463c09b28c3d346529853213657a9fc0f61f2f1529a44d0dde6c4f`.
+The artifact was downloaded to
+`data/paper/research_gate/20260930/github_36689514737/`. All four complete
+economic block/slice payloads, book funnel, paired diagnostics and trial counts
+were compared to the preceding audited run `36685094314`. There are no
+structural, categorical or substantive numeric differences. Maximum absolute
+roundoff is **5.551115123125783e-16** for the parent/book diagnostics; timeslices
+and VN100 payloads are exactly equal. All **85 distinct source blobs** recorded
+across these results match pushed Git contents at `788401f`; manifest hashes
+also match. Git-blob bytes, rather than Windows checkout line endings, are the
+cross-platform source reference.
+An additional exact-equality check of each embedded `replay` object passes for
+all 290 + 180 + 530 + 196 paths: fills, cash/settlement records and daily NAV
+are unchanged, not merely within a profit-summary tolerance.
+
+| Remote result | SHA256 |
+|---|---|
+| Parent gate | `fcf51ae936d79d33ee95f16029bf874a6a66b6a9a7e3c1db427da30627c28483` |
+| Books | `d23c25617689ac7d01d09d951f32bc6606e102b378b5d2527d72baac57fd57d2` |
+| Timeslices | `a0a061836c9ca7673064a6e01712cb0deeb8ae331a724d5f42eb7666d8c610c9` |
+| VN100 | `0d54bb8a6c99ce9681f2aa117702ebac4d2734e2eaef238adada4c2e19a60b7c` |
+
+CI used PR test-merge commit `23225ef511f72a2de40a67f186ad8331042d249f`;
+the pull request remains open and draft, not merged into main. Every result
+retains `live_eligible: false`. The activity and economic failures in the VN100
+audit are unchanged. No new signal hypothesis, model training or live order
+was introduced by the paper-scoring repair.
+
+The workflow reports upcoming runner/action-runtime migration warnings. Its
+dependency versions are bounded ranges, not an exact environment lock, and
+no branch-protection or live-promotion claim is implied by this green run.
