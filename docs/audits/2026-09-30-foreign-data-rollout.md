@@ -90,3 +90,64 @@ không gán ngày máy cho room hoặc dòng tiền nữa.
 
 `ready` chỉ là sẵn sàng dữ liệu theo hợp đồng hiện tại. Chưa đưa khối ngoại vào
 rule bắt đáy/momentum; vẫn cần ablation và bằng chứng prospective riêng.
+
+## Theo dõi phiên tự động và phục hồi dữ liệu công bố muộn
+
+Kiểm tra thực tế sau giờ đóng cửa 30/09: Windows task đã chạy lúc 17:05,
+`LastTaskResult=2`, lần kế tiếp 01/10 lúc 17:05. Không còn là một lần chạy
+tương lai chưa quan sát. Collector hoàn tất lúc 17:10:52 giờ Việt Nam, không
+có lỗi request/schema nhưng trạng thái `partial`: khối ngoại đủ 102 mã,
+tự doanh thiếu phiên 30/09 ở 26 mã. Paper scoring cũng vẫn có lỗi riêng;
+không suy diễn một nguyên nhân duy nhất cho mã thoát của cả launcher.
+
+Manifest lần tự động:
+`data/foreign_flows_v2/runs/20260930T100502494594Z_5d3b63f4/manifest.json`,
+SHA256 `088effad804572f40a3cd4decf7e5a96d2741035d5d6f64d1581f44eaddc6543`.
+Nó chứa 4.054 dòng; bản gốc được giữ nguyên sau khi phục hồi.
+
+Lần chẩn đoán riêng bắt đầu 18:09:44, hoàn tất 18:11:19, tải lại đúng 26 mã
+thiếu: ACB, ANV, BAF, BCM, BID, BMP, BSI, BSR, BVH, BWE, CII, CMG, CTD,
+CTG, CTR, CTS, DBC, DCM, DGW, DIG, NVL, POW, REE, TPB, VHM, VPB.
+Nguồn lúc này trả đủ phiên 30/09 cho cả hai nhóm: 1.040 dòng hợp lệ,
+không quarantine, không gap. Toàn bộ **1.014 dòng chung** với các vintage
+đã lưu có cùng giá trị mua/bán và khối lượng; 26 dòng tự doanh ngày 30/09
+là dữ liệu mới xuất hiện. Điều này xác nhận độ trễ khả dụng của nguồn qua
+các lần nhận response, không xác định chính xác phút công bố giữa hai lần.
+
+Evidence chẩn đoán:
+`data/paper/foreign_eod_late_probe/runs/20260930T110944803466Z_924e2998/manifest.json`,
+SHA256 `8709d6f85bf1a2e7403bb0fb91230a759345d92793caa45a1d2a419ee17b956c`.
+HTTP thành công không bảo đảm dữ liệu phiên mới đã được công bố. Retry lỗi
+mạng hiện tại không tự khắc phục trường hợp response hợp lệ nhưng còn cũ.
+
+## Bổ sung ba mã thu thập và kiểm tra availability
+
+Runtime union đã có MCH/TCX qua VN30; so với bảng VN100 tháng 7 đã kiểm tra,
+ba mã thực sự chưa được collector mặc định thu thập là TAL/VCK/VPX.
+Smoke riêng ba mã nhận 120 dòng hợp lệ, 20 phiên từ 03/09 đến 30/09,
+cả khối ngoại và tự doanh. Manifest:
+`data/paper/foreign_vn100_july_probe/runs/20260930T110837019429Z_27b7ea13/manifest.json`,
+SHA256 `25ebdc6d863f7d562c95bfa85a046dd606d307d85bc9433308e1ea7576e43769`.
+Không dùng kết quả này để suy ra ngày hiệu lực thành phần VN100 lịch sử.
+
+Sau khi hai smoke pass raw/hash/normalization, CLI collector hiện có tải
+**29 mã** (26 thiếu và ba mã bổ sung) vào kho runtime, không chạy BAT/paper
+hay scanner. Lần tải thật mới hoàn tất 18:13:41, chứa 1.160 dòng:
+`data/foreign_flows_v2/runs/20260930T111213592550Z_2f9f4016/manifest.json`,
+SHA256 `ce0b0b7e2401624edde8b5eaedec5e84f14a625bfbc9798880ddf9c089a87b97`.
+Không copy smoke sang runtime và không gán lùi thời điểm nhận nguồn.
+
+Kiểm tra toàn kho cho union 105 mã: `health=ready`, đủ phiên EOD 30/09,
+không gap, không thiếu nhóm, không run dở dang. Loader trả **2.100 dòng wide**
+(105 mã × 20 phiên), không trùng khóa mã/ngày, không thiếu giá trị ròng
+khối ngoại/tự doanh. 9.090 dòng vintage được giữ, không phải 9.090 quan sát
+độc lập. Truy vấn `as_of=2026-09-30T10:11:00Z` vẫn thiếu đúng 26 giá trị
+tự doanh và chưa có TAL/VCK/VPX: dữ liệu muộn không lọt vào vintage cũ.
+
+Đây là phục hồi dữ liệu hiện tại, **chưa sửa xong tự động hóa**. Config mặc
+định vẫn union 102 mã; chưa đăng ký TAL/VCK/VPX cho các lần tự động tiếp theo
+và chưa có retry riêng cho nguồn công bố muộn. Mã nguồn/config giữ nguyên
+trong lúc hồi quy 2.618 replay đang chạy. Bước sửa tiếp cần đăng ký data
+contract, RED/GREEN test cho coverage/retry hữu hạn và giữ timestamp mọi
+lần nhận nguồn. Không xóa năm mã rời bảng tháng 7 khỏi lịch sử thu thập;
+105 là tập thu thập mở rộng, không phải khẳng định VN100 có 105 thành phần.

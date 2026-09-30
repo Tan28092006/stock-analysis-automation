@@ -3,9 +3,10 @@
 ## Phạm vi
 
 Thu thập dữ liệu, không phát lệnh và không tự bật tín hiệu giao dịch. Mỗi ngày
-lấy hai nhóm riêng biệt (khối ngoại / tự doanh), cho 100 mã đã thu thập trước
-đây cộng danh sách giao dịch hiện tại trong `configs/universe_vn30.json`.
-Danh sách thu thập này không phải lịch sử thành phần VN30.
+lấy hai nhóm riêng biệt (khối ngoại / tự doanh), giữ 100 mã đã thu thập trước
+đây, bổ sung MCH/TAL/TCX/VCK/VPX và union danh sách giao dịch hiện tại trong
+`configs/universe_vn30.json`. Tập hiện tại là 105 mã; không xóa mã cũ và không
+coi tập thu thập này là lịch sử thành phần VN30/VN100.
 
 ## Cập nhật tự động
 
@@ -15,6 +16,14 @@ sau đó chạy paper runner độc lập, kể cả khi khối ngoại lỗi. K
 push dữ liệu, không gọi broker, không retrain model.
 
 - Collector retry tối đa 3 lần mỗi request, timeout hữu hạn, giới hạn nhịp gọi.
+- BAT dùng `--retry-stale`: nếu response hợp lệ nhưng chưa có phiên EOD mới,
+  chỉ tải lại các mã thiếu, tối đa ba batch bổ sung sau các khoảng chờ 60, 300
+  và 900 giây. Mỗi batch giữ raw/timestamp riêng; kiểm tra cuối trên **toàn bộ**
+  tập mã ban đầu. Hết lượt vẫn thiếu → không báo thành công.
+- Không thử lại để che lỗi schema, quarantine bất thường, gap lịch sử, hash
+  mismatch hoặc batch dở dang. Đổi phiên EOD hay đồng hồ lùi trong lúc chờ
+  sẽ chặn job. Tổng chờ tối đa 21 phút cộng thời gian request hữu hạn; paper
+  chạy sau bước này kể cả khi thu thập thất bại. Lịch 17:05 không đổi.
 - Dừng gọi hàng loạt khi 5 cặp mã/nguồn lỗi liên tiếp; ghi rõ phần chưa lấy được.
 - Lấy chồng cửa sổ gần nhất của nguồn (~20 dòng) để bù ngày bỏ lỡ và giữ revision.
 - Máy/người dùng/network phải sẵn sàng; `StartWhenAvailable` đang bật, `WakeToRun`
@@ -28,12 +37,18 @@ Chạy tay từ thư mục repo, với Python đã cài dependencies:
 
 ```text
 python -m stock_agent.pipeline.foreign_refresh
+python -m stock_agent.pipeline.foreign_refresh --retry-stale
 python -m stock_agent.pipeline.foreign_refresh --status
 python -m stock_agent.pipeline.foreign_refresh --symbols ACB MBB MCH TCX
 python -m stock_agent.pipeline.foreign_refresh --migrate-legacy
 ```
 
 Lệnh giới hạn mã là để chẩn đoán, không thay đổi danh sách của lịch tự động.
+Chạy tay không có `--retry-stale` chỉ thu thập một batch, không chờ dữ liệu
+công bố muộn. `--status` chỉ đọc; không kết hợp với chế độ retry/migration.
+Kết quả retry có `requested_symbols`, `attempts`, `attempt_manifest_paths`
+và `retry_exhausted`. `latest_status.json` vẫn mô tả batch cuối cùng, có thể
+chỉ gồm vài mã; dùng `--status` để kiểm tra toàn bộ tập mặc định hiện tại.
 Không chạy lại toàn bộ BAT chỉ để sửa dữ liệu khối ngoại vì BAT còn ghi paper
 recommendations; dùng CLI collector riêng ở trên.
 

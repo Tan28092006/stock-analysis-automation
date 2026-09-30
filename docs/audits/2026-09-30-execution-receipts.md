@@ -121,3 +121,57 @@ no known key patterns; it is not a comprehensive security certification.
 The unchanged 2,618-replay regression remains required on this source revision.
 No new return metric or actual broker fill was evaluated. Existing strategies,
 live pipeline, ML, refresh schedules, user logs/cache and UI are unchanged.
+
+### Partial local regression checkpoint (not full acceptance)
+
+In `data/paper/research_gate/20260930/execution_receipts_8dcced0_regression/`,
+the completed parent 290, books 180 and cash-timeslice 530 results have been
+compared against downloaded CI `36694782314`. Comparison covers complete
+economic objects, not only headline returns: parent blocks; book blocks/funnel/
+trial count; timeslice slices/cash and carry counts/partition reconciliation.
+The timeslice report also retains 44 carry-attribution paths. Their manifest
+hashes agree, `live_eligible` remains false and all recorded source hashes
+still match the local bytes (85 sources in parent/books, 86 in timeslices).
+
+| Result | SHA256 | Maximum absolute numeric difference |
+|---|---|---:|
+| Parent | `9709019260357f78cc5acc23ac205130e7b160a746578b43be9bcb397a242081` | 1.1102230246251565e-15 |
+| Books | `c9853a646d39c2eb32448dbd34f872a79bbd126cf500f229c5c6269f959db30c` | 1.1102230246251565e-15 |
+| Timeslices | `4fcf0fc3eeea7947283192b5b2f26bba294bf58ae2616383aeec9421d5826f66` | 5.551115123125783e-17 |
+
+The structural comparator's rejection self-tests also pass. These are floating
+roundoff differences, not a changed strategy. The VN100 and event outputs and
+fresh remote artifact still need their own checks; 1,000 checked replay paths
+must not be presented as the complete 2,618-pass acceptance result.
+
+### Completed remote regression and artifact audit
+
+[CI run 36703736150](https://github.com/Tan28092006/stock-analysis-automation/actions/runs/36703736150)
+completed successfully for pushed head `8dcced00c3ac76c566fffa2d06a35ea0c43ce048`:
+contract checks and all **2,618** pinned replays. The downloaded outputs report
+PR test-merge source commit `879b7bf1260326d7db14972cfb7897486194a6ed`; this is not
+a merge into main. All 92 distinct recorded source blobs across the five suites
+match Git content at `8dcced0`, with snapshot hashes unchanged.
+
+The complete economic payloads of all five suites are **exactly equal** to the
+previous audited CI `36694782314` (maximum numeric delta zero). Fields include
+parent/book blocks, funnel, timeslice/carry results, universe paired diagnostics,
+event protocol/panels/comparisons/live blockers and reconciliation/trial counts.
+The independent event auditor checked 1,422 paths, 23,131 fills, 69 registered
+comparisons, PIT membership, prior-bar volume caps, timing, board lots, activity
+classification and regime attribution. All checks pass; `live_eligible=false`.
+
+| Remote result | SHA256 |
+|---|---|
+| Parent | `64d2d09571b3d3e8fd645dd99563a62956cf97bfe6abde3069a9cb46a0eb17e4` |
+| Books | `968cf783e875289912891f8511ac18b6c746099d314205ffac126a6b96d8f2d7` |
+| Timeslices | `404cc9b66f3beeb34afe1d0be7d21c2456c7dc854bc915514df4950178395f70` |
+| VN100 | `070804d0de89ae27e1d550437a7f872f9b520563881b615b44baab93d4d7342b` |
+| Events | `54ef2511aafaf3245bc89dc179c3f9eba664ebfdbe0ff4ab0041eb596b4c6040` |
+
+Artifact directory: `data/paper/research_gate/20260930/github_36703736150/`.
+GitHub reports artifact ID 11091789036, 37,448,188 bytes, archive digest
+`4aa0300be11e35175a47560e0d2f3def4fdf2d9c818a558468c3934158fdeb5f`;
+the archive digest is provider-reported, not a locally retained ZIP checksum.
+No broker records or real-money return were evaluated. The economic rejection
+and execution/data/prospective limitations above remain unchanged.

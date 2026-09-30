@@ -86,3 +86,39 @@ immutable vintages/as-of and CLI/Windows launcher tests; at least 80% coverage.
 Re-run the full repository tests and all 2,618 pinned replays, preserving every
 economic result. No fresh live scan is part of this change. Source-backed smoke
 is restricted to collection and cannot prove a future scheduled run has occurred.
+
+### Candidate implementation evidence (full replay still pending)
+
+Isolated branch `codex/foreign-collection-readiness` retains checkpoints:
+`d636a4f` executed 16 intended RED cases (nine prior checks passed), followed by
+`6612f08` with all 25 GREEN for coverage/retry/CLI/Windows launcher behavior.
+The combined foreign-flow suite passes 51 tests. Coverage is 93% of 405
+statements (collector 94%, refresh CLI 89%); no coverage pass is claimed for
+the entire repository. No installed Ruff/Pyright is available; compilation
+and diff whitespace checks pass, not a type/lint certification.
+
+A full clean-checkout run initially found one existing ML unit-test dependency
+on a developer's ignored model registry (658 passed, one failed). `99ce6e2`
+makes that test supply an isolated synthetic registry/cache and verifies the
+missing-registry refusal before testing thresholds. It also prevents local
+symbol overrides from affecting the test and restores the cache on failure.
+No ML runtime, threshold, production artifact or activation changed. The test
+is now included in the remote contract job. All **659 tests** then passed,
+with 23 existing warnings, in 175.12 seconds; 54 focused checks also pass.
+
+Real-source CLI smoke used `--retry-stale --symbols TAL VCK VPX` with a separate
+output root and completed ready on its first batch: 120 rows, no missing latest
+session or gaps, no quarantine. It tests real initial success, not a fabricated
+claim that a future delayed-source retry has already occurred. Manifest:
+`data/paper/foreign_readiness_new_code_smoke/runs/20260930T112509688349Z_a756e283/manifest.json`,
+SHA256 `43f34c32e761d34c00dc09f26cedc902c1c8f8e99c2d475687f2e17e1a598927`.
+The deterministic late-publication test uses the actual immutable store and
+checks that the old as-of query still lacks the late value while the new one
+contains it. Retry timing itself is injected in tests, with no real test sleeps.
+
+The new full 2,618-replay chain runs from the isolated checkout against the
+unchanged verified market snapshots. It must finish and be compared before
+claiming full regression acceptance. The old receipt revision's successful CI
+is separately audited; it is not reused as proof for this candidate. No local
+signal scan, broker order or production pipeline activation is part of this
+candidate's smoke tests.

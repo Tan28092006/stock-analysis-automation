@@ -144,3 +144,66 @@ was introduced by the paper-scoring repair.
 The workflow reports upcoming runner/action-runtime migration warnings. Its
 dependency versions are bounded ranges, not an exact environment lock, and
 no branch-protection or live-promotion claim is implied by this green run.
+
+## September 30 archived-source reconciliation
+
+The existing September 30 score report is still `blocked`: the September 25,
+28 and 29 runs are quarantined, with ten September 30 observations pending
+and zero resolved. No fresh signal scan was requested or run for this audit.
+The investigation compared all **31 files** in each archived snapshot, not
+only the ten recommended stocks. Each manifest first passed `verify_snapshot`,
+including raw-source hashes and raw-to-CSV reconstruction.
+
+The September 30 outcome snapshot is
+`data/paper/snapshots/20260930T101058138662Z/manifest.json`, SHA256
+`9f6d4ca079269f03b7ac828c2ca50ede32637cc2c4d1ccb701d2b986beda3ab2`.
+Comparison starts at its declared requested start, December 19, 2024, and ends
+at each original signal date. There are no missing rows within that overlap.
+
+| Original session | Snapshot directory | Compared symbol-date rows | Changed rows |
+|---|---|---:|---:|
+| 2026-09-25 | `20260926T022757171239Z` | 13,235 | 4 |
+| 2026-09-28 | `20260928T124557138267Z` | 13,266 | 4 |
+| 2026-09-29 | `20260929T100504472404Z` | 13,297 | 4 |
+| 2026-09-30, self-check | `20260930T101058138662Z` | 13,328 | 0 |
+
+All twelve changed rows are last-session **volume-only** revisions. Open,
+high, low and close are unchanged throughout the compared overlap. Volumes
+below are shares, original archived value followed by the September 30 value:
+
+| Session | FPT | GAS | TCX | VPB |
+|---|---|---|---|---|
+| Sep 25 | 3,543,900 → 3,568,808 | 1,042,700 → 1,046,966 | 1,794,200 → 1,797,273 | 46,844,000 → 46,877,134 |
+| Sep 28 | 5,148,700 → 5,185,502 | 1,158,100 → 1,162,223 | 2,624,700 → 2,631,441 | 20,503,800 → 20,523,441 |
+| Sep 29 | 3,118,000 → 3,141,350 | 1,601,600 → 1,605,028 | 2,629,000 → 2,635,172 | 16,588,300 → 16,599,712 |
+
+Original manifest SHA256 values, in chronological order:
+
+- `bf4a310704db4a2124f9b3e47ab59c3698347170f9f77d1853582018933d5ffd`
+- `ed9e6a66b536820ee81fd71534fe1825765036739146fb60e0ec7b29e0fb4ad3`
+- `b94b3f86e7c016993f23381b0a9b57b5318029c034bac2d9e3d065fd19776d76`
+
+The raw VCI responses contain these differences; they are not CSV rounding
+or the rolling-prefix bug. For the four affected symbols in all four
+snapshots, raw `v` equals `accumulatedVolume` on every returned row, so merely
+switching between those fields does not resolve this discrepancy. The observed
+pattern suggests a latest-bar aggregation/finality issue, but does not establish
+its cause or prove odd-lot inclusion. Snapshot verification proves integrity of
+the archived response, not that a provider's latest daily bar is final.
+
+Volume feeds MR confirmation, momentum volume filters and liquidity sizing.
+These revisions must therefore remain visible even though OHLC is unchanged.
+No comparison tolerance was relaxed, no unaffected recommendations were scored
+selectively, and no original snapshot, decision or derived score was changed
+by this read-only reconciliation. Provider finality semantics and their effect
+on live/replay parity remain unresolved; the September 30 bar's future revision
+status is unknown. This audit does not introduce a new strategy or trading rule.
+
+A read-only feature sensitivity check on these same twelve archived rows used
+the existing event feature function, aligned to the same December 19 requested
+start and truncated at each original signal date. Maximum volume revision is
+0.7488775%; maximum 20-session ADV revision is 0.02990184%. None of the twelve
+rows changes the existing `volume >= 1.5 * prior_20_session_mean` Boolean gate.
+This small sample does **not** prove invariant MR decisions, rounded quantities,
+future data or entire portfolios. No scanner or new trade replay was run, and
+the exact revision quarantine remains unchanged.
