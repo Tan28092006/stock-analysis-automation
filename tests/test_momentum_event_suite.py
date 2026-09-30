@@ -101,6 +101,7 @@ def test_complete_synthetic_suite_accepts_real_parent_schemas_without_overwrite(
     monkeypatch.setattr(m.gate, 'digest', lambda path: p['snapshots']['VN30'] if Path(path) == manifest else
         p['snapshots']['H1'] if Path(path) == h1 else real_digest(path))
     monkeypatch.setattr(m.universe, 'load_inputs', lambda *args: (frames, {'VN30': timeline, 'VN100': timeline}, rules))
+    monkeypatch.setattr(m.universe, 'load_protocol', lambda: {})
     bounds = dict(start=frames['VNINDEX'].date[i], end=frames['VNINDEX'].date[i + 6], kind='calendar')
     monkeypatch.setattr(m, 'windows', lambda index, full: {'continuous' if full else 'h1_2026': bounds})
     sources = list(Path('scripts').glob('*.py')) + list(Path('stock_agent').rglob('*.py')) + [m.gate.RULES, m.gate.REGISTRY]

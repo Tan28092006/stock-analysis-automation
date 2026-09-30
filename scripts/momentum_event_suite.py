@@ -105,9 +105,11 @@ def evaluate_panel(frames: dict, rules: dict, timeline: Timeline, blocks: dict, 
     return out
 
 
-def verify_parent(path: Path, manifest_hash: str) -> dict:
+def verify_parent(path: Path, manifest_hash: str, *, kind: str = 'gate') -> dict:
     parent = json.loads(Path(path).read_text(encoding='utf-8'))
-    if parent.get('status') != 'research_complete_live_blocked' or parent.get('manifest_sha256') != manifest_hash:
+    status = {'gate': 'research_complete_live_blocked',
+              'universe': 'universe_research_complete_full_regression_required'}[kind]
+    if parent.get('status') != status or parent.get('manifest_sha256') != manifest_hash:
         raise ValueError('Incomplete or different parent snapshot')
     expected = {p.as_posix() for p in Path('scripts').glob('*.py')} | {
         p.as_posix() for p in Path('stock_agent').rglob('*.py')} | {gate.RULES.as_posix(), gate.REGISTRY.as_posix()}
@@ -128,7 +130,7 @@ def run_suite(manifest_path: Path, h1_path: Path, parent_path: Path, output: Pat
     parent = verify_parent(parent_path, p['snapshots']['VN30'])
     if universe_path is None:
         raise ValueError('Paired-universe parent evidence required')
-    universe_parent = verify_parent(universe_path, p['snapshots']['H1'])
+    universe_parent = verify_parent(universe_path, p['snapshots']['H1'], kind='universe')
     timeline = Timeline(json.loads(gate.TIMELINE.read_text(encoding='utf-8')))
     required = timeline.all_members | {'VNINDEX'}
     if not required <= manifest['files'].keys():
@@ -154,7 +156,8 @@ def run_suite(manifest_path: Path, h1_path: Path, parent_path: Path, output: Pat
             panel['prior_monthly_control'] = {k: v['momentum']['baseline']['summary'] for k, v in parent['blocks'].items()}
         else:
             universe_name = name.removeprefix('H1_')
-            panel['prior_monthly_control'] = universe_parent['universes'][universe_name]['trials']['momentum/baseline/normal']['summary']
+            h1_parent = next(b for b in universe_parent['blocks'] if b['id'] == 'calendar_2026_h1')
+            panel['prior_monthly_control'] = h1_parent['universes'][universe_name]['cash_restart']['momentum/baseline/normal']['metrics']
         result['panels'][name] = panel
         (output / f'{name}.json').write_text(json.dumps(panel, allow_nan=False), encoding='utf-8')
     a = result['panels']['H1_VN30']['blocks']['h1_2026']['trials']
