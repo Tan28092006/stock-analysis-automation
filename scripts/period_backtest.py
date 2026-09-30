@@ -276,10 +276,13 @@ def replay_mr(frames: dict, rules: dict, start: str, end: str, signals: dict | N
 
 
 def replay_momentum(frames: dict, rules: dict, start: str, end: str, *,
-                    target_fn=None, entry_gate=None, execution_delay: int = 0) -> dict:
+                    target_fn=None, entry_gate=None, execution_delay: int = 0,
+                    rebalance: str = 'monthly') -> dict:
     """Research callbacks receive prior-close prefixes only; defaults are unchanged."""
     if execution_delay not in (0, 1):
         raise ValueError('execution_delay must be zero or one additional session')
+    if rebalance not in ('monthly', 'weekly'):
+        raise ValueError('rebalance must be monthly or weekly')
     target_fn = momentum_targets if target_fn is None else target_fn
     frames, days, previous, rows = _inputs(frames, start, end)
     broker = Broker(rules)
@@ -293,7 +296,8 @@ def replay_momentum(frames: dict, rules: dict, start: str, end: str, *,
         broker.settle(day)
         prior = previous[day]
         bars = {s: data[day] for s, data in rows.items() if day in data}
-        if i == 0 or day[:7] != days[i - 1][:7]:
+        period = lambda d: d[:7] if rebalance == 'monthly' else date.fromisoformat(d).isocalendar()[:2]
+        if i == 0 or period(day) != period(days[i - 1]):
             prefixes = {s: f.loc[f['date'] <= prior].copy() for s, f in frames.items()
                         if prior in rows[s]}
             weights, excluded = target_fn(prefixes, set(broker.positions))
