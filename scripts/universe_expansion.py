@@ -109,10 +109,11 @@ def execution_diagnostics(fills: list, frames: dict) -> dict:
 def compare_metrics(vn30: dict, vn100: dict) -> dict:
     if abs(vn30['index_return_pct'] - vn100['index_return_pct']) > 1e-9:
         raise ValueError('Paired benchmark bases differ')
+    epsilon = 1e-9  # Numerical zero: 0.01 VND on the configured 1bn NAV, not alpha tuning.
     return dict(vn100_minus_vn30_pp=vn100['return_pct'] - vn30['return_pct'],
-        vn100_beats_vn30=vn100['return_pct'] > vn30['return_pct'],
-        vn100_beats_index=vn100['return_pct'] > vn100['index_return_pct'],
-        vn100_positive_net_and_beats_both=vn100['return_pct'] > max(0., vn30['return_pct'], vn100['index_return_pct']),
+        vn100_beats_vn30=vn100['return_pct'] - vn30['return_pct'] > epsilon,
+        vn100_beats_index=vn100['return_pct'] - vn100['index_return_pct'] > epsilon,
+        vn100_positive_net_and_beats_both=vn100['return_pct'] - max(0., vn30['return_pct'], vn100['index_return_pct']) > epsilon,
         new_entry_delta=vn100['new_entries'] - vn30['new_entries'],
         addition_delta=vn100['additions'] - vn30['additions'],
         fees_delta_vnd=vn100['fees_vnd'] - vn30['fees_vnd'],
