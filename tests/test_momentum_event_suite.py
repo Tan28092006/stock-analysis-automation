@@ -119,6 +119,9 @@ def test_complete_synthetic_suite_accepts_real_parent_schemas_without_overwrite(
     result = m.run_suite(manifest, h1, parent_path, tmp_path/'out', up_path)
     assert result['replay_count'] == 54 and result['live_eligible'] is False
     assert result['panels']['H1_VN100']['prior_monthly_control'] == old_trial['metrics']
+    # Only the registered 51 continuous + 18 paired-universe comparisons are tested.
+    assert all('vs_index' not in t and 'vs_daily55' not in t for t in
+               result['panels']['H1_VN100']['blocks']['h1_2026']['trials'].values())
     assert len(result['paired_universe_tests']) == 18
     assert json.loads((tmp_path/'out/results.json').read_text())['status'] == 'research_complete_live_blocked'
     assert all(real_digest(f) == h for f, h in protected.items())
