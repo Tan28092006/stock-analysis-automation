@@ -809,7 +809,7 @@
     <!-- Fat-Pitch Hunter: Mean-Reversion (Bat day) panel -->
     <section id="mrCard" style="grid-column: 1 / -1;">
       <div class="section-head">
-        <h2>🎯 Bắt đáy — Mean-Reversion Hunter (VN100)</h2>
+        <h2>🎯 Bắt đáy — Mean-Reversion Hunter (VN30)</h2>
         <div style="display:flex; align-items:center; gap:10px;">
           <div class="status" id="mrStatus">Loading…</div>
           <button onclick="exportCard(this,'batday_buys')" title="Tải bảng kèo BUY thành CSV" style="min-height:28px; padding:0 10px; font-size:11px;">⬇ CSV</button>
@@ -2003,6 +2003,9 @@
 
     // ---- Regime Orchestrator: which engine to use now ----
     const REGIME_ADVICE = {
+      UNKNOWN: { emoji: "⚪", color: "rgba(148,163,184,0.12)", border: "#94a3b8",
+        head: "CHƯA ĐỦ DỮ LIỆU — không có nhận định giao dịch", rec: "none",
+        mom: "Chưa đánh giá được.", mr: "Chưa đánh giá được." },
       RISK_ON: { emoji: "🟢", color: "rgba(45,212,191,0.12)", border: "var(--teal,#2dd4bf)",
         head: "TĂNG KHỎE → ưu tiên 🚀 MOMENTUM (ăn bull)", rec: "momentum",
         mom: "Giữ / mở nhóm dẫn dắt.", mr: "Bắt đáy nghỉ — không có đáy để bắt (0 kèo là bình thường)." },
@@ -2015,8 +2018,8 @@
         mr: "Săn kèo capitulation + đảo chiều." },
     };
     function renderRegimeBanner(mkt) {
-      const st = mkt?.state || "GRIND";
-      const a = REGIME_ADVICE[st] || REGIME_ADVICE.GRIND;
+      const st = mkt?.state || "UNKNOWN";
+      const a = REGIME_ADVICE[st] || REGIME_ADVICE.UNKNOWN;
       const banner = document.getElementById("regimeBanner");
       banner.style.background = a.color; banner.style.borderColor = a.border;
       banner.innerHTML = `
@@ -2149,7 +2152,7 @@
 
     function renderPositions(data) {
       const pos = data.positions || [];
-      document.getElementById("mrPosCount").textContent = pos.length;
+      document.getElementById("mrPosCount").textContent = data.status === "blocked_data" ? "chưa kiểm tra" : pos.length;
       const sells = data.sell_alerts || [];
       const banner = document.getElementById("mrSellBanner");
       if (sells.length) {
@@ -2172,7 +2175,7 @@
               <td><button onclick="closePosition('${p.id}','${p.symbol}','${p.entry_date}','${p.kind||'mr'}')" style="min-height:22px;padding:0 8px;font-size:10px;border-radius:4px;">Đóng</button></td>
             </tr>`;
           }).join("")
-        : `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:14px;">Chưa ghi vị thế nào. Bấm "Ghi" ở một kèo bên dưới.</td></tr>`;
+        : `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:14px;">${data.status === 'blocked_data' ? 'Không đánh giá vị thế do dữ liệu lỗi; sổ vị thế đã lưu không bị thay đổi.' : 'Chưa ghi vị thế nào. Bấm "Ghi" ở một kèo bên dưới.'}</td></tr>`;
     }
 
     // "HÀNH ĐỘNG HÔM NAY" — plain buy/wait. A 7-crash study proved bottom-detection is a
@@ -2182,6 +2185,10 @@
     function renderActionToday(data) {
       const el = document.getElementById("mrAction");
       if (!el) return;
+      if (data.status === "blocked_data") {
+        el.innerHTML = '<div role="alert" style="border-left:4px solid #ef4444;padding:12px">DỮ LIỆU KHÔNG HỢP LỆ — đã chặn khuyến nghị. Không dùng cache cũ để vào lệnh. Kiểm tra nguồn giá, rổ VN30 và phiên EOD; không có đánh giá mua/bán hoặc cập nhật vị thế lúc này.</div>';
+        return;
+      }
       const THR = 0.55, MIN_RR = 1.5;
       const st = data.market?.state || "UNKNOWN";
       const breadth = data.market?.breadth_pct ?? 100;
@@ -2224,7 +2231,7 @@
       const m = data.model || {};
       const modelInfo = m.available
         ? `<span style="color:var(--purple,#a78bfa)">ML P(win): AUC ${(m.calib_auc||0).toFixed(3)} · base ${(m.base_win_rate*100||0).toFixed(0)}% · ${m.n_candidates} mẫu</span>`
-        : `<span style="color:var(--text-muted)">ML P(win): chưa train</span>`;
+        : `<span style="color:var(--text-muted)">ML P(win): đang tắt hoặc chưa đủ điều kiện/phê duyệt</span>`;
       document.getElementById("mrMarket").innerHTML = `
         <span style="font-weight:700; color:${st.color};">● ${st.label}</span>
         <span>VNINDEX <strong>${mrFmt(data.market?.index_close)}</strong> vs EMA50 <strong>${mrFmt(data.market?.index_ema50)}</strong></span>
@@ -2249,7 +2256,7 @@
             ${ghiBtn(b)}
           </tr>`).join("")
         : `<tr><td colspan="10" style="text-align:center; color:var(--text-muted); padding:18px;">
-             Không có kèo — đúng thiết kế: bắt đáy chỉ bắn khi có capitulation.</td></tr>`;
+             ${data.status === 'blocked_data' ? 'DỮ LIỆU KHÔNG HỢP LỆ — không phát khuyến nghị.' : 'Không có tín hiệu BUY_SETUP theo quy tắc.'}</td></tr>`;
 
       const probs = data.prob_buys || [];
       document.getElementById("mrProbCount").textContent = probs.length;
@@ -2267,7 +2274,7 @@
             ${ghiBtn(b)}
           </tr>`).join("")
         : `<tr><td colspan="10" style="text-align:center; color:var(--text-muted); padding:18px;">
-             Chưa mã nào đạt ngưỡng xác suất (regime hiện tại model floor ~48% — đúng: chợ đi ngang không có edge).</td></tr>`;
+             ${data.model?.available ? 'Không có tín hiệu xác suất được phép phát.' : 'ML đang tắt hoặc chưa đủ điều kiện/phê duyệt; không phải kết luận về thị trường.'}</td></tr>`;
 
       const watches = data.watches || [];
       document.getElementById("mrWatchCount").textContent = watches.length;
@@ -2292,7 +2299,7 @@
             <td class="num">${mrFmt(r.take_profit)}</td>
             <td class="num">${r.reward_risk ?? "-"}</td>
           </tr>`).join("")
-        : `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:18px;">Không có kèo nào trong 120 ngày.</td></tr>`;
+        : `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:18px;">${data.status === 'blocked_data' ? 'Chưa kiểm tra lịch sử vì dữ liệu lỗi.' : 'Không có tín hiệu trong khoảng đã quét.'}</td></tr>`;
 
       renderPositions(data);
     }
@@ -2304,8 +2311,9 @@
         const data = await requestJson("/api/mr/scan" + (force ? "?force=true" : ""));
         if (data.error) throw new Error(data.error);
         renderMr(data);
-        status.textContent = "OK · " + (data.data_date || "");
+        status.textContent = data.status === "blocked_data" ? "CHẶN: dữ liệu không hợp lệ" : "OK · " + (data.data_date || "");
       } catch (err) {
+        renderMr({status: "blocked_data", market: {state: "UNKNOWN"}, model: {available: false}});
         status.textContent = "Error: " + err.message;
       }
     }
@@ -2360,11 +2368,11 @@
             <td class="num">${new Intl.NumberFormat('vi-VN').format(p.qty)}</td>
             ${momGhi(p)}
           </tr>`).join("")
-        : `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:16px;">Chưa đủ lịch sử 12 tháng để xếp hạng.</td></tr>`;
+        : `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:16px;">${d.status === 'blocked_data' ? 'DỮ LIỆU KHÔNG HỢP LỆ — không phát khuyến nghị; sổ vị thế không bị thay đổi.' : 'Chưa đủ lịch sử 12 tháng để xếp hạng.'}</td></tr>`;
 
       // momentum positions + sell banner
       const pos = d.positions || [], sells = d.sell_alerts || [];
-      document.getElementById("momPosCount").textContent = pos.length;
+      document.getElementById("momPosCount").textContent = d.status === "blocked_data" ? "chưa kiểm tra" : pos.length;
       const mb = document.getElementById("momSellBanner");
       if (sells.length) { mb.style.display="block"; mb.innerHTML = "🔔 CẢNH BÁO BÁN (Momentum): " + sells.map(s=>`${s.symbol} (${s.sell_reason})`).join(" · "); }
       else mb.style.display="none";
@@ -2385,7 +2393,7 @@
               <td><button onclick="closePosition('${p.id}','${p.symbol}','${p.entry_date}','momentum')" style="min-height:22px;padding:0 8px;font-size:10px;border-radius:4px;">Đóng</button></td>
             </tr>`;
           }).join("")
-        : `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:14px;">Chưa ghi vị thế. Bấm "Ghi" ở một mã bên dưới.</td></tr>`;
+        : `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:14px;">${d.status === 'blocked_data' ? 'Không đánh giá vị thế do dữ liệu lỗi; sổ vị thế đã lưu không bị thay đổi.' : 'Chưa ghi vị thế. Bấm "Ghi" ở một mã bên dưới.'}</td></tr>`;
     }
     async function openMomPosition(enc) {
       try {
@@ -2399,8 +2407,8 @@
       try {
         const d = await requestJson("/api/momentum/scan" + (force?"?force=true":""));
         if (d.error) throw new Error(d.error);
-        renderMom(d); s.textContent = "OK · " + (d.data_date||"");
-      } catch(e) { s.textContent = "Error: " + e.message; }
+        renderMom(d); s.textContent = d.status === "blocked_data" ? "CHẶN: dữ liệu không hợp lệ" : "OK · " + (d.data_date||"");
+      } catch(e) { renderMom({status: "blocked_data", active: false, exposure_pct: 0}); s.textContent = "Error: " + e.message; }
     }
     document.getElementById("momRefresh").addEventListener("click", () => loadMom(true));
 
@@ -2417,15 +2425,15 @@
             <td class="num" style="color:var(--red,#ef4444)">${mrFmt(p.stop_loss)}</td>
             <td class="num">${(p.size && p.size.qty) ? new Intl.NumberFormat('vi-VN').format(p.size.qty) : '-'}</td>
           </tr>`).join("")
-        : `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:18px;">Không có kèo — không mã nào RSI2&lt;5 trong uptrend (đúng: đang crash/chỉnh thì đứng ngoài).</td></tr>`;
+        : `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:18px;">${d.status === 'blocked_data' ? 'DỮ LIỆU KHÔNG HỢP LỆ — không phát khuyến nghị.' : 'Không có tín hiệu RSI2 theo quy tắc.'}</td></tr>`;
     }
     async function loadSwing(force = false) {
       const s = document.getElementById("swingStatus"); s.textContent = force ? "Scanning…" : "Loading…";
       try {
         const d = await requestJson("/api/swing/scan" + (force ? "?force=true" : ""));
         if (d.error) throw new Error(d.error);
-        renderSwing(d); s.textContent = "OK · " + (d.data_date || "");
-      } catch (e) { s.textContent = "Error: " + e.message; }
+        renderSwing(d); s.textContent = d.status === "blocked_data" ? "CHẶN: dữ liệu không hợp lệ" : "OK · " + (d.data_date || "");
+      } catch (e) { renderSwing({status: "blocked_data"}); s.textContent = "Error: " + e.message; }
     }
     document.getElementById("swingRefresh").addEventListener("click", () => loadSwing(true));
 

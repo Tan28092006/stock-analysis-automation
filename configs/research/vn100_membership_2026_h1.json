@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "index": "VN100",
+  "live_eligible": false,
+  "coverage_start": "2025-08-04",
+  "coverage_end": "2026-06-30",
+  "member_count": 100,
+  "initial_announced_on": "2025-07-16",
+  "initial_known_on": "2025-07-17",
+  "initial_effective_on": "2025-08-04",
+  "initial_members": [
+    "ACB", "ANV", "BCM", "BID", "BMP", "BSI", "BVH", "BWE", "CII", "CMG",
+    "CTD", "CTG", "CTR", "CTS", "DBC", "DCM", "DGC", "DGW", "DIG", "DPM",
+    "DSE", "DXG", "DXS", "EIB", "EVF", "FPT", "FRT", "FTS", "GAS", "GEE",
+    "GEX", "GMD", "GVR", "HAG", "HCM", "HDB", "HDC", "HDG", "HHV", "HPG",
+    "HSG", "HT1", "IMP", "KBC", "KDC", "KDH", "KOS", "LPB", "MBB", "MSB",
+    "MSN", "MWG", "NAB", "NKG", "NLG", "NT2", "OCB", "PAN", "PC1", "PDR",
+    "PHR", "PLX", "PNJ", "POW", "PPC", "PTB", "PVD", "PVT", "REE", "SAB",
+    "SBT", "SCS", "SHB", "SIP", "SJS", "SSB", "SSI", "STB", "SZC", "TCB",
+    "TCH", "TLG", "TPB", "VCB", "VCG", "VCI", "VGC", "VHC", "VHM", "VIB",
+    "VIC", "VIX", "VJC", "VND", "VNM", "VPB", "VPI", "VRE", "VSC", "VTP"
+  ],
+  "initial_source": "https://static2.vietstock.vn/vietstock/2025/7/16/20250716_cbtt_danh_muc_thanh_phan_hose_index_thang_7_2025.pdf",
+  "initial_announcement_source": "https://www.phs.vn/tin-tuc/hose-danh-muc-co-phieu-thanh-phan-cua-bo-chi-so-hose-index-ky-thang-72025/6310304",
+  "initial_source_sha256": "8573aaed26f2f087ac30567b1c943e4112a85f6c3efc6a57faa80b7b3f020eae",
+  "initial_source_pages": [4, 5],
+  "initial_source_note": "HOSE-authored attachment, VN100 rows 1-100, no reserves. Conservatively available at the next day's close because exact publication time is not established.",
+  "changes": [
+    {
+      "announced_on": "2026-01-21",
+      "known_on": "2026-01-22",
+      "effective_on": "2026-02-02",
+      "add": ["BSR", "NVL", "VPL"],
+      "remove": ["PPC", "PTB", "TLG"],
+      "source": "https://static2.vietstock.vn/vietstock/2026/1/21/21012026_cbtt___danh_sach_thanh_phan_hose_index_thang_1_2026.pdf",
+      "announcement_source": "https://www.phs.vn/tin-tuc/hose-danh-muc-co-phieu-thanh-phan-cua-bo-chi-so-hose-index-ky-thang-012026/6361399",
+      "source_sha256": "a89a30791f450cc66a2bb81496eda3f250a75697b4102ea75401d29da0ff2814",
+      "source_pages": [4, 5, 6],
+      "note": "Set difference of the two complete 100-member HOSE tables, not a forecast. Conservative next-day close availability."
+    },
+    {
+      "announced_at": "2026-05-07T18:03:00+07:00",
+      "known_on": "2026-05-08",
+      "effective_on": "2026-05-13",
+      "add": ["BAF"],
+      "remove": ["DGC"],
+      "source": "https://cafef.vn/du-lieu/hose-2882336/hose-thay-doi-thanh-phan-cua-chi-so-vnmitech-vn50-growth-va-bo-chi-so-hoseindex.chn",
+      "issuer_confirmation": "https://baf.vn/co-phieu-baf-duoc-lua-chon-vao-ro-chi-so-vn100/",
+      "note": "HOSE-authored notice mirrored after the May 7 close; first usable at May 8 close. BSR changes sub-index but was already in VN100, so it is not added twice."
+    }
+  ],
+  "limitations": [
+    "Manual source-based reconstruction for H1 research, not a certified archival constituent feed; absence of other interim changes is not independently certified.",
+    "known_on means usable at that day's close, not its open; publication and effective dates are separate.",
+    "No coverage after June 2026 or before the July 2025 anchor; do not backfill today's members into earlier crises.",
+    "Membership does not certify available price history, corporate actions, suspension status, liquidity or execution.",
+    "Research input only. Production VN30 scans, models, orders, collectors and ledgers are unchanged."
+  ]
+}

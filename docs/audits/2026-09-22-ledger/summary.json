@@ -1,0 +1,67 @@
+{
+  "created_at": "2026-09-22T04:15:39.636741+00:00",
+  "scope": "Derived provenance screening, not certification of model quality or live fills.",
+  "legacy_score": null,
+  "legacy_score_note": "No reconstruction of unknown original horizons or fabricated clipped fills.",
+  "legacy": {
+    "rows": 143,
+    "eligible": 0,
+    "quarantined": 143,
+    "reason_counts": {
+      "conflicting_duplicate": 114,
+      "missing_provenance": 143,
+      "reference_price_mismatch": 93,
+      "unknown_original_label_contract": 143,
+      "unverifiable_timing": 143,
+      "duplicate": 2
+    },
+    "source_sha256": "db6736d2ab641f66ab8c51fde514848d1ca11da16bc8004eecf2f7e45c803a0c"
+  },
+  "forward": {
+    "rows": 737,
+    "eligible": 0,
+    "quarantined": 737,
+    "reason_counts": {
+      "missing_provenance": 737,
+      "unverifiable_timing": 737,
+      "reference_price_mismatch": 11
+    },
+    "source_sha256": "f571ef706d4baac3032f12f75aa307d0ccecdfe7ae3bacaa951c9e5ddc509c61"
+  },
+  "forward_score": {
+    "ledger_rows": 737,
+    "pending": 0,
+    "provenance_eligible": 0,
+    "quarantined": 737,
+    "quarantine_reasons": {
+      "missing_provenance": 737,
+      "unverifiable_timing": 737,
+      "reference_price_mismatch": 11,
+      "invalid_risk_plan": 0
+    },
+    "scope": "Paper replay only; provenance eligibility does not certify model/data quality or execution PnL.",
+    "mr_trades": {
+      "n": 0
+    },
+    "mr_by_regime": {},
+    "pwin_calibration": [],
+    "momentum_fwd21": {
+      "n": 0
+    },
+    "watch_fwd": {
+      "n": 0
+    }
+  },
+  "git_reconstruction": {
+    "ledger_changing_commits": 23,
+    "exact_record_count": 737,
+    "timing_counts": {
+      "first_commit_outside_ex_ante_window": 88,
+      "first_commit_within_ex_ante_window": 649
+    },
+    "tracked_artifact_hashes": {
+      "6dc71d3c2027c068b8c7638bfe504ff2d9ff7348889a8c4943a918d36d4c0038": 737
+    },
+    "caveat": "Local Git committer time is reconstructive evidence, not authenticated append time or proof of the actually loaded model."
+  }
+}

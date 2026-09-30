@@ -19,6 +19,7 @@ from ..constants import PRICE_CACHE_DIR
 from ..data.exchange_calendar import add_trading_days, next_trading_day
 from ..data.validation import normalize_ohlcv
 from ..features.backtest import BacktestConfig, enforce_price_limit, round_trip_cost_pct
+from .ledger_integrity import provenance_reasons
 
 logger = logging.getLogger(__name__)
 
@@ -80,10 +81,20 @@ def resolve_pending_labels(
 
     still_pending: list[dict] = []
     resolved_count = 0
+    quarantined = 0
     RESOLVED_LABELS_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     for record in pending:
         if record.get("status") != "pending":
+            still_pending.append(record)
+            continue
+
+        # Historical records have no original horizon/source/model contract.
+        # Preserve them byte-for-byte if nothing resolves; never invent outcomes
+        # by applying today's rules or clipping fills around an unknown reference.
+        if provenance_reasons(record) or not record.get("label_contract"):
+            quarantined += 1
+            still_pending.append(record)
             continue
 
         signal_date = date.fromisoformat(record["signal_date"])
@@ -150,14 +161,16 @@ def resolve_pending_labels(
             still_pending.append(record)
 
     # Rewrite pending file with only unresolved items
-    with PENDING_PREDICTIONS_PATH.open("w", encoding="utf-8") as f:
-        for record in still_pending:
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    if resolved_count:
+        with PENDING_PREDICTIONS_PATH.open("w", encoding="utf-8") as f:
+            for record in still_pending:
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
     return {
         "status": "ok",
         "resolved": resolved_count,
         "still_pending": len(still_pending),
+        "quarantined": quarantined,
     }
 
 

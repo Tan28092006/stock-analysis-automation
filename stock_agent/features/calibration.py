@@ -18,6 +18,7 @@ from ..data.exchange_calendar import add_trading_days, next_trading_day
 from ..data.validation import detect_corporate_action_flags, normalize_ohlcv, validate_ohlcv
 from .backtest import BacktestConfig, enforce_price_limit, round_trip_cost_pct
 from .signal_engine import score_symbol
+from .temporal_validation import mature_labeled, purged_time_split
 
 
 MODEL_NUMERIC_FEATURES = [
@@ -274,7 +275,7 @@ def run_calibration(
             feature_columns=[],
         )
 
-    working = dataset.copy()
+    working = mature_labeled(dataset)
     working = working.dropna(subset=["net_t2_win", "net_t2_return_pct"])
     rows_used = int(len(working))
     if rows_used < max(20, min_trades) or len(cols) < 2:
@@ -418,14 +419,12 @@ def preprocess_features_robust(
         "feature_spread_proxy_pct": 0.01,
     }
     
-    # Perform column-specific forward fill first, then fill remaining NaNs with neutral values
+    # Row-local imputation is identical in batch training and single-row serving.
     for col in feature_cols:
         if col in df.columns:
             series = df[col].copy()
             # Replace inf/-inf with NaN
             series = series.replace([np.inf, -np.inf], np.nan)
-            # Time-series forward fill
-            series = series.ffill()
             
             # Feature-specific fill
             neutral = 0.0
@@ -451,7 +450,9 @@ def preprocess_features_robust(
             # Binary rules columns do not need winsorizing
             continue
         
-        if winsorize_bounds is not None and col in winsorize_bounds:
+        if winsorize_bounds is not None:
+            if col not in winsorize_bounds:
+                raise ValueError(f"Missing training bounds for {col}")
             lower, upper = winsorize_bounds[col]
         else:
             series = out[col]
@@ -465,7 +466,7 @@ def preprocess_features_robust(
             
         out[col] = out[col].clip(lower=lower, upper=upper)
         
-    return out, winsorize_bounds or computed_bounds
+    return out, winsorize_bounds if winsorize_bounds is not None else computed_bounds
 
 
 def _feature_frame(frame: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
@@ -474,11 +475,7 @@ def _feature_frame(frame: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
 
 
 def _time_split(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    n = len(frame)
-    train_end = max(1, int(n * 0.6))
-    validation_end = max(train_end + 1, int(n * 0.8))
-    validation_end = min(validation_end, n - 1)
-    return frame.iloc[:train_end], frame.iloc[train_end:validation_end], frame.iloc[validation_end:]
+    return purged_time_split(frame)
 
 
 def _date_range(frame: pd.DataFrame) -> dict[str, str | None]:

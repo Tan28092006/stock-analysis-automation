@@ -134,8 +134,8 @@ def add_regime_features(df: pd.DataFrame, market_returns: pd.Series | None = Non
     out["regime_volatility_20"] = mkt_ret.rolling(20, min_periods=5).std().fillna(0.0)
 
     # Classify volatility regime
-    vol_q33 = out["regime_volatility_20"].quantile(0.33)
-    vol_q67 = out["regime_volatility_20"].quantile(0.67)
+    vol_q33 = out["regime_volatility_20"].expanding(min_periods=5).quantile(0.33).shift(1)
+    vol_q67 = out["regime_volatility_20"].expanding(min_periods=5).quantile(0.67).shift(1)
     out["regime_vol_class"] = np.select(
         [out["regime_volatility_20"] <= vol_q33, out["regime_volatility_20"] >= vol_q67],
         [0, 2],  # 0=low, 1=medium, 2=high
@@ -143,9 +143,9 @@ def add_regime_features(df: pd.DataFrame, market_returns: pd.Series | None = Non
     )
 
     # Regime: Trend (EMA crossover on market proxy cumulative return)
-    # Check if returns are in percentage or ratio
-    is_percentage = mkt_ret.abs().median() > 0.1
-    scale = 100.0 if is_percentage else 1.0
+    # Contract: add_indicators.return_1d and cross-sectional averages are ratios.
+    # Never infer units from the entire (possibly future) distribution.
+    scale = 1.0
     cum_ret = (1 + mkt_ret / scale).cumprod()
     ema9 = cum_ret.ewm(span=9, min_periods=5).mean()
     ema21 = cum_ret.ewm(span=21, min_periods=10).mean()
@@ -162,8 +162,7 @@ def add_regime_features(df: pd.DataFrame, market_returns: pd.Series | None = Non
 
     # Relative Strength (RS) Ratio and 5-day slope (using rolling 60-day relative return to prevent start-date dependency)
     stock_ret = out.get("return_1d", pd.Series(0.0, index=out.index)).fillna(0.0).astype(float)
-    is_stock_percentage = stock_ret.abs().median() > 0.1
-    stock_scale = 100.0 if is_stock_percentage else 1.0
+    stock_scale = 1.0
     
     rolling_window = 60
     # Use log returns to sum them over rolling window stably, then exponentiate

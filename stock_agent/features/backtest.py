@@ -258,6 +258,8 @@ def run_backtest(
 ) -> BacktestResult:
     cfg = config or BacktestConfig()
     data = df.sort_values("date").reset_index(drop=True).copy()
+    if end is not None:
+        data = data.loc[pd.to_datetime(data.date).dt.date <= end].reset_index(drop=True)
     if not data.empty:
         data = prepare_signal_frame(data, rules)
     if data.empty:
@@ -327,8 +329,12 @@ def run_backtest(
         # Shared canonical exit replay (T+2 settlement lock, first of stop/target/time).
         # max_hold in bars = exit_idx - entry_idx (the date-based T+N horizon computed above);
         # slippage / price-limits are applied to the returned raw price below.
-        actual_exit_idx, exit_price, _reason, _ = simulate_mr_exit(
-            data, entry_idx, stop_loss, take_profit_1, max_hold=exit_idx - entry_idx, settle_lock=2)
+        full_horizon = data.loc[exit_idx, "date"] >= target_exit_date
+        horizon = exit_idx - entry_idx if full_horizon else len(data) - entry_idx
+        actual_exit_idx, exit_price, _reason, resolved = simulate_mr_exit(
+            data, entry_idx, stop_loss, take_profit_1, max_hold=horizon, settle_lock=2)
+        if not resolved:
+            break  # Still open at the requested as-of boundary; never a realized label.
         exit_reason = {"stop": "STOP_LOSS", "target": "TAKE_PROFIT_1", "time": "T2_CLOSE"}[_reason]
 
         exit_reference_idx = max(actual_exit_idx - 1, 0)

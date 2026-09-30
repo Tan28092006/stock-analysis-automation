@@ -18,12 +18,14 @@ import numpy as np
 import pandas as pd
 
 from ..config import compute_rules_hash, load_json
+from ..data.eod import read_eod_csv, scan_input_snapshot
 from .indicators import ema, sma
 from .signal_engine import prepare_signal_frame, score_precomputed_at
 from . import win_probability as wp
 from .position_manager import money_cfg, suggest_size
 
 DEFAULT_MIN_WIN_PROB = 0.55
+MODEL_SERVING_CONTRACT = "explicit-ml-live-approval-override-v1"
 
 PRICES_DIR = Path("data/raw/prices_hist")
 MR_RULES_PATH = Path("configs/rules_mr.json")
@@ -36,14 +38,23 @@ def _load_rules() -> dict:
 
 def _load_frames(prices_dir: Path) -> dict[str, pd.DataFrame]:
     frames: dict[str, pd.DataFrame] = {}
+    index_path = prices_dir / "VNINDEX.csv"
+    if not index_path.exists():
+        return frames  # No common market as-of: abstain instead of mixing dates.
+    index = read_eod_csv(index_path)
+    if index.empty:
+        return frames
+    as_of = str(index["date"].iloc[-1])
     for p in sorted(prices_dir.glob("*.csv")):
         if p.stem == "VNINDEX":
             continue
         try:
-            df = pd.read_csv(p)
+            df = read_eod_csv(p, pd.Timestamp(as_of).date())
         except Exception:
             continue
         if len(df) < 90:
+            continue
+        if str(df["date"].iloc[-1]) != as_of:
             continue
         df["date"] = df["date"].astype(str).str.slice(0, 10)
         frames[p.stem] = df.sort_values("date").reset_index(drop=True)
@@ -55,7 +66,9 @@ def _market_state(prices_dir: Path, frames: dict[str, pd.DataFrame]) -> dict:
            "breadth_pct": None, "date": None}
     idx_path = prices_dir / "VNINDEX.csv"
     if idx_path.exists():
-        idx = pd.read_csv(idx_path)
+        idx = read_eod_csv(idx_path)
+        if idx.empty:
+            return out
         idx["date"] = idx["date"].astype(str).str.slice(0, 10)
         idx = idx.sort_values("date").reset_index(drop=True)
         close = float(idx["close"].iloc[-1])
@@ -128,22 +141,42 @@ def _rules_selector(rules: dict):
     return pick
 
 
-def _compute(recent_days: int, min_win_prob: float) -> dict:
+def _admitted_model(rules: dict, use_model: bool):
+    """Offline eligibility never grants permission to publish live probabilities."""
+    if not use_model or rules.get("ml", {}).get("enabled") is not True:
+        return None, "disabled"
+    try:
+        model = wp.WinProbModel.load()
+        if model is None:
+            return None, "missing_artifact"
+        if (model.meta.get("release") or {}).get("live_approved") is not True:
+            return None, "not_live_approved"
+        return model, "approved_asof_still_required"
+    except Exception:
+        # Do not expose artifact internals or drop the independent rule-only scan.
+        return None, "load_failed"
+
+
+def _compute(recent_days: int, min_win_prob: float, *, prices_dir: Path | None = None,
+             use_model: bool = True, include_positions: bool = True) -> dict:
+    prices_dir = prices_dir if prices_dir is not None else PRICES_DIR
     rules = _load_rules()
     cfg = money_cfg(rules)
     rules_for = _rules_selector(rules)
-    frames = _load_frames(PRICES_DIR)
-    market = _market_state(PRICES_DIR, frames)
+    frames = _load_frames(prices_dir)
+    market = _market_state(prices_dir, frames)
 
     # win-probability model + context (regime / breadth / index 20d return by date)
-    model = wp.WinProbModel.load()
-    regime, idx_ret20 = wp._context(PRICES_DIR)
-    breadth = wp._breadth_map(frames)
+    model, admission = _admitted_model(rules, use_model)
+    regime, idx_ret20 = wp._context(prices_dir) if model is not None else ({}, {})
+    breadth = wp._breadth_map(frames) if model is not None else {}
 
     def win_prob_at(feats: pd.DataFrame, i: int):
         if model is None:
             return None, None
         sd = str(feats["date"].iloc[i])
+        if not model.available_at(sd):
+            return None, None
         fr = wp.feature_row(feats, i, regime.get(sd, 1.0), breadth.get(sd, 0.5), idx_ret20.get(sd))
         if fr is None:
             return None, None
@@ -159,6 +192,7 @@ def _compute(recent_days: int, min_win_prob: float) -> dict:
     if latest_date:
         cutoff = str(pd.Timestamp(latest_date) - pd.Timedelta(days=recent_days))[:10]
 
+    errors = {}
     for symbol, df in frames.items():
         try:
             srules, gate = rules_for(symbol)
@@ -175,7 +209,8 @@ def _compute(recent_days: int, min_win_prob: float) -> dict:
                 watches.append(pay)
 
             # probability track: loose dip candidate on the latest bar, ranked by P(win)
-            if fr_last is not None and wp.is_candidate(fr_last) and p_last is not None \
+            if rules.get("ml", {}).get("override_enabled") is True \
+                    and fr_last is not None and wp.is_candidate(fr_last) and p_last is not None \
                     and p_last >= min_win_prob and sig.decision != "BUY_SETUP":
                 pay = _signal_payload(symbol, sig, signal_date, p_last, cfg)
                 pay["decision"] = "PROB_BUY"; pay["gate"] = gate
@@ -197,7 +232,8 @@ def _compute(recent_days: int, min_win_prob: float) -> dict:
                         pay = _signal_payload(symbol, s, str(feats["date"].iloc[int(i)]), None)
                         pay["gate"] = gate
                         recent.append(pay)
-        except Exception:
+        except Exception as exc:
+            errors[symbol] = str(exc)
             continue
 
     buys.sort(key=lambda x: (-(x.get("win_prob") or 0), -(x.get("reward_risk") or 0)))
@@ -209,7 +245,7 @@ def _compute(recent_days: int, min_win_prob: float) -> dict:
     positions, sell_alerts = [], []
     try:
         from .position_manager import PositionStore, check_positions
-        positions = check_positions(PositionStore())
+        positions = check_positions(PositionStore()) if include_positions else []
         sell_alerts = [p for p in positions if p.get("live_status") == "SELL"]
     except Exception:
         pass
@@ -218,10 +254,15 @@ def _compute(recent_days: int, min_win_prob: float) -> dict:
         "rules_hash": compute_rules_hash(rules),
         "data_date": market.get("date"),
         "symbols_scanned": len(frames),
+        "scanned_symbols": sorted(frames),
+        "scan_errors": errors,
         "min_win_prob": min_win_prob,
         "money": {"account_nav": cfg["account_nav"], "risk_per_trade_pct": cfg["risk_per_trade_pct"],
                   "max_positions": cfg["max_positions"]},
-        "model": {"available": model is not None, **({k: meta.get(k) for k in ("calib_auc", "base_win_rate", "trained_at", "n_candidates")} if model else {})},
+        "model": {"available": bool(model is not None and latest_date and model.available_at(latest_date)),
+                  "admission": admission,
+                  "eligibility": "explicit_ml_live_approval_and_asof_required",
+                  **({k: meta.get(k) for k in ("calib_auc", "base_win_rate", "trained_at", "n_candidates", "model_version", "test_auc", "test_brier", "training_metadata")} if model else {})},
         "market": market,
         "buys": buys,
         "watches": watches,
@@ -235,15 +276,23 @@ def _compute(recent_days: int, min_win_prob: float) -> dict:
 def mr_scan(recent_days: int = 120, force: bool = False,
            min_win_prob: float = DEFAULT_MIN_WIN_PROB) -> dict:
     """Cached MR scan; recomputes when data date, rules, or the threshold change."""
+    from .scan_guard import readiness, blocked
+    status = readiness(PRICES_DIR)
+    if not status["data_ready"]:
+        return blocked(status, "mean_reversion_hybrid")
     rules_hash = compute_rules_hash(_load_rules())
+    snapshot = scan_input_snapshot(PRICES_DIR)
     if not force and CACHE_PATH.exists():
         try:
             cached = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
             latest_csv_date = None
             idx = PRICES_DIR / "VNINDEX.csv"
             if idx.exists():
-                latest_csv_date = str(pd.read_csv(idx)["date"].astype(str).str.slice(0, 10).max())
+                latest_csv_date = str(read_eod_csv(idx)["date"].max())
             if (cached.get("rules_hash") == rules_hash
+                    and cached.get("model_serving_contract") == MODEL_SERVING_CONTRACT
+                    and cached.get("recent_days") == recent_days
+                    and cached.get("input_snapshot") == snapshot
                     and cached.get("data_date") == latest_csv_date
                     and cached.get("min_win_prob") == min_win_prob):
                 # positions change independently of the (cached) scan — refresh them live
@@ -257,6 +306,9 @@ def mr_scan(recent_days: int = 120, force: bool = False,
         except Exception:
             pass
     payload = _compute(recent_days, min_win_prob)
+    payload["input_snapshot"] = snapshot
+    payload["model_serving_contract"] = MODEL_SERVING_CONTRACT
+    payload["recent_days"] = recent_days
     try:
         CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         CACHE_PATH.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")

@@ -135,10 +135,10 @@ def train_model_suite_from_dataset(
             "models": {},
             "warnings": ["no labeled rows available"],
         }
-        write_json(MODEL_REGISTRY_PATH, payload)
         return payload
 
-    working = dataset.dropna(subset=["net_t2_win", "net_t2_return_pct"]).copy()
+    from .temporal_validation import mature_labeled
+    working = mature_labeled(dataset.dropna(subset=["net_t2_win", "net_t2_return_pct"]))
     cols = feature_columns(working)
     working = working.sort_values(["signal_date", "symbol"]).reset_index(drop=True)
     dataset_summary = {
@@ -162,7 +162,6 @@ def train_model_suite_from_dataset(
             "models": {},
             "warnings": warnings,
         }
-        write_json(MODEL_REGISTRY_PATH, payload)
         return payload
 
     train, validation, test = _time_split(working)
@@ -177,7 +176,6 @@ def train_model_suite_from_dataset(
             "models": {},
             "warnings": warnings,
         }
-        write_json(MODEL_REGISTRY_PATH, payload)
         return payload
 
     threshold = float(rules.get("ml", {}).get("probability_threshold", 0.58))
@@ -195,7 +193,8 @@ def train_model_suite_from_dataset(
         "models": models,
         "warnings": warnings,
     }
-    write_json(MODEL_REGISTRY_PATH, payload)
+    if selected:
+        write_json(MODEL_REGISTRY_PATH, payload)
     return payload
 
 
@@ -230,9 +229,17 @@ def predict_model_signal(symbol: str, signal: Any, rules: dict[str, Any]) -> Mod
 
     try:
         artifact = _load_artifact(Path(artifact_path))
+        from .temporal_validation import model_available_at
+        if not model_available_at(artifact.get("training_metadata", {}), artifact.get("trained_at"), getattr(signal, "latest_date", None)):
+            return ModelSignal(status="unavailable", model_family=family,
+                               detail="Artifact unverified or unavailable at signal EOD; no ML override")
         cols = list(artifact["feature_columns"])
         row = _feature_row_from_signal(signal)
-        frame = pd.DataFrame([{col: row.get(col, 0.0) for col in cols}]).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+        from .calibration import preprocess_features_robust
+        bounds = artifact.get("winsorize_bounds")
+        if bounds is None:
+            raise ValueError("Missing fitted preprocessing; retrain a verified artifact")
+        frame, _ = preprocess_features_robust(pd.DataFrame([row]), cols, bounds)
         probability = _predict_probability(artifact["model"], frame)
     except Exception as exc:
         return ModelSignal(
@@ -291,6 +298,10 @@ def _predict_ensemble(symbol: str, signal: Any, rules: dict, ml_rules: dict) -> 
             warnings=[str(exc)],
         )
 
+    from .temporal_validation import model_available_at
+    if not model_available_at(getattr(trainer, "training_metadata", {}), trainer.trained_at, getattr(signal, "latest_date", None)):
+        return ModelSignal(status="unavailable", model_family="ensemble",
+                           detail="Artifact unverified or unavailable at signal EOD; no ML override")
     try:
         row = _feature_row_from_signal(signal)
         return_shap = bool(ml_rules.get("return_shap", False))
@@ -380,9 +391,11 @@ def _train_one_family(
         return TrainingResult(family, "skipped", feature_columns=cols, warnings=[setup_warning or "adapter unavailable"])
 
     try:
-        x_train = _feature_frame(train, cols)
-        x_validation = _feature_frame(validation, cols)
-        x_test = _feature_frame(test, cols)
+        from .calibration import preprocess_features_robust
+        from .temporal_validation import training_manifest
+        x_train, bounds = preprocess_features_robust(train, cols)
+        x_validation, _ = preprocess_features_robust(validation, cols, bounds)
+        x_test, _ = preprocess_features_robust(test, cols, bounds)
         estimator.fit(x_train, train["net_t2_win"].astype(int))
         validation_probability = _predict_probability_array(estimator, x_validation)
         test_probability = _predict_probability_array(estimator, x_test)
@@ -396,6 +409,12 @@ def _train_one_family(
                 "family": family,
                 "threshold": threshold,
                 "trained_at": created_at,
+                "winsorize_bounds": bounds,
+                "training_metadata": training_manifest(
+                    train, cols, validation_start=str(validation.signal_date.min()),
+                    evaluation_test_start=str(test.signal_date.min()),
+                    evaluation_label_end=str(test.exit_date.max()),
+                ),
             },
         )
         return TrainingResult(
@@ -527,10 +546,10 @@ def _select_model(results: list[TrainingResult]) -> str | None:
         return None
 
     def key(item: TrainingResult) -> tuple[float, float, int]:
-        test = item.metrics.get("test", {})
-        avg_return = float(test.get("avg_net_return_pct") or 0.0)
-        win_rate = float(test.get("win_rate") or 0.0)
-        trades = int(test.get("selected_trades") or 0)
+        validation = item.metrics.get("validation", {})
+        avg_return = float(validation.get("avg_net_return_pct") or 0.0)
+        win_rate = float(validation.get("win_rate") or 0.0)
+        trades = int(validation.get("selected_trades") or 0)
         return (avg_return, win_rate, trades)
 
     return max(trained, key=key).model_family
@@ -558,11 +577,8 @@ def _feature_frame(frame: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
 
 
 def _time_split(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    n = len(frame)
-    train_end = max(1, int(n * 0.6))
-    validation_end = max(train_end + 1, int(n * 0.8))
-    validation_end = min(validation_end, n - 1)
-    return frame.iloc[:train_end], frame.iloc[train_end:validation_end], frame.iloc[validation_end:]
+    from .temporal_validation import purged_time_split
+    return purged_time_split(frame)
 
 
 def _feature_row_from_signal(signal: Any) -> dict[str, Any]:

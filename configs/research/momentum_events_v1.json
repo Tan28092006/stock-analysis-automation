@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "hypothesis_id": "momentum_events_v1_20260930",
+  "holdout": false,
+  "live_eligible": false,
+  "variants": ["daily55", "weekly55", "daily20", "pyramiding55", "market55", "volume55"],
+  "comparators": {"weekly55":"daily55", "daily20":"daily55", "pyramiding55":"daily55", "market55":"daily55", "volume55":"daily55"},
+  "scenarios": ["normal", "double_cost", "delay_one_session"],
+  "atr_sessions": 20,
+  "exit_sessions": 20,
+  "risk_per_unit_pct": 0.5,
+  "max_positions": 10,
+  "max_weight_pct": 20,
+  "max_exposure_pct": 100,
+  "max_stop_risk_pct": 6,
+  "stop_atr": 2,
+  "add_atr": 0.5,
+  "max_units": 4,
+  "max_chase_atr": 1,
+  "adv_sessions": 20,
+  "participation_pct": 1,
+  "volume_multiple": 1.5,
+  "market_sma": 200,
+  "monthly_activity_floor": null,
+  "bootstrap_blocks": [20, 40],
+  "family": 184,
+  "min_sessions": 252,
+  "seed": 20260930,
+  "alpha": 0.05,
+  "snapshots": {
+    "VN30": "21b2deff6694a2a7218c861a681524b91f311617fc1e84de0598fc8001e155d0",
+    "H1": "c9d046ff5d1c336284c2fc8a1bd07abc2e63c84d2493ce508a8d16bf132d7148"
+  },
+  "evaluation": [
+    "All six variants under all three scenarios in every ten parent blocks and every existing fixed-half-year/causal-regime slice, each restarted with cash. Also attribute all 18 continuous portfolios to every slice without resetting holdings.",
+    "Paired VN30/VN100 on the same H1 snapshot, all 18 paths per universe, plus all 18 cash restarts for each H1 causal episode and March-April event, and carry attribution from H1 paths.",
+    "Continuous VN30 primary inference: 15 same-scenario ablations, 18 vs gross VNINDEX, 18 vs lagged-exposure index. H1 paired-universe 18 comparisons descriptive (<252 sessions). Family 184 = 69 new + 27 previously registered parent/book comparisons + 88 paired-universe comparisons; not correction for unknown earlier searches.",
+    "Retain full 290+180+530+196 parent runs. Report cash, gross VNINDEX, lagged-exposure index, prior monthly momentum and all rejected paths; no winner-only filtering. Parent monthly comparison is multi-mechanism, not a one-rule ablation."
+  ]
+}
