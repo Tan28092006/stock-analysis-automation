@@ -317,7 +317,7 @@ def test_zero_volume_cannot_be_revised_into_or_out_of_tradability(tmp_path, orig
                                          ("volume", float("inf")), ("extra", 2)])
 def test_history_comparison_refuses_invalid_volume_or_nonvolume_change(column, value):
     from stock_agent.pipeline.paper_scoring import _check_history
-    old = pd.DataFrame({"date": ["2026-09-21"], "close": [10000], "volume": [1000000], "extra": [1]})
+    old = pd.DataFrame({"date": ["2026-09-21"], "close": [10000], "volume": [1000000.0], "extra": [1]})
     frame = old.copy()
     frame.loc[0, column] = value
     with pytest.raises(ValueError, match="history revision"):
