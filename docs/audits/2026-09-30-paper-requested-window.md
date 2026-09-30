@@ -61,3 +61,38 @@ preserve the previous score report as evidence and keep genuine revisions blocke
 
 An engineering pass removes a false failure mode. It is not enough to meet the
 user's separate activity, after-cost profitability and live-readiness requirements.
+
+## RED/GREEN and real-record verification
+
+Two RED checkpoints precede implementation: `16f4264` captures five failing
+rolling-window/CI regressions (19 related checks already passed); `ba09ce5`
+captures two additional failing CLI and whole-run quarantine cases. The GREEN
+implementation is `8234c28`. All **43** paper scoring, runner, CLI and runtime
+hardening tests pass together. Statement coverage for `paper_scoring.py` is
+**88%** (101 statements, 12 uncovered). Tests retain exact checks for all five
+OHLCV fields, including real volume revisions; no comparison tolerance changed.
+
+After those tests passed, a read-only score of the September 29 snapshot checked
+194 original-source/record/report file hashes before and after: no changes.
+The normal scoring command then updated only the derived score report, after
+preserving its predecessor. A wider check of **380** archived snapshot, record
+and scan-report files again found **zero** changed hashes.
+
+The result is intentionally still **blocked**: the September 25 and 28 runs
+now identify GAS as having a real revision inside the requested overlap. The
+September 29 run has ten pending momentum observations, zero resolved outcomes,
+and null returns. Nine unaffected stocks are not cherry-picked out of either
+quarantined run. CLI exit code 2 is the expected data-quality failure, not a
+failure to execute the scorer. These are paper observations, not account P&L.
+
+Preserved reports live under
+`data/paper/research_gate/20260930/paper_requested_window_v1/`:
+
+| Report | SHA256 |
+|---|---|
+| `scores_before.json` | `da0aba50b902b4e8e01d82f4765afd2b3ce2bd0f819f4eaaf1f66ecdd8a7de9b` |
+| `scores_after.json` | `f07d63a625ccfb32df973fce21cdfad8ba11472308c953fcdbc67007a3ea8e6d` |
+
+The real volume differences remain a source-reconciliation requirement. Their
+cause is not established by this fix. Neither historical snapshots nor recorded
+decisions were rewritten, and no daily bar was fabricated.
