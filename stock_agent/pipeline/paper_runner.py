@@ -228,8 +228,9 @@ def main(argv=None) -> int:
             from .paper_scoring import score_paper_runs
             scores = score_paper_runs(args.output_dir, prices_dir, manifest_path=manifest)
             _atomic_json(args.output_dir / "scores/latest.json", scores)
-            print(json.dumps({k: scores[k] for k in ("status", "as_of", "pending", "resolved", "errors")}))
-            return 0 if scores["status"] == "ok" else 2
+            print(json.dumps({k: scores[k] for k in (
+                "status", "as_of", "pending", "resolved", "errors", "volume_revision_rows", "volume_revision_runs")}))
+            return 0 if scores["status"] in {"ok", "ok_with_revisions"} else 2
         result = run_paper(prices_dir, symbols, output_dir=args.output_dir,
                            manifest_path=manifest, record=args.run)
         _atomic_json(args.output_dir / "latest.json", result)
@@ -242,7 +243,9 @@ def main(argv=None) -> int:
             from .paper_scoring import score_paper_runs
             scores = score_paper_runs(args.output_dir, prices_dir, manifest_path=manifest)
             _atomic_json(args.output_dir / "scores/latest.json", scores)
-            if scores["status"] != "ok":
+            print(json.dumps({k: scores[k] for k in (
+                "status", "as_of", "pending", "resolved", "errors", "volume_revision_rows", "volume_revision_runs")}))
+            if scores["status"] not in {"ok", "ok_with_revisions"}:
                 print(f"SCORING BLOCKED: {scores['errors']}", flush=True)
                 return 2
         return 3 if args.run and result["status"] == "preview_only" else 0

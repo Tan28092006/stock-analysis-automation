@@ -17,6 +17,35 @@ from .paper_runner import IDENTITY_KEYS, _digest, _source, _window
 COST_PCT = .6
 
 
+def _check_history(old: pd.DataFrame, frame: pd.DataFrame, *, symbol: str,
+                   requested_start: str, session: str) -> tuple[dict, list[dict]]:
+    """Compare outcomes without substituting revised inputs into sealed decisions."""
+    if requested_start > session:
+        raise ValueError(f"{symbol}: outcome request starts after the signal session")
+    # A rolling request may omit an archived prefix, never a requested session.
+    required = old.loc[old.date >= requested_start].reset_index(drop=True)
+    matched = frame.set_index("date").reindex(required.date).reset_index()
+    try:
+        pd.testing.assert_frame_equal(required.drop(columns="volume"), matched.drop(columns="volume"),
+                                      check_dtype=False, check_exact=True)
+    except AssertionError as exc:
+        raise ValueError(f"{symbol}: history revision or missing session inside requested overlap") from exc
+    revisions = []
+    for index in required.index[required.volume != matched.volume]:
+        original, outcome = float(required.at[index, "volume"]), float(matched.at[index, "volume"])
+        if not all(math.isfinite(v) and v > 0 for v in (original, outcome)):
+            raise ValueError(f"{symbol}: history revision crosses zero or has invalid volume")
+        revisions.append({"symbol": symbol, "date": str(required.at[index, "date"]),
+                          "original_volume": original, "outcome_volume": outcome})
+    return {
+        "contract": "requested_window_v1", "requested_start": requested_start,
+        "original_start": str(old.date.iloc[0]), "compared_rows": len(required),
+        "archived_prefix_rows_not_reobserved": len(old) - len(required),
+        "revision_policy": "positive_volume_only_v1",
+        "decision_inputs_revised": bool(revisions), "volume_revision_rows": len(revisions),
+    }, revisions
+
+
 def _outcome(signal: dict, frame: pd.DataFrame, session: str) -> dict:
     symbol, track = signal["symbol"], signal["track"]
     if signal.get("date") != session or track not in {"mr", "momentum"}:
@@ -66,6 +95,7 @@ def score_paper_runs(output_dir: Path, prices_dir: Path, *, manifest_path: Path)
 
     Hashes detect accidental corruption, not malicious edits to both data and hash.
     Daily OHLC cannot prove intraday T+2 availability, queue fills or liquidity.
+    Flagged historical volume revisions do not certify decision-input invariance.
     """
     manifest_path = Path(manifest_path).resolve()
     current = verify_snapshot(manifest_path)
@@ -74,6 +104,7 @@ def score_paper_runs(output_dir: Path, prices_dir: Path, *, manifest_path: Path)
         raise ValueError("Outcome manifest/prices directory mismatch")
     result = {"status": "ok", "as_of": current["as_of"], "records": [], "errors": [],
               "pending": 0, "resolved": 0, "not_entered": 0, "runs": 0,
+              "revision_warnings": [], "volume_revision_rows": 0, "volume_revision_runs": 0,
               "outcome_manifest": str(manifest_path),
               "outcome_manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
               "assumptions": {"cost_pct": COST_PCT, "entry": "next_open", "settle_lock_bars": 2,
@@ -96,6 +127,7 @@ def score_paper_runs(output_dir: Path, prices_dir: Path, *, manifest_path: Path)
             if any(checked[key] != paper.get(key) for key in checked):
                 raise ValueError("Original source provenance changed")
             staged, seen = [], set()
+            staged_revisions = {}
             for signal in paper["recommendations"]:
                 symbol = signal["symbol"]
                 key = (signal["track"], symbol)
@@ -104,34 +136,25 @@ def score_paper_runs(output_dir: Path, prices_dir: Path, *, manifest_path: Path)
                 seen.add(key)
                 old = pd.read_csv(original_path.parent / "prices" / f"{symbol}.csv")
                 frame = pd.read_csv(prices_dir / f"{symbol}.csv")
-                # Rolling requests intentionally omit an archived leading prefix.
-                # Use the requested boundary, never the first returned date: missing
-                # requested bars and any shared OHLCV revision still quarantine the run.
-                requested_start = current["start"]
-                if requested_start > session:
-                    raise ValueError(f"{symbol}: outcome request starts after the signal session")
-                required = old.loc[old.date >= requested_start].reset_index(drop=True)
-                matched = frame.set_index("date").reindex(required.date).reset_index()
-                try:
-                    pd.testing.assert_frame_equal(required, matched, check_dtype=False, check_exact=True)
-                except AssertionError as exc:
-                    raise ValueError(f"{symbol}: history revision or missing session inside requested overlap") from exc
+                history_check, revisions = _check_history(
+                    old, frame, symbol=symbol, requested_start=current["start"], session=session)
                 segment = frame[frame.date >= session]
                 expected = {str(d) for d in symbol_trading_days_between(symbol, date.fromisoformat(session), date.fromisoformat(current["as_of"]))}
                 if set(segment.date) != expected:
                     raise ValueError(f"{symbol}: missing outcome sessions")
                 outcome = _outcome(signal, frame, session)
-                outcome["history_check"] = {
-                    "contract": "requested_window_v1", "requested_start": requested_start,
-                    "original_start": str(old.date.iloc[0]),
-                    "compared_rows": len(required),
-                    "archived_prefix_rows_not_reobserved": len(old) - len(required),
-                }
+                outcome["history_check"] = history_check
                 staged.append(outcome)
+                for revision in revisions:
+                    staged_revisions[(symbol, revision["date"])] = {"path": str(path), **revision}
             result["records"].extend(staged)
+            result["revision_warnings"].extend(staged_revisions.values())
+            result["volume_revision_runs"] += bool(staged_revisions)
         except Exception as exc:
             result["errors"].append({"path": str(path), "error": f"{type(exc).__name__}: {exc}"})
     for row in result["records"]:
         result[row["status"]] += 1
-    result["status"] = "blocked" if result["errors"] else "ok"
+    result["volume_revision_rows"] = len(result["revision_warnings"])
+    result["status"] = ("blocked" if result["errors"] else
+                        "ok_with_revisions" if result["revision_warnings"] else "ok")
     return result
