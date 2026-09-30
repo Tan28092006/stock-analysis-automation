@@ -20,6 +20,21 @@ def completed_session_date(now: datetime | None = None) -> date:
 
 
 HOSE_HOLIDAYS = {
+    # 2021-2023: exchange/broker notices, sources and scope in
+    # docs/audits/2026-09-30-research-sources.md. Weekends remain excluded below.
+    date(2021, 1, 1),
+    date(2021, 2, 10), date(2021, 2, 11), date(2021, 2, 12),
+    date(2021, 2, 15), date(2021, 2, 16), date(2021, 4, 21),
+    date(2021, 4, 30), date(2021, 5, 3),
+    date(2021, 9, 2), date(2021, 9, 3),
+    date(2022, 1, 3), date(2022, 1, 31),
+    date(2022, 2, 1), date(2022, 2, 2), date(2022, 2, 3), date(2022, 2, 4),
+    date(2022, 4, 11), date(2022, 5, 2), date(2022, 5, 3),
+    date(2022, 9, 1), date(2022, 9, 2),
+    date(2023, 1, 2), date(2023, 1, 20), date(2023, 1, 23),
+    date(2023, 1, 24), date(2023, 1, 25), date(2023, 1, 26),
+    date(2023, 5, 1), date(2023, 5, 2), date(2023, 5, 3),
+    date(2023, 9, 1), date(2023, 9, 4),
     # 2024
     date(2024, 1, 1),
     date(2024, 2, 8),

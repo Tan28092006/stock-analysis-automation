@@ -217,7 +217,11 @@ def _result(broker: Broker, nav: list, **extra) -> dict:
                 receivables=broker.receivables, **extra)
 
 
-def replay_mr(frames: dict, rules: dict, start: str, end: str, signals: dict | None = None) -> dict:
+def replay_mr(frames: dict, rules: dict, start: str, end: str, signals: dict | None = None,
+              *, exit_policy: str = 'bracket') -> dict:
+    """Research exit comparison; fixed_hold keeps entry/sizing but disables brackets."""
+    if exit_policy not in ('bracket', 'fixed_hold'):
+        raise ValueError('Unknown MR exit_policy')
     frames, days, previous, rows = _inputs(frames, start, end)
     signals = mr_signals(frames, rules) if signals is None else signals
     broker = Broker(rules)
@@ -257,9 +261,9 @@ def replay_mr(frames: dict, rules: dict, start: str, end: str, signals: dict | N
                     bar, rows[symbol][prior]['close'], 'SELL', rules['backtest']['price_limit_pct']):
                 continue
             raw_px, reason = None, None
-            if float(bar['low']) <= position['stop']:
+            if exit_policy == 'bracket' and float(bar['low']) <= position['stop']:
                 raw_px, reason = min(position['stop'], float(bar['open'])), 'stop'
-            elif float(bar['high']) >= position['target']:
+            elif exit_policy == 'bracket' and float(bar['high']) >= position['target']:
                 raw_px, reason = position['target'], 'target'
             elif day >= position['expiry']:
                 raw_px, reason = float(bar['close']), 'time'
