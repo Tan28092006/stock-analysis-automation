@@ -7,6 +7,12 @@ from scripts import period_backtest as bt
 from tests.test_period_backtest import prices, rules, order
 
 
+def test_shb_exchange_transfer_is_not_imputed_as_missing_prices():
+    from stock_agent.data.exchange_calendar import symbol_trading_days_between
+    actual = symbol_trading_days_between('SHB', date(2021, 10, 5), date(2021, 10, 11))
+    assert actual == [date(2021, 10, 5), date(2021, 10, 11)]
+
+
 @pytest.mark.parametrize('day', [
     '2021-02-10', '2021-04-21', '2021-05-03', '2021-09-03',
     '2022-01-03', '2022-01-31', '2022-02-04', '2022-04-11',
