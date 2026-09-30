@@ -19,7 +19,6 @@ def test_exact_trial_inventory_and_required_windows():
     assert len(names) == len(set(names)) == 18
     assert 'pyramiding55/double_cost' in names
     assert 'daily20/delay_one_session' in names
-    fixture = Path('data/paper/research_gate/20260930/snapshot_20210824/manifest.json')
     # Source-based inventory does not depend on local private data existing in CI.
     assert lab().PARENT_REPLAYS == 1196
 

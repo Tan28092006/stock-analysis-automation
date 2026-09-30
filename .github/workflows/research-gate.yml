@@ -19,6 +19,7 @@ jobs:
       - run: python -m pytest tests/test_research_timeslices.py -q
       - run: python -m pytest tests/test_vn100_membership.py -q
       - run: python -m pytest tests/test_universe_expansion.py -q
+      - run: python -m pytest tests/test_momentum_events.py tests/test_momentum_event_suite.py -q
       - run: python -m pytest tests/test_pinned_market_fixtures.py -q
       - run: python -m pytest tests/test_paper_scoring.py tests/test_paper_runner.py tests/test_paper_cli.py tests/test_market_runtime_hardening.py -q
       - run: python -m pytest tests/test_research_gate.py tests/test_foreign_flow_research.py tests/test_foreign_flows_v2.py tests/test_foreign_refresh.py tests/test_eod_launcher.py tests/test_momentum_books.py tests/test_research_replay_contract.py tests/test_period_backtest.py tests/test_period_backtest_boundaries.py tests/test_momentum_hypotheses.py tests/test_historical_universe.py tests/test_exchange_calendar.py -q
@@ -40,6 +41,7 @@ jobs:
       - run: python -m scripts.momentum_books --manifest research-input/manifest.json --output research-output/books-v1
       - run: python -m scripts.research_timeslices --manifest research-input/manifest.json --gate-results research-output/results.json --book-results research-output/books-v1/results.json --output research-output/timeslices-v1
       - run: python -m scripts.universe_expansion --manifest research-vn100-input/manifest.json --output research-output/vn100-h1-v1
+      - run: python -m scripts.momentum_event_suite --manifest research-input/manifest.json --h1-manifest research-vn100-input/manifest.json --gate-results research-output/results.json --universe-results research-output/vn100-h1-v1/results.json --output research-output/events-v1
       - uses: actions/upload-artifact@v4
         if: always()
         with:

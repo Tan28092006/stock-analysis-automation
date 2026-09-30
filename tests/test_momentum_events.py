@@ -232,7 +232,7 @@ def test_delayed_add_cancelled_by_new_exit(market):
     frames, _, _, i = market
     rally(market, offset=0)
     frames['AAA']['volume'] = 100000.
-    set_bar(frames['AAA'], i + 7, 9000., opening=10725.)
+    set_bar(frames['AAA'], i + 5, 9000., opening=10575.)
     result = run(market, 'pyramiding55', 'delay_one_session', length=9)
     assert result['funnel'].get('cancelled_by_exit', 0) > 0
 

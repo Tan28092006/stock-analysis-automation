@@ -118,6 +118,9 @@ def replay(frames: dict, rules: dict, timeline: Timeline, start: str, end: str,
     if not required <= set(frames):
         raise ValueError('Missing PIT union price history')
     frames, days, previous, _ = bt._inputs({s: frames[s] for s in sorted(required)}, start, end)
+    # A later IPO in the historical union must not invalidate an earlier window.
+    # Its membership is still evaluated; unavailable pre-listing history cannot buy.
+    frames = {s: f for s, f in frames.items() if not f.empty}
     bt.validate_frames(frames, start, end)
     rows = {s: features(f, 20 if variant == 'daily20' else 55).set_index('date').to_dict('index')
             for s, f in frames.items()}
