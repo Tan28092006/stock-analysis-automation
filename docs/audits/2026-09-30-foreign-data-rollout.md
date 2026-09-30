@@ -151,3 +151,40 @@ trong lúc hồi quy 2.618 replay đang chạy. Bước sửa tiếp cần đăn
 contract, RED/GREEN test cho coverage/retry hữu hạn và giữ timestamp mọi
 lần nhận nguồn. Không xóa năm mã rời bảng tháng 7 khỏi lịch sử thu thập;
 105 là tập thu thập mở rộng, không phải khẳng định VN100 có 105 thành phần.
+
+## Đã tích hợp bộ thu thập sau kiểm chứng đầy đủ
+
+Checkpoint chưa hoàn tất ở trên được thay thế bởi trạng thái này: nhánh local
+`codex/data-integrity-audit` tại `D:/Chungkhoan` đã fast-forward từ `8dcced0`
+đến `b97a45d`, sau khi bản sửa vượt đầy đủ 2.618 replay trên Windows và CI
+`36709652180`, đối chiếu toàn bộ kết quả, nguồn và kiểm toán độc lập giao dịch.
+Chi tiết và hash được giữ trong `2026-09-30-foreign-data-contract.md`.
+
+Config mặc định hiện giữ cả 105 mã cũ/mới; BAT đã dùng `--retry-stale` với
+ba lần thử bổ sung có giới hạn. Mỗi batch có raw/manifest và availability riêng,
+và trạng thái được kiểm tra lại trên toàn rổ yêu cầu. Lịch 17:05 không đổi.
+Lần chạy tự động kế tiếp chưa diễn ra; không sửa `LastTaskResult=2` của lần cũ
+thành công, và không bảo đảm nguồn sẽ công bố đủ trong thời gian retry.
+
+Sau tích hợp, chạy lại toàn bộ test ngay tại thư mục vận hành: **659 passed**,
+23 warning hiện có, 184,93 giây. Compile các file Python thay đổi và kiểm tra
+whitespace đều đạt; không tuyên bố đã chạy Ruff/Pyright. CLI `--status` chỉ đọc
+báo `ready` cho phiên 30/09, 9.090 dòng vintage, không thiếu nhóm hoặc gap.
+Không chạy BAT, lấy snapshot mới, scan mới, retrain hoặc đặt lệnh trong bước này.
+
+Các tài liệu đang sửa được đối chiếu với bản sắp tích hợp rồi lưu riêng trong
+stash `31dba4294fcb8d42d0913a4852c52acaf35a1922`; nội dung đó đã có trong commit
+mới. Stash không gồm log/cache hoặc dữ liệu runtime. Hash của hai file
+`data/pipeline/local_server.log` và `data/pipeline/swing_scan_cache.json` giữ
+nguyên trước/sau tích hợp và sau bộ test.
+
+Worktree tạm đã được archive có snapshot Git khôi phục được. Bằng chứng coverage
+được giữ ngoài worktree tại `data/paper/foreign_readiness_verification/`:
+`.coverage` SHA256 `fc9512c9fe908af1ca95dbf8cb1467113b49ddc6ca55a75510ba5bec27c55f94`,
+`coverage.json` SHA256 `c5f5c3b3fc59469bc73b8e261fa85a18596792a3ea880f0fdd0c6116d5c9ba30`.
+Hai báo cáo smoke optimizer sinh từ dữ liệu demo của unit test trong worktree
+tạm không được giữ; đây không phải kết quả giả thuyết thị trường thật.
+
+Đây là tích hợp phần **thu thập dữ liệu**, không phải chấp nhận chiến lược.
+Quarantine các bản paper bị sửa volume vẫn giữ nguyên; chưa có chứng nhận
+finality từ nhà cung cấp, bằng chứng khớp lệnh thật hoặc lợi nhuận vốn thật.
