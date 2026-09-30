@@ -84,7 +84,7 @@ def inventory(raw_dir):
     pairs = [(detail[(r['symbol'], r['stored_date'])], r) for r in normalized.get('ndtnn_chart', [])
              if (r['symbol'], r['stored_date']) in detail and r['buy_bn'] > 0]
     unit_evidence = dict(overlaps_nonzero_buy=len(pairs),
-        matched_volume_and_unit_converted_value=sum(a['buy_vol'] == b['buy_vol'] and np.isclose(a['buy_bn'], b['buy_bn']) for a, b in pairs),
+        matched_volume_and_unit_converted_value=sum(bool(a['buy_vol'] == b['buy_vol'] and np.isclose(a['buy_bn'], b['buy_bn'])) for a, b in pairs),
         warning='Remaining differences may be revisions or matched/put-through definitions; sources are not blindly merged.')
     return report, normalized, unit_evidence
 
