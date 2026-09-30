@@ -1,4 +1,5 @@
 from datetime import date
+import json
 
 import pytest
 
@@ -35,3 +36,16 @@ def test_missing_and_nan_values_are_quarantined_not_zero():
 def test_monthly_is_not_daily_and_requires_period_key():
     with pytest.raises(ValueError, match='daily'):
         flow.normalize('ndtnn_monthly', dict(period='2026-06', symbol='ACB', buy_val=1, sell_val=0))
+
+
+def test_inventory_report_is_strict_json_and_uses_period_key(tmp_path):
+    detail = dict(date='2026-07-01', TradingDate='/Date(1782925200000)/', StockCode='AAA',
+                  BuyVal=1000, SellVal=500, BuyVol=100, SellVol=50)
+    chart = dict(date='2026-07-01', symbol='AAA', buy_val=1, sell_val=.5, buy_vol=100, sell_vol=50)
+    (tmp_path / 'ndtnn.jsonl').write_text(json.dumps(detail))
+    (tmp_path / 'ndtnn_chart.jsonl').write_text(json.dumps(chart))
+    (tmp_path / 'ndtnn_monthly.jsonl').write_text('\n'.join(json.dumps(dict(symbol='AAA', period=p)) for p in ['2026-06','2026-07']))
+    files, rows, units = flow.inventory(tmp_path)
+    assert files['ndtnn_monthly']['duplicate_rows'] == 0
+    assert units['matched_volume_and_unit_converted_value'] == 1
+    json.dumps(dict(files=files, units=units), allow_nan=False)
