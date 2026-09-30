@@ -175,3 +175,29 @@ GitHub reports artifact ID 11091789036, 37,448,188 bytes, archive digest
 the archive digest is provider-reported, not a locally retained ZIP checksum.
 No broker records or real-money return were evaluated. The economic rejection
 and execution/data/prospective limitations above remain unchanged.
+
+### Completed local regression audit
+
+The full chain in `execution_receipts_8dcced0_regression/` exited zero.
+All **2,618** replay paths are now complete. Before any root source changes,
+the recorded source hashes in every result were checked against the original
+local checkout bytes at `8dcced00c3ac76c566fffa2d06a35ea0c43ce048`.
+Complete economic payloads of all five suites match audited CI `36703736150`
+within an absolute tolerance of 1e-12; maximum observed delta is
+1.1102230246251565e-15. Snapshot hashes agree and every live-eligibility flag
+remains false. The earlier partial checkpoint is superseded by this audit.
+
+The remaining local result hashes are:
+
+- VN100: `adadf609056a79a96b4b43c09e0abb43e551fe7a86f9d4e30a6ec9bceae5b9f6`;
+  88 sources checked, maximum economic delta 1.1102230246251565e-16.
+- Events: `f15cd7bb44ba85b84aa5e1ba7c910d61ed5fe3d8f91dbc2b39d9b238cda10fd3`;
+  91 sources checked, maximum economic delta 8.881784197001252e-16.
+
+The independent local event audit also passes: 1,422 paths, 23,131 fills and
+69 registered comparisons; PIT membership, signal/entry timing, prior-bar
+volume caps, board lots, add-on limits, monthly entry/add classification and
+regime attribution reconcile. Aggregated counts across overlapping replays
+are audit counts, not distinct real trades. This certifies the receipt patch's
+regression evidence, not real execution or a profitable strategy. It does not
+replace the separate pending collection-readiness candidate regression.

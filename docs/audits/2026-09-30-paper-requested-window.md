@@ -207,3 +207,28 @@ rows changes the existing `volume >= 1.5 * prior_20_session_mean` Boolean gate.
 This small sample does **not** prove invariant MR decisions, rounded quantities,
 future data or entire portfolios. No scanner or new trade replay was run, and
 the exact revision quarantine remains unchanged.
+
+## Decision versus outcome lineage: code review follow-up
+
+Read-only inspection of `paper_scoring._outcome` and `simulate_mr_exit` confirms
+that scoring consumes the sealed recommendation; it does not regenerate the
+historical signal from the outcome vintage. Momentum's descriptive result uses
+the recorded signal close and the close 21 sessions later. MR uses the recorded
+stop/target/holding horizon, the next open and future OHLC bars; its volume tests
+are on entry/exit bars, not the pre-signal historical volume series.
+
+The exact shared-history check is a separate, earlier gate, so a positive-to-
+positive revision of historical volume can block an entire run even when no
+field read by the outcome calculation changes. This is not evidence that the
+original strategy, quantities or features would be unchanged under revised
+inputs. Decision-input finality and outcome-measurement comparability are two
+different questions. Neither one establishes actual fills.
+
+A possible future contract should preserve original decision/raw integrity,
+retain and expose later revisions, and test any narrowly permitted outcome
+comparison separately from signal readiness. It must not silently replace the
+old signal with a hindsight rerun, drop affected trades selectively, accept
+price/missing-session changes, or relabel informational returns as funded P&L.
+No scoring condition or derived score has changed during this review. Any
+implementation first requires registry entry, explicit refusal cases and
+RED/GREEN/CI evidence; the existing strict quarantine remains in force.

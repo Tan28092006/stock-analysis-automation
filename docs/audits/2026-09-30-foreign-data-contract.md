@@ -122,3 +122,109 @@ claiming full regression acceptance. The old receipt revision's successful CI
 is separately audited; it is not reused as proof for this candidate. No local
 signal scan, broker order or production pipeline activation is part of this
 candidate's smoke tests.
+
+### Evidence retention and partial comparison
+
+The candidate parent result (290 paths) has been compared with audited CI
+`36703736150`: complete economic blocks match to a maximum absolute difference
+of 1.1102230246251565e-15, with unchanged snapshot hash, all 85 recorded local
+source hashes verified, and `live_eligible=false`. Result SHA256:
+`2003f757583fdb1d8718a5824c6bc24933cbd79408ebc90612966da6bc45c4bd`.
+Its recorded Git commit is `99ce6e2`; subsequent `1685d14` only adds documentation
+and does not change the runtime/config content. The remaining candidate suites
+and the fresh remote artifact are not yet accepted by this partial comparison.
+
+Coverage evidence was copied without modification out of the temporary worktree
+to `D:/Chungkhoan/data/paper/foreign_readiness_verification/.coverage`.
+Both files have SHA256
+`fc9512c9fe908af1ca95dbf8cb1467113b49ddc6ca55a75510ba5bec27c55f94`.
+Reading the retained file from the candidate checkout reproduces collector 94%,
+refresh CLI 89%, combined 93% (405 statements, 27 uncovered).
+
+A read-only candidate `--status` against the runtime store reports ready for
+September 30 over its default 105-name basket: 9,090 vintage rows, no missing
+latest foreign/proprietary values and no internal gaps. No collection, signal
+scan or broker action was made by this check. Windows Task Scheduler still
+points to `D:/Chungkhoan/run_eod_update.bat`, with next run October 1 at 17:05;
+the last scheduled run remains exit 2. The later manual recovery does not
+rewrite that failed run or prove the next scheduled retry will succeed.
+
+### Completed candidate CI and downloaded-artifact audit
+
+[CI 36709652180](https://github.com/Tan28092006/stock-analysis-automation/actions/runs/36709652180)
+passed both contract and pinned-data-replay jobs for pushed head
+`1685d148b996cf06775ee85958f2c7f30de9118a`. All **2,618** paths completed.
+The downloaded results record PR test-merge commit
+`4a3a1dd8b854e6ed90ae69a54b262ebb44602847`; no merge into main occurred.
+All 92 distinct recorded source blobs match the pushed candidate, and both
+input snapshot hashes remain unchanged.
+
+Complete economic payloads of all five suites match audited CI `36703736150`
+using an absolute numeric tolerance of 1e-12.
+Maximum absolute delta is 5.551115123125783e-16, not a change in return or orders.
+The independent event audit passes for 1,422 paths, 23,131 fills and 69 registered
+comparisons, including PIT membership, signal/entry timing, prior-bar volume
+caps, board lots, add-on limits, monthly activity and regime attribution.
+Every result still has `live_eligible=false`; no strategy was promoted.
+
+| Remote result | SHA256 | Maximum absolute economic delta |
+|---|---|---:|
+| Parent | `54e35b16060d59b7688bbfb91031c910987fcf8f22ce8b25d8be44d13caaec1d` | 5.551115123125783e-16 |
+| Books | `592d92e7007dd3a924026d872a2bc6639139539d966bfc12cfb76d4daf9af745` | 5.551115123125783e-16 |
+| Timeslices | `a54cd7c0d7c5c2944e688f2d5ba34e0022cd43616adf59a1a050a7113ecf7825` | 0 |
+| VN100 | `edacad1d351355a1727f1cbf442ed1fd269e3b31ac0f0879161481e923007502` | 0 |
+| Events | `867875e3abdc151a076d30c292038daab5c818f9d19ff501e475afbc28b4263e` | 2.220446049250313e-16 |
+
+Artifacts are retained in `data/paper/research_gate/20260930/github_36709652180/`.
+GitHub reports artifact ID 11095220442, 37,448,250 bytes, archive digest
+`37568da9dd58d77ac3429573f333f78f1e3df3669a3ba02c4b3cab5aa2abc4a0`.
+That archive digest is provider-reported, not a locally retained ZIP checksum.
+The result hashes above were independently calculated from downloaded files.
+
+### Local candidate checkpoint: 1,000 paths verified, chain still running
+
+The local books suite (180 paths) and timeslices suite (530 cash restarts plus
+44 carry attributions) have also completed. Full economic-object comparisons
+against CI `36703736150`, snapshot checks and local source-byte checks pass:
+
+- Books SHA256 `68841c57f4ea058d8fe74194e648e649d612113148c9231056fa5d5367c34486`;
+  85 sources, maximum delta 1.1102230246251565e-15.
+- Timeslices SHA256 `947a0b4e34923f76b21547a41414839ba7f0225e1ba2cb788981f283e2e79cdc`;
+  86 sources, maximum delta 5.551115123125783e-17.
+
+Both record `1685d14`; the earlier parent records `99ce6e2`, whose relevant
+source/config bytes are unchanged by the intervening docs-only commit.
+The Windows VN100 and events suites are still pending; the successful remote
+audit does not silently mark this unfinished local process as complete.
+
+Subsequent local VN100 checkpoint: all 196 paths finished, bringing verified
+local replay paths to **1,196**. Full blocks, paired diagnostics, partition flag
+and trial count match the newly audited candidate CI `36709652180` with maximum
+absolute difference 1.1102230246251565e-16. The snapshot matches and all 88
+recorded local source hashes were verified against the frozen checkout.
+Result SHA256 is `cdce2b95886e4be5910ec53816146ee0f68d12c4096eaffaa5c306afc4701f02`;
+recorded source commit is `1685d14`, with `live_eligible=false`.
+Only the 1,422-path event suite remains pending in the local chain.
+
+### Completed Windows regression and final source audit
+
+The local chain has now exited zero after all **2,618** paths. This supersedes
+the earlier pending checkpoints. The event result SHA256 is
+`e554cdde1fd8ce86d7fbc7c45e5ad24c68588d294ece59f8c01b11edc4d081de`.
+Its complete protocol, panels, paired universe tests and live blockers match
+candidate CI `36709652180` within 8.881784197001252e-16 absolute roundoff.
+The independent auditor passes 1,422 event paths, 23,131 fills and all 69
+registered comparisons, with reconciled regime partitions for VN30, H1/VN30
+and H1/VN100. This is simulated-fill accounting, not brokerage evidence.
+
+Before releasing the source freeze, every recorded local source hash across
+all five suites was rechecked: 92 distinct paths, no byte mismatch. Full
+economic objects were re-compared against the new candidate CI; the maximum
+absolute difference across all five suites is 1.1102230246251565e-15, below
+the fixed comparison tolerance of 1e-12. Both pinned snapshot hashes match.
+All results retain `live_eligible=false` and the prior economic rejection.
+
+Acceptance here is for the collection-readiness implementation and unchanged
+historical economics. It does not certify provider finality, resolve the old
+paper volume-revision quarantine, change strategy-to-order parity, authenticate
+broker receipts or demonstrate real-money profit. No live scan occurred.
