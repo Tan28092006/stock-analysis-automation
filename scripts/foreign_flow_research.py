@@ -63,7 +63,8 @@ def inventory(raw_dir):
         daily = source in DAILY
         key = lambda r: (r.get('StockCode', r.get('symbol')), r.get('date' if daily else 'period'))
         keys = Counter(key(r) for r in rows)
-        dates = sorted({r.get('date' if daily else 'period') for r in rows})
+        dates = sorted({r.get('date' if daily else 'period') for r in rows},
+                       key=None if daily else lambda value: tuple(reversed([int(x) for x in value.split('/')])))
         clean, invalid = [], 0
         if daily:
             for row in rows:

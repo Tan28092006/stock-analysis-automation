@@ -41,6 +41,10 @@ def load_registry(path=REGISTRY):
     for block in r['blocks'].values():
         if date.fromisoformat(block['start']) > date.fromisoformat(block['end']):
             raise ValueError('Reversed block')
+    required = {'continuous', 'recent_6m', 'panic_2022', 'year_2023', 'year_2024',
+                'year_2025', 'year_2026_ytd', 'tariffs_2025', 'war_2026', 'rebound_2022'}
+    if set(r['blocks']) != required:
+        raise ValueError('Missing or unregistered required evaluation window')
     return r
 
 
