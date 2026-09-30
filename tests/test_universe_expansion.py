@@ -77,6 +77,15 @@ def test_paired_comparison_never_calls_losing_less_profit():
     with pytest.raises(ValueError): lab().compare_metrics(b,dict(a,index_return_pct=-21.))
 
 
+def test_numerical_roundoff_is_not_a_profit_or_outperformance():
+    a = dict(return_pct=0.,index_return_pct=0.,new_entries=0,additions=0,
+             fees_vnd=0.,max_drawdown_pct=0.)
+    c = lab().compare_metrics(a,dict(a,return_pct=1e-12))
+    assert not c['vn100_beats_vn30']
+    assert not c['vn100_beats_index']
+    assert not c['vn100_positive_net_and_beats_both']
+
+
 def test_cli_and_ci_cannot_silently_skip_vn100_input():
     workflow = Path('.github/workflows/research-gate.yml').read_text()
     assert 'scripts.universe_expansion' in workflow
