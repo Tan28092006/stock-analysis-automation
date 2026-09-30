@@ -5,6 +5,7 @@
 - Keep edits scoped to the user request.
 - Verify with tests when behavior changes.
 - Avoid touching the trading pipeline unless the task explicitly asks for it.
+- User-facing operation is backend/CLI-first: do not build a UI unless explicitly requested. When the user asks to see signals, run the code locally and report results in chat. Keep automatic data collection separate from on-demand signal viewing; this preference does not authorize broker orders or changing existing data-refresh schedules.
 
 ## Strategy research regression gate
 - For MR/momentum signals, selection, exits, sizing, costs, calendar, or data-contract changes, register the hypothesis before examining new results in `configs/research/research_gate_v1.json` (version the protocol when changing its design).
