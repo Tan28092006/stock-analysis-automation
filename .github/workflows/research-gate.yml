@@ -17,6 +17,7 @@ jobs:
       - run: pip install 'numpy>=1.26,<2' 'pandas>=2.2,<3' scipy requests python-dotenv scikit-learn pytest coverage
       - run: python -m scripts.research_gate --validate
       - run: python -m pytest tests/test_research_timeslices.py -q
+      - run: python -m pytest tests/test_vn100_membership.py -q
       - run: python -m pytest tests/test_research_gate.py tests/test_foreign_flow_research.py tests/test_foreign_flows_v2.py tests/test_foreign_refresh.py tests/test_eod_launcher.py tests/test_momentum_books.py tests/test_research_replay_contract.py tests/test_period_backtest.py tests/test_period_backtest_boundaries.py tests/test_momentum_hypotheses.py tests/test_historical_universe.py tests/test_exchange_calendar.py -q
   pinned-data-replay:
     needs: contracts
