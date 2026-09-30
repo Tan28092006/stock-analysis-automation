@@ -97,3 +97,39 @@ def test_mr_funnel_is_nested_and_matches_registered_bank(rules):
     counts=list(f['sequential_pass'].values())
     assert counts[0]>0 and counts==sorted(counts,reverse=True)
     assert f['signals']==sum(len(v) for v in f['signal_days'].values())
+
+
+def test_quality_ranking_actually_changes_selected_names_not_only_score():
+    data={'VNINDEX':frame(.001+np.sin(np.arange(300))*.005)}
+    for i in range(20):
+        returns=(.004+np.sin(np.arange(300))*.03) if i<10 else (.002+np.cos(np.arange(300))*.0002)
+        data[f'S{i:02}']=frame(returns+i*.000001)
+    generic,_=lab().targets(data,set(),'weekly')
+    quality,_=lab().targets(data,set(),'quality')
+    assert set(generic)=={f'S{i:02}' for i in range(10)}
+    assert set(quality)=={f'S{i:02}' for i in range(10,20)}
+    assert sum(quality.values())<=1.0000000001
+    data['NEW']=data['S00'].tail(100)
+    assert 'NEW' not in lab().targets(data,set(),'slope90')[0]
+
+
+def test_weekly_future_changes_do_not_modify_earlier_fills(rules):
+    data=inputs()
+    timeline=Timeline(dict(coverage_start='2024-01-01',coverage_end='2025-12-31',initial_known_on='2024-01-01',
+                           member_count=2,initial_members=['AAA','BBB'],changes=[]))
+    short=lab().run_one(data,rules,timeline,'2025-01-01','2025-01-17','slope90','normal')['replay']
+    changed=copy.deepcopy(data)
+    for f in changed.values(): f.loc[f.date>'2025-01-17',['open','high','low','close']]*=2
+    long=lab().run_one(changed,rules,timeline,'2025-01-01','2025-02-03','slope90','normal')['replay']
+    assert short['fills'] and short['fills']==[f for f in long['fills'] if f['date']<='2025-01-17']
+    assert short['nav']==[n for n in long['nav'] if n['date']<='2025-01-17']
+
+
+@pytest.mark.parametrize('scenario',['double_cost','delay_one_session'])
+def test_weekly_stresses_reconcile_and_do_not_mutate_rules(scenario,rules):
+    original=copy.deepcopy(rules)
+    timeline=Timeline(dict(coverage_start='2024-01-01',coverage_end='2025-12-31',initial_known_on='2024-01-01',
+                           member_count=2,initial_members=['AAA','BBB'],changes=[]))
+    run=lab().run_one(inputs(),rules,timeline,'2025-01-01','2025-02-03','weekly',scenario)
+    assert run['replay']['fills'] and run['reconciliation']['max_nav_error_vnd']<1e-5
+    assert rules==original
