@@ -79,3 +79,47 @@ def test_parent_missing_source_cannot_claim_regression_match(tmp_path):
     path.write_text(json.dumps(parent))
     with pytest.raises(ValueError, match='source'):
         m.verify_parent(path, 'x')
+
+
+def test_complete_synthetic_suite_accepts_real_parent_schemas_without_overwrite(tmp_path, monkeypatch, market):
+    m = lab()
+    frames, rules, timeline, i = market
+    rally(market)
+    files = {}
+    for symbol, frame in frames.items():
+        frame.to_csv(tmp_path / f'{symbol}.csv', index=False)
+        files[symbol] = {'path': f'{symbol}.csv'}
+    manifest, h1 = tmp_path/'manifest.json', tmp_path/'h1.json'
+    manifest.write_text('{}')
+    h1.write_text('{}')
+    timeline_path = tmp_path / 'timeline.json'
+    timeline_path.write_text(json.dumps(timeline.data))
+    monkeypatch.setattr(m.gate, 'TIMELINE', timeline_path)
+    monkeypatch.setattr(m, 'verify_snapshot', lambda path: {'files': files})
+    real_digest = m.gate.digest
+    p = m.events.load_protocol()
+    monkeypatch.setattr(m.gate, 'digest', lambda path: p['snapshots']['VN30'] if Path(path) == manifest else
+        p['snapshots']['H1'] if Path(path) == h1 else real_digest(path))
+    monkeypatch.setattr(m.universe, 'load_inputs', lambda *args: (frames, {'VN30': timeline, 'VN100': timeline}, rules))
+    bounds = dict(start=frames['VNINDEX'].date[i], end=frames['VNINDEX'].date[i + 6], kind='calendar')
+    monkeypatch.setattr(m, 'windows', lambda index, full: {'continuous' if full else 'h1_2026': bounds})
+    sources = list(Path('scripts').glob('*.py')) + list(Path('stock_agent').rglob('*.py')) + [m.gate.RULES, m.gate.REGISTRY]
+    hashes = {str(path): real_digest(path) for path in sources}
+    parent = dict(status='research_complete_live_blocked', manifest_sha256=p['snapshots']['VN30'],
+        source_hashes=hashes, blocks={'continuous': {'momentum': {'baseline': {'summary': {'return_pct': 0.}}}}})
+    old_trial = {'metrics': {'return_pct': -1.}}
+    old_universes = {u: {'cash_restart': {'momentum/baseline/normal': old_trial}} for u in ['VN30', 'VN100']}
+    up = dict(status='universe_research_complete_full_regression_required', manifest_sha256=p['snapshots']['H1'],
+        source_hashes=hashes, blocks=[dict(id='calendar_2026_h1', universes=old_universes)])
+    parent_path, up_path = tmp_path/'parent.json', tmp_path/'universe.json'
+    parent_path.write_text(json.dumps(parent))
+    up_path.write_text(json.dumps(up))
+    protected = {str(f): real_digest(f) for f in tmp_path.iterdir()}
+    result = m.run_suite(manifest, h1, parent_path, tmp_path/'out', up_path)
+    assert result['replay_count'] == 54 and result['live_eligible'] is False
+    assert result['panels']['H1_VN100']['prior_monthly_control'] == old_trial['metrics']
+    assert len(result['paired_universe_tests']) == 18
+    assert json.loads((tmp_path/'out/results.json').read_text())['status'] == 'research_complete_live_blocked'
+    assert all(real_digest(f) == h for f, h in protected.items())
+    with pytest.raises(FileExistsError):
+        m.run_suite(manifest, h1, parent_path, tmp_path/'out', up_path)
