@@ -18,33 +18,26 @@ jobs:
       - run: python -m scripts.research_gate --validate
       - run: python -m pytest tests/test_research_timeslices.py -q
       - run: python -m pytest tests/test_vn100_membership.py -q
+      - run: python -m pytest tests/test_universe_expansion.py -q
       - run: python -m pytest tests/test_research_gate.py tests/test_foreign_flow_research.py tests/test_foreign_flows_v2.py tests/test_foreign_refresh.py tests/test_eod_launcher.py tests/test_momentum_books.py tests/test_research_replay_contract.py tests/test_period_backtest.py tests/test_period_backtest_boundaries.py tests/test_momentum_hypotheses.py tests/test_historical_universe.py tests/test_exchange_calendar.py -q
   pinned-data-replay:
     needs: contracts
     runs-on: ubuntu-latest
-    env:
-      SNAPSHOT_RUN_ID: ${{ vars.RESEARCH_SNAPSHOT_RUN_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Require explicitly pinned input artifact
+      - name: Verify and extract immutable public-market fixtures
         run: |
-          if [ -z "$SNAPSHOT_RUN_ID" ]; then
-            echo 'BLOCKED: configure RESEARCH_SNAPSHOT_RUN_ID for artifact research-snapshot-v1; missing data is not a pass.'
-            exit 1
-          fi
-      - uses: actions/download-artifact@v4
-        with:
-          name: research-snapshot-v1
-          path: research-input
-          run-id: ${{ vars.RESEARCH_SNAPSHOT_RUN_ID }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          sha256sum --check tests/fixtures/research/SHA256SUMS
+          python -m zipfile -e tests/fixtures/research/research-snapshot-v1.zip research-input
+          python -m zipfile -e tests/fixtures/research/research-vn100-h1-v1.zip research-vn100-input
       - run: pip install 'numpy>=1.26,<2' 'pandas>=2.2,<3' scipy requests python-dotenv scikit-learn pytest
       - run: python -m scripts.research_gate --manifest research-input/manifest.json --output research-output
       - run: python -m scripts.momentum_books --manifest research-input/manifest.json --output research-output/books-v1
       - run: python -m scripts.research_timeslices --manifest research-input/manifest.json --gate-results research-output/results.json --book-results research-output/books-v1/results.json --output research-output/timeslices-v1
+      - run: python -m scripts.universe_expansion --manifest research-vn100-input/manifest.json --output research-output/vn100-h1-v1
       - uses: actions/upload-artifact@v4
         if: always()
         with:
