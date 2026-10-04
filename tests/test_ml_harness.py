@@ -161,3 +161,12 @@ def test_model_contract_requires_every_timestamp_in_order():
         {**GOOD, "fit_label_available_max": "2026-01-03T00:00:00+07:00"}, d)
     assert any("after_decision" in p for p in H.validate_model_contract(GOOD, pd.Timestamp("2026-01-02", tz=TZ)))
     assert "contract_version" in H.validate_model_contract({**GOOD, "contract_version": "v1"}, d)
+
+
+def test_fixed_geometry_folds_use_requested_train_and_test_sizes():
+    df = dataset(n_days=100, n_sym=3)
+    folds = H.purged_grouped_folds(df, 0, first_train_dates=40, test_block_dates=20)
+    assert len(folds) == 3 and [f.test_dates for f in folds] == [20, 20, 20]
+    assert folds[0].train_dates <= 40 and folds[0].train_dates >= 34  # purge removes the tail
+    with pytest.raises(ContractError):
+        H.purged_grouped_folds(df, 0, first_train_dates=95, test_block_dates=20)

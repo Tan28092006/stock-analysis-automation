@@ -37,7 +37,9 @@ class Fold:
 
 
 def purged_grouped_folds(frame: pd.DataFrame, n_splits: int, *, min_train_dates: int = 5,
-                         min_test_dates: int = 1, label_col: str = "win") -> list[Fold]:
+                         min_test_dates: int = 1, label_col: str = "win",
+                         first_train_dates: int | None = None,
+                         test_block_dates: int | None = None) -> list[Fold]:
     """Expanding date folds; all symbols of a signal date share a fold.
 
     ``label_available_at`` is mandatory (tz-aware): a train row is kept only if its
@@ -48,9 +50,20 @@ def purged_grouped_folds(frame: pd.DataFrame, n_splits: int, *, min_train_dates:
     avail = as_utc(frame["label_available_at"], "label_available_at").reset_index(drop=True)
     signal = pd.to_datetime(frame["signal_date"]).dt.normalize().reset_index(drop=True)
     days = np.sort(signal.unique())
-    if len(days) < n_splits + 1:
+    if first_train_dates is None and len(days) < n_splits + 1:
         raise ContractError("not enough independent dates for the requested folds")
-    blocks = np.array_split(days, n_splits + 1)
+    if first_train_dates is not None:
+        # Fixed geometry: first_train_dates of history, then consecutive test blocks.
+        if not test_block_dates:
+            raise ContractError("test_block_dates required with first_train_dates")
+        edges = list(range(first_train_dates, len(days), test_block_dates))
+        edges = [e for e in edges if e + test_block_dates <= len(days)]
+        if not edges:
+            raise ContractError("not enough independent dates for fixed fold geometry")
+        blocks = [days[:first_train_dates]] + [days[e:e + test_block_dates] for e in edges]
+        n_splits = len(edges)
+    else:
+        blocks = np.array_split(days, n_splits + 1)
     y = frame[label_col].reset_index(drop=True) if label_col in frame else None
     folds = []
     for k in range(1, n_splits + 1):
