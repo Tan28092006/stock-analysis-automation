@@ -394,16 +394,18 @@ và accounting/risk/execution readiness là lớp bằng chứng khác.
 | Work ID | Trạng thái 04/10 | Phụ thuộc | Deliverable / done criterion |
 |---|---|---|---|
 | R0 Agent onboarding | IMPLEMENTED documentation/discovery; verification xem audit bên dưới | Không | Root router, ownership/test map, historical-plan warning, current roadmap; verified links/commands, chưa full app boot/fresh-session outcome benchmark |
-| R1 Source/dataset contracts | PLANNED | R0; prereg contract change | Schemas/grain/as-of/missing/coverage registry + intentional-leak RED/GREEN tests |
-| R2 Canonical aggregation/catalog | PLANNED | R1 | Idempotent ingest/projection, pagination/receipts/revision/restore tests; no legacy promotion |
-| R3 Feature and strategy label builders | PLANNED | R1–R2 | Versioned F0–F3, separate MR15/momentum datasets, fast/slow cost parity, pending exclusion tests |
-| R4 Fold/transform/evidence harness | PLANNED | R3 | Purged grouped dates, serialized fold fit, OOF identity and availability tests; bundle validator |
+| R1 Source/dataset contracts | IMPLEMENTED (engineering, synthetic fixtures; `stock_agent/research_ml/contracts.py`, `tests/test_ml_contracts.py`) | R0; prereg contract change | Schemas/grain/as-of/missing/coverage registry + intentional-leak RED/GREEN tests |
+| R2 Canonical aggregation/catalog | PARTIAL (price vintages only: `catalog.py`, `tests/test_ml_catalog.py`; foreign-flow projection, pagination proof and RPO/RTO not done) | R1 | Idempotent ingest/projection, pagination/receipts/revision/restore tests; no legacy promotion |
+| R3 Feature and strategy label builders | IMPLEMENTED for F0/F2/F3 + MR15/mom_5/21/63 (`features.py`, `labels.py`, `tests/test_ml_features_labels.py`); F1/F4 BLOCKED; legacy `build_labeled_t2_dataset` still drops `cost_config` (characterization test) | R1–R2 | Versioned F0–F3, separate MR15/momentum datasets, fast/slow cost parity, pending exclusion tests |
+| R4 Fold/transform/evidence harness | IMPLEMENTED (`harness.py`, `evidence.py`, `tests/test_ml_harness.py`, `tests/test_ml_evidence.py`); not run on real data | R3 | Purged grouped dates, serialized fold fit, OOF identity and availability tests; bundle validator |
 | R5 Baselines / feature experiments | PLANNED | R4; activity floor agreed | Registered M0/M1 and one-family trials; retained failures and all pinned/regime evidence |
 | R6 Ensemble experiments | PLANNED | R5 sufficient samples | Single bases/mean/true OOF stack; calibration, error diversity/drop-base; no automatic promotion |
 | R7 Full research regression | PLANNED | R5–R6 | Full gate/books/slices/VN100/events + accounting/causality, cost/delay/multiplicity/activity decisions |
 | R8 Prospective readiness | BLOCKED for trading approval | R7 + execution/data blockers | Separate authorization, frozen candidate, complete expected sessions, matured outcomes/actual execution evidence |
 
-Next bounded implementation: **R1** — thiết kế/test source contract và as-of
+Next bounded implementation: **R5 prerequisites** (activity floor from the user, sample floors) — R1–R4 landed 2026-10-04, see below. Original R1 note:
+
+**R1** — thiết kế/test source contract và as-of
 dataset eligibility trước khi train hay mở rộng số model. Chốt activity floor
 trước R5; thiếu floor không ngăn viết contract/tests, nhưng ngăn activity acceptance.
 Update trạng thái tại bảng này và link exact run evidence, không tạo tracker
