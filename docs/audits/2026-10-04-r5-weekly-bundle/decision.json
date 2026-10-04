@@ -1,0 +1,15 @@
+{
+  "limitations": [
+    "development data",
+    "per-lot diagnostics, no NAV",
+    "R7 regression absent"
+  ],
+  "live_eligible": false,
+  "reviewer": null,
+  "status": "INCONCLUSIVE",
+  "validator": {
+    "blocked": [],
+    "problems": [],
+    "status": "engineering_complete"
+  }
+}

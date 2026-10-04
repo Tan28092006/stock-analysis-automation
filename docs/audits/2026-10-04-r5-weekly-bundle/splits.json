@@ -1,0 +1,18 @@
+{
+  "folds": [
+    {
+      "index": 0,
+      "problems": [],
+      "purged_rows": 30,
+      "test_dates": 40,
+      "train_dates": 120
+    },
+    {
+      "index": 1,
+      "problems": [],
+      "purged_rows": 30,
+      "test_dates": 40,
+      "train_dates": 160
+    }
+  ]
+}
