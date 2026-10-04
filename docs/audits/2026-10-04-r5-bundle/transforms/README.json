@@ -1,0 +1,3 @@
+{
+  "note": "per-fold transforms are fit inside forward_oof; hashes not persisted in R5 diagnostics"
+}

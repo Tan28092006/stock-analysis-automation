@@ -1,0 +1,152 @@
+{
+  "activity_floor": {
+    "applies_to": "monthly portfolio activity; reported separately from add-ons; never forced",
+    "distinct_entry_days_per_month_min": 3,
+    "flat_to_long_entries_per_month_min": 4
+  },
+  "artifact_hashes": {
+    "dataset_manifest.json": "32f540708964da0d0c92c6d9d37922bf38cdf83a0b8c1aba55ae9313c2a880cf",
+    "environment.json": "4fd27cc8ebf3b22556c0a1d1d4f47c0fc02968668a433b9fb0f95cc7901a7065",
+    "metrics.json": "e67bbe6e1e0bbdedb28bfcfc93165f93704206285c49e6a12afabc7c234a428c",
+    "portfolio/README.json": "f153cfd17e385de0cf372f832cf41144a9fc259ca1e4f5475a35c1d04d9710e5",
+    "predictions/README.json": "42b19b249532aa03ed38166933d81193638d98b26d890d59e7c144f5fb11dc2b",
+    "regression/README.json": "bcfbe81e8d216ee9346edeaa5a4e2734a6e284186025780715a743977c0eac06",
+    "source_manifest.json": "d0eef63056106b212e1ef860cb7642b4c8b704cb0c80372977a693b91d1f2d43",
+    "splits.json": "049c2542c68b26894d25dd2c722f1b6b65b326847a92631b4c44a44686bd698f",
+    "transforms/README.json": "7a5fb45b68cd528f8299878c7133c8aae9504777780eb7a0f66e2247ec210355"
+  },
+  "git_commit": "db6aa973e7b1ca6e603153e165e769493e388dc8",
+  "hypotheses": [
+    "H-MR01",
+    "H-MO01",
+    "H-P01(not run)"
+  ],
+  "parent": null,
+  "protocol": {
+    "controls": [
+      "m0_rule_only",
+      "universe_equal_weight_pit",
+      "label_shuffle_within_date"
+    ],
+    "costs": {
+      "commission_pct": 0.15,
+      "sell_tax_pct": 0.1,
+      "slippage_pct": 0.1
+    },
+    "data": {
+      "decision_window": {
+        "end": "2026-09-29",
+        "start": "2022-09-01"
+      },
+      "f1_f4": "BLOCKED: no PIT breadth/sector sources",
+      "foreign_f3": "BLOCKED: no verified foreign v2 vintages in the pinned snapshot; F3 trials not run",
+      "manifest": "tests/fixtures/research/research-snapshot-v1.zip (extracted manifest.json)",
+      "membership": "configs/research/vn30_membership_2022_2026.json",
+      "rules": "configs/rules_mr.json"
+    },
+    "decision_rule": "Floors unmet => BLOCKED/INCONCLUSIVE. Predictive metrics are diagnostics; acceptance needs net NAV/excess evidence from the R7 regression suite. All trials are retained, including failures.",
+    "feature_families": {
+      "f0_momentum": [
+        "f0_mom_126_21",
+        "f0_high_prox_120"
+      ],
+      "f0_reversal": [
+        "f0_ret_1",
+        "f0_ret_5"
+      ],
+      "f0_risk": [
+        "f0_vol_20",
+        "f0_drawdown_60"
+      ],
+      "f0_volume": [
+        "f0_volume_anomaly_20"
+      ],
+      "f2_liquidity": [
+        "f2_adv_value_20"
+      ]
+    },
+    "floors": {
+      "activity": {
+        "applies_to": "monthly portfolio activity; reported separately from add-ons; never forced",
+        "distinct_entry_days_per_month_min": 3,
+        "flat_to_long_entries_per_month_min": 4
+      },
+      "events_per_class_min": 50,
+      "source": "user decision 2026-10-04",
+      "test_dates_min": 40,
+      "train_dates_min": 120
+    },
+    "folds": {
+      "n_splits": 4,
+      "scheme": "expanding date folds, purge by label_available_at"
+    },
+    "metrics": {
+      "classification": [
+        "brier",
+        "log_loss",
+        "pr_auc"
+      ],
+      "ranking": [
+        "rank_ic_by_date"
+      ],
+      "system": [
+        "mean_net_return_pct",
+        "selected_events",
+        "months_below_activity_floor"
+      ]
+    },
+    "model_m1": {
+      "logistic": {
+        "C": 1.0,
+        "max_iter": 500
+      },
+      "ridge": {
+        "alpha": 10.0
+      },
+      "seed": 20261004
+    },
+    "not_run_here": [
+      "cost x2/delay stresses (R7)",
+      "portfolio NAV replay (R7)",
+      "ensembles (R6)"
+    ],
+    "preprocessing": {
+      "missing_indicators": true,
+      "scaler": "robust",
+      "winsor": [
+        0.01,
+        0.99
+      ]
+    },
+    "protocol": "ml_research_v1",
+    "registered_on": "2026-10-04",
+    "schema_version": 1,
+    "status_note": "Registered before any R5 result. Development data only (no untouched holdout). Not a live approval.",
+    "tasks": {
+      "mom_21": {
+        "decision_dates": "last session of each month",
+        "label": "mom_21",
+        "m0": "formation_6_1 rank, top 10 equal weight",
+        "m1": "ridge on 21-session net return, top 10"
+      },
+      "mr_fixed15": {
+        "candidates": "research_gate.mr_signal_bank variant fixed15 (PIT members)",
+        "label": "mr_fixed15",
+        "m0": "take every rule candidate",
+        "m1": "logistic filter on candidate features"
+      }
+    },
+    "trials": [
+      "baseline_all_features",
+      "drop_f0_reversal",
+      "drop_f0_momentum",
+      "drop_f0_risk",
+      "drop_f0_volume",
+      "drop_f2_liquidity"
+    ]
+  },
+  "sample_floors": {
+    "dates": 160,
+    "events_per_class": 50
+  }
+}

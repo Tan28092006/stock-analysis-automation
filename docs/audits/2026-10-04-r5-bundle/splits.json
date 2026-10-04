@@ -1,0 +1,920 @@
+{
+  "folds": [
+    {
+      "index": 0,
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": 1,
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": 2,
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": 3,
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features/0",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features/1",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features/2",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features/3",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold0:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold0:train_class0_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold0:train_class1_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold0:test_class0_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold0:test_class1_events_2<50"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold1:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold1:train_class0_events_8<50"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold1:train_class1_events_6<50"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold1:test_class1_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold1:test_class0_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold2:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold2:train_class0_events_11<50"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold2:train_class1_events_9<50"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold2:test_class1_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold2:test_class0_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold3:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold3:train_class0_events_14<50"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold3:train_class1_events_12<50"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold3:test_class1_events_6<50"
+      ]
+    },
+    {
+      "index": "mr/baseline_all_features",
+      "problems": [
+        "fold3:test_class0_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal/0",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal/1",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal/2",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal/3",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold0:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold0:train_class0_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold0:train_class1_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold0:test_class0_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold0:test_class1_events_2<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold1:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold1:train_class0_events_8<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold1:train_class1_events_6<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold1:test_class1_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold1:test_class0_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold2:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold2:train_class0_events_11<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold2:train_class1_events_9<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold2:test_class1_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold2:test_class0_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold3:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold3:train_class0_events_14<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold3:train_class1_events_12<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold3:test_class1_events_6<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_reversal",
+      "problems": [
+        "fold3:test_class0_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum/0",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum/1",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum/2",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum/3",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold0:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold0:train_class0_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold0:train_class1_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold0:test_class0_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold0:test_class1_events_2<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold1:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold1:train_class0_events_8<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold1:train_class1_events_6<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold1:test_class1_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold1:test_class0_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold2:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold2:train_class0_events_11<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold2:train_class1_events_9<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold2:test_class1_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold2:test_class0_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold3:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold3:train_class0_events_14<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold3:train_class1_events_12<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold3:test_class1_events_6<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_momentum",
+      "problems": [
+        "fold3:test_class0_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk/0",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk/1",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk/2",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk/3",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold0:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold0:train_class0_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold0:train_class1_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold0:test_class0_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold0:test_class1_events_2<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold1:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold1:train_class0_events_8<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold1:train_class1_events_6<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold1:test_class1_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold1:test_class0_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold2:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold2:train_class0_events_11<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold2:train_class1_events_9<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold2:test_class1_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold2:test_class0_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold3:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold3:train_class0_events_14<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold3:train_class1_events_12<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold3:test_class1_events_6<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_risk",
+      "problems": [
+        "fold3:test_class0_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume/0",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume/1",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume/2",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume/3",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold0:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold0:train_class0_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold0:train_class1_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold0:test_class0_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold0:test_class1_events_2<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold1:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold1:train_class0_events_8<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold1:train_class1_events_6<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold1:test_class1_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold1:test_class0_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold2:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold2:train_class0_events_11<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold2:train_class1_events_9<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold2:test_class1_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold2:test_class0_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold3:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold3:train_class0_events_14<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold3:train_class1_events_12<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold3:test_class1_events_6<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f0_volume",
+      "problems": [
+        "fold3:test_class0_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity/0",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity/1",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity/2",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity/3",
+      "problems": [
+        "insufficient_train_dates",
+        "insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold0:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold0:train_class0_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold0:train_class1_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold0:test_class0_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold0:test_class1_events_2<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold1:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold1:train_class0_events_8<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold1:train_class1_events_6<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold1:test_class1_events_4<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold1:test_class0_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold2:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold2:train_class0_events_11<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold2:train_class1_events_9<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold2:test_class1_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold2:test_class0_events_3<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold3:insufficient_train_dates,insufficient_test_dates"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold3:train_class0_events_14<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold3:train_class1_events_12<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold3:test_class1_events_6<50"
+      ]
+    },
+    {
+      "index": "mr/drop_f2_liquidity",
+      "problems": [
+        "fold3:test_class0_events_4<50"
+      ]
+    }
+  ]
+}
