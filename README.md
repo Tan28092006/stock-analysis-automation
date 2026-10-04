@@ -6,6 +6,8 @@
 
 Hệ thống nghiên cứu **lướt sóng T+ cho thị trường Việt Nam**, gồm các nhánh rules, momentum và mean-reversion. Universe giao dịch hiện tại theo `configs/universe_vn30.json`; universe thu thập dữ liệu có thể rộng hơn. Tín hiệu chạy **cuối phiên (EOD)**, không real-time.
 
+Agent bắt đầu tại [bản đồ repo và quy trình xác minh](docs/agent-workflow.md). Kế hoạch hiện hành cho dữ liệu, tiền xử lý và ensemble MR/momentum: [roadmap 04/10/2026](docs/plans/2026-10-04-data-ml-research-plan.md); đây là kế hoạch nghiên cứu, chưa phải pipeline ML mới đã triển khai.
+
 > **Mốc bằng chứng 30/09/2026:** xem [290 replay PIT và giới hạn thống kê](docs/audits/2026-09-30-strategy-reassessment.md), [chẩn đoán tần suất lệnh và nghiên cứu momentum từ sách](docs/audits/2026-09-30-momentum-books.md), [vận hành khối ngoại tự động](docs/FOREIGN-FLOWS.md). Kết quả cũ bên dưới không thay thế các báo cáo này. Chưa có chiến lược được chứng nhận lợi thế tiền thật; ML đang tắt.
 
 > **Kiểm toán 22/09/2026: CHƯA ĐẠT gate dữ liệu/leakage.** Đã tìm thấy đánh giá ensemble in-sample, preprocessing nhìn tương lai, nhãn MR chưa chín và thiếu provenance ledger. Các số backtest/calibration dưới đây là kết quả nghiên cứu cũ, không phải hiệu quả đã chứng nhận ngoài mẫu. Xem [báo cáo kiến trúc, bằng chứng và điều kiện trước retrain](docs/audits/2026-09-22-architecture-and-leakage.md). Sửa universe/EOD/ledger không đồng nghĩa model đã sạch; chưa retrain hoặc thay artifact trong đợt kiểm toán này.

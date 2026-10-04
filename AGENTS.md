@@ -22,6 +22,13 @@
 - Use skill files for reusable workflows.
 - Use MCP for external state or memory, not prompt stuffing.
 
+## Agent startup and task routing
+- Start with `docs/agent-workflow.md`: repository ownership map, safe discovery commands, test routes and handoff contract. Startup must not refresh data, scan signals, train models or change schedules.
+- For the current data/preprocessing/ensemble research roadmap, use `docs/plans/2026-10-04-data-ml-research-plan.md`. Its work ledger is the source of progress for that roadmap; planned tasks are not implemented capabilities.
+- For operational/system boundaries, consult `docs/audits/2026-10-04-system-design-review.md`; for foreign collection, consult `docs/FOREIGN-FLOWS.md`.
+- `docs/scrum_development_plan.md` is historical T+2 planning, not current MR/momentum acceptance. Runtime code, dated evidence and the registered research protocol take precedence over legacy README examples or test counts.
+- Load only the task-relevant references. Before handing off, record changed paths, exact verification commands/results, source revision and dirty-tree limitations, unresolved blockers and the next bounded action. Do not infer permission to push, promote or place orders from a successful check.
+
 ## Agent packaging targets
 - Codex should consume this file plus any `SKILL.md` adapters and MCP wiring.
 - Antigravity should consume `.agents/skills/**/SKILL.md` and plugin manifests.
