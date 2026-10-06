@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+import re
 
 import numpy as np
 import pandas as pd
@@ -192,3 +193,100 @@ def assert_no_target_leak(columns: list[str], *, allowlist: set[str]) -> None:
     bad = [c for c in columns if any(tok in c.lower() for tok in FORBIDDEN_FEATURE_TOKENS)]
     if bad:
         raise ContractError(f"target-like feature names: {bad}")
+
+
+# --- Ported R1 semantics (earlier parallel R1 implementation) -------------------
+# Additive: validate_source/asof_join/select_vintage behaviour above is unchanged.
+# Row statuses, worst first: invalid > quarantined > blocked > not_yet_available > eligible.
+ELIGIBLE, NOT_YET, BLOCKED, QUARANTINED, INVALID = (
+    "eligible", "not_yet_available", "blocked", "quarantined", "invalid")
+
+# Runtime stores without row provenance: never eligible for research datasets.
+LEGACY_PATH_PREFIXES = ("data/raw/foreign", "data/raw/prices", "data/raw/prices_hist", "data/pipeline")
+LEGACY_FLOW_PROVIDERS = ("ndtnn", "ndtnn_chart", "tudoanh_chart", "price_board_snapshots", "ndtnn_monthly",
+                         "ndtnn_quarterly", "tudoanh_monthly", "tudoanh_quarterly")
+FOREIGN_FLOW_SCHEMA_VERSION = 2
+FOREIGN_FLOW_SCOPE = "provider_chart_aggregate"  # matched_only/unknown are never mixed in
+_PATH_COLUMNS = ("source_path", "path", "raw_path")
+
+
+def is_legacy_path(path) -> bool:
+    """True for anything stored under a legacy, provenance-less runtime directory."""
+    text = str(path).replace("\\", "/").lower()
+    return any(re.search(r"(^|/)" + re.escape(p) + r"(/|$)", text) for p in LEGACY_PATH_PREFIXES)
+
+
+class _Reject(Exception):
+    def __init__(self, status: str, reason: str):
+        super().__init__(reason)
+        self.status, self.reason = status, reason
+
+
+def _absent(value) -> bool:
+    return value is None or (not isinstance(value, str) and pd.isna(value)) or value == ""
+
+
+def _row_ts(row: dict, name: str) -> pd.Timestamp:
+    value = row.get(name)
+    if _absent(value):
+        raise _Reject(QUARANTINED, f"missing_timestamp:{name}")
+    try:
+        stamp = pd.Timestamp(value)
+    except (TypeError, ValueError):
+        raise _Reject(INVALID, f"unparseable_timestamp:{name}") from None
+    if stamp.tzinfo is None:
+        raise _Reject(INVALID, f"naive_timestamp:{name}")
+    return stamp
+
+
+def _check_flow_row(row: dict) -> None:
+    for col in _PATH_COLUMNS:
+        if not _absent(row.get(col)) and is_legacy_path(row[col]):
+            raise _Reject(QUARANTINED, "legacy_storage_path")
+    if _absent(row.get("schema_version")) or row["schema_version"] != FOREIGN_FLOW_SCHEMA_VERSION:
+        raise _Reject(QUARANTINED, "schema_version_not_2")
+    if (not _absent(row.get("research_only")) and bool(row["research_only"])) or \
+            str(row.get("quality") or "").startswith("legacy"):
+        raise _Reject(QUARANTINED, "legacy_research_only_row")
+    if row.get("provider") in LEGACY_FLOW_PROVIDERS:
+        raise _Reject(QUARANTINED, "legacy_provider")
+    if row.get("trade_scope") != FOREIGN_FLOW_SCOPE:
+        raise _Reject(QUARANTINED, "trade_scope_not_contracted")
+    for name in ("observed_at", "available_at"):
+        _row_ts(row, name)
+    sha = row.get("raw_sha256")
+    if not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{64}", sha):
+        raise _Reject(QUARANTINED, "missing_provenance:raw_sha256")
+
+
+def screen_foreign_flow(frame: pd.DataFrame) -> pd.DataFrame:
+    """Per-row FOREIGN_FLOW eligibility; adds ``contract_status`` and ``contract_reason``.
+
+    Legacy/unprovenanced rows are QUARANTINED (never eligible, never coerced);
+    structurally broken rows are INVALID. Missing contract columns fail closed.
+    """
+    missing = [c for c in FOREIGN_FLOW.required if c not in frame]
+    if missing:
+        raise ContractError(f"{FOREIGN_FLOW.name}: missing columns {missing}")
+    out = frame.copy()
+    status, reason = [], []
+    for row in out.to_dict("records"):
+        try:
+            _check_flow_row(row)
+        except _Reject as exc:
+            status.append(exc.status)
+            reason.append(exc.reason)
+        else:
+            status.append(ELIGIBLE)
+            reason.append("")
+    out["contract_status"], out["contract_reason"] = status, reason
+    return out
+
+
+def eligible_foreign_flow(frame: pd.DataFrame) -> pd.DataFrame:
+    """Only contract-eligible rows, then validated by ``validate_source(FOREIGN_FLOW)``."""
+    screened = screen_foreign_flow(frame)
+    keep = screened[screened.contract_status == ELIGIBLE].drop(columns=["contract_status", "contract_reason"])
+    if keep.empty:
+        return keep.reset_index(drop=True)
+    return validate_source(keep.reset_index(drop=True), FOREIGN_FLOW)
