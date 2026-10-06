@@ -210,3 +210,22 @@ def provenance_fields(prov: dict | None) -> dict:
     return {k: prov.get(k) for k in ("history_mode", "history_source", "history_store_id",
                                      "history_store_manifest_sha256", "history_first_date", "history_rows",
                                      "history_mismatch")}
+
+
+def store_line(paths: DeskPaths, now, snapshot_as_of: str | None) -> dict:
+    """Fast history-store status for `status` / `refresh` (no hashing: selection runs `verify`)."""
+    from ..data.history_store import store_status
+    st = store_status(paths.history_root, now)
+    aborted = None
+    if st.get("store"):
+        try:
+            aborted = json.loads((Path(st["store"]) / "manifest.json").read_text(encoding="utf-8")).get("aborted")
+        except (OSError, ValueError):
+            aborted = "unreadable manifest"
+    return {"mode": paths.history if paths.history in MODES else "on", "root": str(paths.history_root),
+            "newest_store": Path(st["store"]).name if st.get("store") else None, "as_of": st.get("as_of"),
+            "sessions_behind": st.get("sessions_behind"), "stale": bool(st.get("stale")),
+            "counts": st.get("counts"), "aborted": aborted or None, "incomplete_dirs": st.get("incomplete_dirs", []),
+            "snapshot_as_of": snapshot_as_of,
+            "matches_snapshot_as_of": bool(st.get("as_of")) and st.get("as_of") == snapshot_as_of,
+            "verified": "not checked here; refresh/check/scan run `verify` before using a store"}

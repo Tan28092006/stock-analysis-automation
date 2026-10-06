@@ -15,7 +15,7 @@ from .calendar_events import (SELL_FROM, earliest_sell, holiday_table_end, horiz
                               next_vn30f_expiry, trade_session)
 from .config import DeskPaths, code_hash, load_config, load_universe_symbols
 from .gate import FAIL, evaluate_gate, verdict
-from .history import HistoryResolver, provenance_fields
+from .history import HistoryResolver, provenance_fields, store_line
 from .indicators import compute_ticker, flow_fields, jsonable
 from .journal import load_journal
 from . import reclog
@@ -354,6 +354,7 @@ def status(paths: DeskPaths, now: datetime, *, with_flows: bool = True) -> dict:
            "holiday_table_ends": str(holiday_table_end()),
            "horizon_warning": horizon_warning(trade_session(now)),
            "legacy_prices_hist": dl.legacy_prices_freshness(paths, now),
+           "history_store": store_line(paths, now, fresh.get("as_of")),
            "orders": "advisory only; the desk never places orders"}
     if with_flows:
         out["foreign_flows"], _ = dl.flows_snapshot(paths, load_universe_symbols(paths), now, None)

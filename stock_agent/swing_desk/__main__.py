@@ -24,7 +24,7 @@ def _paths(args) -> DeskPaths:
     repo = Path(args.repo).resolve()
     data_root = Path(args.data_root or os.environ.get("SWING_DESK_DATA_ROOT") or repo).resolve()
     desk = Path(args.desk).resolve() if args.desk else repo / "swing_desk"
-    return DeskPaths(repo=repo, data_root=data_root, desk=desk)
+    return DeskPaths(repo=repo, data_root=data_root, desk=desk, history=getattr(args, "history_mode", "on"))
 
 
 def _print(obj) -> None:
@@ -38,11 +38,18 @@ def build_parser() -> argparse.ArgumentParser:
                                        "(default: --repo or $SWING_DESK_DATA_ROOT)")
     p.add_argument("--desk", help="desk folder (default <repo>/swing_desk)")
     p.add_argument("--now", help=argparse.SUPPRESS)
+    p.add_argument("--history", dest="history_mode", choices=["on", "off"], default="on",
+                   help="on (default): long windows (SMA200, high_250, MAE/MFE, bottom-fish episode) from the "
+                        "newest verified data/history store that matches the snapshot; off: snapshot only "
+                        "(the pre-history behaviour). Put it before the command: --history off check TCB")
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("status", help="read-only freshness report")
     s.add_argument("--no-flows", action="store_true", help="skip foreign-flow health (faster)")
     r = sub.add_parser("refresh", help="reuse/fetch verified snapshot, optional flows, build desk state")
     r.add_argument("--with-flows", action="store_true", help="collect foreign flows if stale (not 16:30-18:30 VN)")
+    r.add_argument("--history", dest="fetch_history", action="store_true",
+                   help="also fetch a 10-year history store for VN30 + VNINDEX + held tickers when the newest "
+                        "store is stale (python -m stock_agent.data.history_store fetch, paced), then verify it")
     r.add_argument("--held", action="store_true",
                    help="only: fetch an isolated VCI snapshot for journal-held symbols outside VN30 (+VNINDEX) "
                         "into swing_desk/snapshots/extra/ (check/review only; never BUY)")
@@ -115,7 +122,7 @@ def main(argv=None) -> int:
             _print(refresh_held(paths, now=now, announce=print))
         elif args.cmd == "refresh":
             from .refresh import refresh
-            _print(refresh(paths, now=now, with_flows=args.with_flows))
+            _print(refresh(paths, now=now, with_flows=args.with_flows, fetch_history=args.fetch_history))
         elif args.cmd == "check" and args.mode == "bottomfish":
             result = service.check(paths, args.ticker, now=now, price=args.price, amount=args.amount,
                                    reason=args.reason, emotion=args.emotion, ack=args.ack, nav=args.nav,
