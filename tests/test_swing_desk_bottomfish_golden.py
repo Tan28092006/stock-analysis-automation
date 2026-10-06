@@ -68,8 +68,11 @@ def collect(tmp_path, monkeypatch) -> dict:
     paths.portfolio.unlink()
     state = service.compute_state(paths, NOW_EOD, s2_override=[], with_flows_data=False)
     out["scan_table"] = _text(service.gate_table(state))
-    out["desk_v1_sha256"] = hashlib.sha256((ROOT / "configs/swing_desk/desk_v1.json").read_bytes()).hexdigest()
-    out["prospective_v1_sha256"] = hashlib.sha256((ROOT / "configs/swing_desk/prospective_v1.json").read_bytes()).hexdigest()
+    # Hash LF-normalized bytes so CRLF (autocrlf) and LF checkouts agree.
+    out["desk_v1_sha256"] = hashlib.sha256(
+        (ROOT / "configs/swing_desk/desk_v1.json").read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+    out["prospective_v1_sha256"] = hashlib.sha256(
+        (ROOT / "configs/swing_desk/prospective_v1.json").read_bytes().replace(b"\r\n", b"\n")).hexdigest()
     out["params_hash"] = load_config(ROOT / "configs/swing_desk/desk_v1.json")["params_hash"]
     return json.loads(json.dumps(out, ensure_ascii=False, sort_keys=True, default=str))
 

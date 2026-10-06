@@ -37,12 +37,16 @@ def load_bf_config(path: Path | None = None) -> dict:
 
 
 def code_hash() -> str:
-    """Hash of the desk package source: identifies the deterministic rule code in log rows."""
+    """Hash of the desk package source: identifies the deterministic rule code in log rows.
+
+    Line endings are normalized so a CRLF (Windows autocrlf) and an LF checkout of the same
+    commit give the same hash.
+    """
     here = Path(__file__).parent
     digest = hashlib.sha256()
     for path in sorted(here.glob("*.py")):
         digest.update(path.name.encode())
-        digest.update(path.read_bytes())
+        digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
     return digest.hexdigest()[:16]
 
 
