@@ -205,6 +205,7 @@ def build_labeled_dataset_fast(
     from ..data.exchange_calendar import add_trading_days, next_trading_day, completed_session_date
     from ..data.validation import detect_corporate_action_flags
     from ..features.backtest import BacktestConfig, enforce_price_limit, round_trip_cost_pct
+    from ..features.mr_exit import simulate_mr_exit
     from ..features.signal_engine import score_symbol, precompute_signal_frames
     from ..features.feature_store import build_feature_snapshot
     from ..config import compute_rules_hash
@@ -291,25 +292,19 @@ def build_labeled_dataset_fast(
             
             stop_loss = float(signal.risk_plan.stop_loss)
             take_profit_1 = float(signal.risk_plan.take_profit_1)
-            exit_price = float(data.loc[exit_idx, "close"])
-            exit_reason = "T2_CLOSE"
-            actual_exit_idx = exit_idx
-            
-            for j in range(entry_idx, exit_idx + 1):
-                if j < entry_idx + 2:
-                    # Cannot exit on T+0 or T+1 (T+2 settlement rule)
-                    continue
-                day = data.loc[j]
-                if float(day["low"]) <= stop_loss:
-                    exit_price = stop_loss
-                    exit_reason = "STOP_LOSS"
-                    actual_exit_idx = j
-                    break
-                if float(day["high"]) >= take_profit_1:
-                    exit_price = take_profit_1
-                    exit_reason = "TAKE_PROFIT_1"
-                    actual_exit_idx = j
-                    break
+            # Shared canonical exit replay (features/mr_exit.simulate_mr_exit): T+2 settlement
+            # lock, then the FIRST of stop (checked first) / target, else the close of the
+            # scheduled exit bar. The horizon stays CALENDAR-based (exit_date above, exact bar
+            # required, row skipped otherwise) and is handed over in bars, as run_backtest does.
+            # Behaviour-preserving for every positive stop/target: see
+            # tests/test_fast_builder_exit_parity.py. Raw stop/target/close is returned;
+            # the price-limit clamp and costs below are unchanged.
+            actual_exit_idx, exit_price, reason, resolved = simulate_mr_exit(
+                data, entry_idx, stop_loss, take_profit_1,
+                max_hold=exit_idx - entry_idx, settle_lock=2)
+            if not resolved:  # unreachable: exit_idx is an observed bar of `data`
+                continue
+            exit_reason = {"stop": "STOP_LOSS", "target": "TAKE_PROFIT_1", "time": "T2_CLOSE"}[reason]
 
             exit_reference_idx = max(actual_exit_idx - 1, 0)
             exit_reference = float(data.loc[exit_reference_idx, "close"])
