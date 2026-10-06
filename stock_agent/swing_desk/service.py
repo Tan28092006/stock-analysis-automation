@@ -98,7 +98,14 @@ def _portfolio(journal, nav_arg, cfg):
 def check(paths: DeskPaths, ticker: str, *, now: datetime, price: float | None = None,
           amount: float | None = None, reason: str | None = None, emotion: str | None = None,
           ack: bool = False, nav: float | None = None, record: bool = True,
-          s2_override: list[str] | None = None) -> dict:
+          s2_override: list[str] | None = None, mode: str = "swing", profile: str | None = None,
+          tranche: int | None = None, why: str | None = None) -> dict:
+    if mode == "bottomfish":
+        from .bf_service import check_bottomfish
+        return check_bottomfish(paths, ticker, now=now, price=price, amount=amount, reason=reason, emotion=emotion,
+                                ack=ack, nav=nav, record=record, profile=profile, tranche=tranche, why=why)
+    if mode != "swing":
+        raise ValueError("mode must be swing or bottomfish")
     cfg = load_config(paths.config)
     ticker = ticker.upper()
     tday = trade_session(now)

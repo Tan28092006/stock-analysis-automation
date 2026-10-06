@@ -93,7 +93,9 @@ def classify_fall(fields: dict | None, market: dict, news: dict | None, *, data_
     breadth = market.get("breadth_pct")
     is_market = (_ok(fields.get("idx_ret_5d")) and fields["idx_ret_5d"] <= c["market_idx_ret_5d_pct"]) or \
         (panic and _ok(breadth) and breadth < c["market_breadth_max_pct"])
-    metrics = [f"idx_ret_5d {fields.get('idx_ret_5d')}", f"idio_ret_10d {idio:.1f}", f"beta_60 {fields['beta_60']:.2f}",
+    i5 = fields.get("idx_ret_5d")
+    metrics = [f"idx_ret_5d {i5:.1f}%" if _ok(i5) else "idx_ret_5d n/a", f"idio_ret_10d {idio:.1f}%",
+               f"beta_60 {fields['beta_60']:.2f}",
                f"regime {market.get('state')} breadth {breadth}"]
     if is_market and idio > c["idio_market_max_pct"]:
         return out("a", "market-wide panic with small idiosyncratic part", metrics)
@@ -521,7 +523,8 @@ def evaluate_bf_behaviour(*, ticker: str, fields: dict | None, journal, plan: di
 
     # BF-B3 "it's cheap now" (soft by user decision)
     cheap = why in b["b3_reasons"] or (_ok(dd) and dd <= b["b3_drawdown_250_pct"] and fall_type != "a")
-    add("BF-B3", cheap, "soft", "'cheap now': " + (f"why={why}" if why in b["b3_reasons"] else f"drawdown_250 {dd:.0f}% with type {fall_type}"))
+    add("BF-B3", cheap, "soft", "'cheap now': " + (f"why={why}" if why in b["b3_reasons"] else
+                                                     f"drawdown_250 {dd if not _ok(dd) else round(dd)}% with type {fall_type}"))
 
     # BF-B8 attention / crowd (soft)
     crowd = [x for x in ((reason or "").lower(), why or "") if x in b["b8_reasons"]]

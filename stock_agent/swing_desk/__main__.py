@@ -43,6 +43,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--no-flows", action="store_true", help="skip foreign-flow health (faster)")
     r = sub.add_parser("refresh", help="reuse/fetch verified snapshot, optional flows, build desk state")
     r.add_argument("--with-flows", action="store_true", help="collect foreign flows if stale (not 16:30-18:30 VN)")
+    r.add_argument("--held", action="store_true",
+                   help="only: fetch an isolated VCI snapshot for journal-held symbols outside VN30 (+VNINDEX) "
+                        "into swing_desk/snapshots/extra/ (check/review only; never BUY)")
     c = sub.add_parser("check", help="pre-trade check for one ticker")
     c.add_argument("ticker")
     c.add_argument("--price", type=float, help="live price you see now (VND)")
@@ -53,13 +56,21 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--nav", type=float, help="override NAV (VND) for sizing")
     c.add_argument("--json", action="store_true")
     c.add_argument("--no-log", action="store_true", help="do not append to checks.jsonl")
-    sub.add_parser("scan", help="gate table for all VN30 from current desk state")
+    c.add_argument("--mode", choices=["swing", "bottomfish"], default="swing",
+                   help="swing (default, unchanged) or bottomfish (BF-G/BF-B rules, profile plan)")
+    c.add_argument("--profile", choices=["P0", "P1", "P2", "P3"],
+                   help="bottomfish profile (default from configs/swing_desk/bottomfish_v1.json: P0 = no bottom-fishing)")
+    c.add_argument("--tranche", type=int, help="bottomfish P2: tranche number k of a pre-written plan=scalein")
+    c.add_argument("--why", help="bottomfish: cheap, anchor, old_high, news, forum, group, tip, kol, other")
+    sc = sub.add_parser("scan", help="gate table for all VN30 from current desk state")
+    sc.add_argument("--mode", choices=["swing", "bottomfish"], default="swing")
     v = sub.add_parser("review", help="portfolio review of swing_desk/portfolio.txt")
     v.add_argument("--show-nav", action="store_true")
     v.add_argument("--json", action="store_true")
     f = sub.add_parser("freeze", help="append frozen recommendation rows (before 09:00 VN)")
-    f.add_argument("--source", required=True, choices=["baseline", "desk", "single"],
-                   help="baseline freezes baseline+control by code; desk/single need --file")
+    f.add_argument("--source", required=True, choices=["baseline", "desk", "single", "bf_baseline", "bf_desk"],
+                   help="baseline freezes baseline+control by code; bf_baseline freezes bf_baseline+bf_knife+bf_random; "
+                        "desk/single/bf_desk need --file")
     f.add_argument("--file", type=Path, help="recommendations.json (array) for desk/single")
     f.add_argument("--model-id")
     f.add_argument("--n-rollouts", type=int, default=0)
@@ -72,6 +83,18 @@ def build_parser() -> argparse.ArgumentParser:
     e.add_argument("--session", required=True, help="trade session the check covers (YYYY-MM-DD)")
     e.add_argument("--event", action="append", default=[], help="YYYY-MM-DD:type (repeatable), e.g. 2026-10-09:ex_dividend")
     e.add_argument("--source", required=True, help="URL or document the calendar came from")
+    e.add_argument("--pending-dilution", action="store_true",
+                   help="bottomfish: the recorded events are an unresolved dilution vote / issue (BF-G5 BLOCK)")
+    e.add_argument("--resolved", action="append", default=[],
+                   help="YYYY-MM-DD:type of an event whose result/terms are now published (cite --source)")
+    n = sub.add_parser("bf-news", help="record cited news/margin facts for a bottom-fish check (agent-supplied)")
+    n.add_argument("ticker")
+    n.add_argument("--session", required=True, help="trade session the check covers (YYYY-MM-DD)")
+    n.add_argument("--class", dest="news_class", required=True, choices=["fact_negative", "none_found", "opinion_only"])
+    n.add_argument("--item", action="append", default=[], help="date|evidence_type|impact|type|url|quote (repeatable)")
+    n.add_argument("--insider-sell", action="append", default=[], help="start..end|shares|url (repeatable)")
+    n.add_argument("--margin", help="hose_ineligible=yes|no|broker_cut=<date|none>|[status=..|]checked=<date>|<url>...")
+    n.add_argument("--searched", action="append", default=[], help="URL actually opened while searching (repeatable)")
     return p
 
 
@@ -87,9 +110,22 @@ def main(argv=None) -> int:
     try:
         if args.cmd == "status":
             _print(service.status(paths, now, with_flows=not args.no_flows))
+        elif args.cmd == "refresh" and args.held:
+            from .refresh import refresh_held
+            _print(refresh_held(paths, now=now, announce=print))
         elif args.cmd == "refresh":
             from .refresh import refresh
             _print(refresh(paths, now=now, with_flows=args.with_flows))
+        elif args.cmd == "check" and args.mode == "bottomfish":
+            result = service.check(paths, args.ticker, now=now, price=args.price, amount=args.amount,
+                                   reason=args.reason, emotion=args.emotion, ack=args.ack, nav=args.nav,
+                                   record=not args.no_log, mode="bottomfish", profile=args.profile,
+                                   tranche=args.tranche, why=args.why)
+            if args.json:
+                _print(result)
+            else:
+                print(render.render_bf_check(result))
+            return {"PASS": 0, "WARN": 1, "BLOCK": 2}[result["verdict"]]
         elif args.cmd == "check":
             result = service.check(paths, args.ticker, now=now, price=args.price, amount=args.amount,
                                    reason=args.reason, emotion=args.emotion, ack=args.ack, nav=args.nav,
@@ -99,6 +135,9 @@ def main(argv=None) -> int:
             else:
                 print(render.render_check(result))
             return {"PASS": 0, "WARN": 1, "BLOCK": 2}[result["verdict"]]
+        elif args.cmd == "scan" and args.mode == "bottomfish":
+            from .bf_service import scan_rows, scan_table
+            print(scan_table(scan_rows(paths, now)))
         elif args.cmd == "scan":
             fresh = service.state_freshness(paths, now)
             if not fresh["ok"]:
@@ -120,6 +159,17 @@ def main(argv=None) -> int:
             if args.source == "baseline":
                 out = baseline.freeze_code_arms(paths, now=now)
                 _print({k: [r["ticker"] for r in v] for k, v in out.items()})
+            elif args.source == "bf_baseline":
+                from . import bf_arms
+                out = bf_arms.freeze_bf_arms(paths, now=now)
+                _print({k: [r["ticker"] for r in v] for k, v in out.items()})
+            elif args.source == "bf_desk":
+                from . import bf_arms
+                if not args.file or not args.model_id:
+                    raise ValueError("bf_desk freeze needs --file and --model-id")
+                rows = json.loads(args.file.read_text(encoding="utf-8"))
+                _print([r["id"] for r in bf_arms.freeze_bf_desk(paths, rows, now=now, model_id=args.model_id,
+                                                                n_rollouts=args.n_rollouts)])
             else:
                 if not args.file or not args.model_id:
                     raise ValueError("desk/single freeze needs --file and --model-id")
@@ -144,7 +194,29 @@ def main(argv=None) -> int:
                 day, _, kind = item.partition(":")
                 datetime.fromisoformat(day)
                 events.append({"date": day, "type": kind or "event"})
-            _print(service.mark_events(paths, args.ticker, args.session, events, args.source))
+            resolved = []
+            for item in args.resolved:
+                day, _, kind = item.partition(":")
+                datetime.fromisoformat(day)
+                resolved.append({"date": day, "type": kind or "event"})
+            data = None
+            if args.event or not resolved:
+                data = service.mark_events(paths, args.ticker, args.session, events, args.source,
+                                           pending_dilution=args.pending_dilution)
+            if resolved:
+                from .bf_facts import mark_resolved
+                data = mark_resolved(paths, args.ticker, args.session, resolved, args.source)
+            _print(data)
+        elif args.cmd == "bf-news":
+            from . import bf_facts
+            rec = bf_facts.mark_bf_news(
+                paths, args.ticker, args.session, news_class=args.news_class,
+                items=[bf_facts.parse_item(i) for i in args.item],
+                insider_sell=[bf_facts.parse_insider(i) for i in args.insider_sell],
+                margin=bf_facts.parse_margin(args.margin) if args.margin else None,
+                searched=args.searched, now=now)
+            _print({"ticker": rec["ticker"], "checked_session": rec["checked_session"], "class": rec["class"],
+                    "items": len(rec["items"]), "margin": bool(rec.get("margin")), "source_sha": rec["source_sha"]})
         return 0
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
