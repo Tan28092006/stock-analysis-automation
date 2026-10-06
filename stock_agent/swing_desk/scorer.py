@@ -174,3 +174,72 @@ def summarize(scored: list[dict], *, activity_floor: int = 4) -> dict:
                          "both regimes); describe only" if not enough else
                          "Floor reached: run the registered weekly block bootstrap before any claim")
     return out
+
+
+# ------------------------------------------------------------------ bottom-fish rows (bottomfish_prospective_v1)
+
+def _sma(values: list[float], k: int, n: int) -> float:
+    return sum(values[k - n + 1:k + 1]) / n if k + 1 >= n else float("nan")
+
+
+def score_bf_row(row: dict, df: pd.DataFrame | None) -> dict:
+    """P1 plan: fill at entry; lock e and e+1; from e+2 a close below the invalidation level, at/below the
+    catastrophe stop, above SMA5/EMA21 (exit signal) or the time stop exits at the NEXT open. An exit open on
+    a session that closes <= -6.5% is deferred to the following open (floor_lock_days). No look-ahead:
+    rows whose path is incomplete stay pending."""
+    out = {k: row.get(k) for k in ("id", "source", "ticker", "target_session", "episode_id", "bf_type", "profile")}
+    out["mode"] = "bottomfish"
+    if row.get("action") != "BUY":
+        return {**out, "status": "not_scored"}
+    if df is None or df.empty:
+        return {**out, "status": "pending", "reason": "no price data"}
+    days = _dates(df)
+    entry = row["entry"]
+    session = entry.get("session") or row["target_session"]
+    if session not in days:
+        if session > days[-1]:
+            return {**out, "status": "pending"}
+        return {**out, "status": "error", "reason": "entry session missing from data"}
+    i = days.index(session)
+    o, h, lo, c = (df[k].astype(float).tolist() for k in ("open", "high", "low", "close"))
+    if entry["type"] == "ato":
+        fill = o[i]
+    elif lo[i] <= entry["limit_price"]:
+        fill = min(o[i], entry["limit_price"])
+    else:
+        return {**out, "status": "no_fill"}
+    cat_pct = float(row.get("catastrophe_stop_pct", 12.0))
+    catastrophe = fill * (1 - cat_pct / 100)
+    inv = row.get("invalidation")
+    hold = int(row["time_stop_sessions"])
+    ema = pd.Series(c).ewm(span=21, adjust=False).mean().tolist()
+    signal_at = reason = None
+    for k in range(i + 2, i + hold + 1):
+        if k >= len(days):
+            return {**out, "status": "pending", "fill": fill}
+        if inv is not None and c[k] < float(inv):
+            signal_at, reason = k, "invalidation"
+        elif c[k] <= catastrophe:
+            signal_at, reason = k, "catastrophe"
+        elif row.get("exit_signal") == "close_above_sma5_or_ema21" and (c[k] > _sma(c, k, 5) or c[k] > ema[k]):
+            signal_at, reason = k, "exit_signal"
+        elif k == i + hold:
+            signal_at, reason = k, "time"
+        if signal_at is not None:
+            break
+    carry, x = 0, signal_at + 1
+    while True:
+        if x >= len(days):
+            return {**out, "status": "pending", "fill": fill, "planned_exit_reason": reason}
+        if (c[x] / c[x - 1] - 1) * 100 <= -LIMIT_PROXY:
+            carry, x = carry + 1, x + 1
+            continue
+        break
+    exit_price = o[x]
+    net = (exit_price * (1 - SELL_COST) / (fill * (1 + BUY_COST)) - 1) * 100
+    eff = float(row.get("effective_loss_pct", 19.6))
+    return {**out, "status": "resolved", "fill": fill, "fill_session": days[i], "exit_price": exit_price,
+            "exit_reason": reason, "signal_date": days[signal_at], "exit_date": days[x], "holding_sessions": x - i,
+            "floor_lock_days": carry, "net_pct": net, "net_pct_stress": (exit_price / fill - 1) * 100 - STRESS * 100,
+            "R": net / eff, "risk_pct": eff, "mae_pct": (min(lo[i:x + 1]) / fill - 1) * 100,
+            "mfe_pct": (max(h[i:x + 1]) / fill - 1) * 100, "win": net > 0}

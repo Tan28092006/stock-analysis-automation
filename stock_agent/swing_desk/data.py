@@ -179,3 +179,56 @@ def legacy_prices_freshness(paths: DeskPaths, now: datetime) -> dict:
 
 def finite_or_none(value):
     return value if isinstance(value, (int, float)) and math.isfinite(value) else None
+
+
+# ------------------------------------------------------------------ extra snapshots (`refresh --held`)
+
+def newest_extra_manifest(paths: DeskPaths, ticker: str) -> Path | None:
+    """Newest verified extra snapshot (desk-owned, outside data/) that contains `ticker`."""
+    root = paths.extra_snapshots
+    best, key = None, None
+    if not root.is_dir():
+        return None
+    for path in root.glob("*/manifest.json"):
+        try:
+            m = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if m.get("kind") != "market_snapshot" or m.get("status") != "verified" or ticker not in m.get("files", {}):
+            continue
+        k = (str(m.get("as_of")), str(m.get("completed_at") or m.get("fetched_at")))
+        if key is None or k > key:
+            best, key = path, k
+    return best
+
+
+def extra_freshness(paths: DeskPaths, now: datetime, ticker: str) -> dict:
+    """BF-G0 for a held symbol outside VN30: same checks as `freshness` on its extra snapshot."""
+    expected = str(completed_session_date(now))
+    out = {"ok": False, "expected_session": expected, "manifest": None, "as_of": None,
+           "manifest_sha256": None, "reason": "", "source": "extra"}
+    path = newest_extra_manifest(paths, ticker)
+    if path is None:
+        out["reason"] = f"{ticker} is not in the VN30 snapshot and has no verified extra snapshot; run `refresh --held`"
+        return out
+    out["manifest"] = str(path)
+    out["manifest_sha256"] = manifest_sha256(path)
+    try:
+        manifest = verify_snapshot(path)
+    except Exception as exc:
+        out["reason"] = f"extra snapshot failed re-verification: {exc}"
+        return out
+    out["as_of"] = manifest["as_of"]
+    for stamp in [manifest.get("completed_at"), manifest.get("fetched_at")]:
+        if stamp and datetime.fromisoformat(stamp) > now:
+            out["reason"] = "extra snapshot fetched after the stated time (clock/look-ahead)"
+            return out
+    if "VNINDEX" not in manifest["files"]:
+        out["reason"] = "extra snapshot has no VNINDEX (beta / fall type cannot be computed)"
+        return out
+    if manifest["as_of"] != expected:
+        out["reason"] = f"stale: extra snapshot as_of {manifest['as_of']} != completed session {expected}; run `refresh --held`"
+        return out
+    out.update(ok=True, reason=f"verified extra snapshot as_of {manifest['as_of']}",
+               file_sha256={s: e["sha256"] for s, e in manifest["files"].items()})
+    return out

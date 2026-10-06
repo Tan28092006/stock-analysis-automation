@@ -182,7 +182,89 @@ def build_review(paths: DeskPaths, *, now: datetime, show_nav: bool = False) -> 
               "journal_errors": [{"line": e["line"], "error": e["error"]} for e in journal.errors],
               "activity_floor_note": "Activity floor (>= 4/month) applies to desk ideas in the prospective log, not to your trades."}
     report["markdown"] = _markdown(report, nav if show_nav else None, nav_known, show_nav)
+    if any(e.reason == "bottomfish" for e in journal.buys()):
+        report["bottomfish"] = bf_review(paths, journal, frames, fresh, now)
+        report["markdown"] += _bf_markdown(report["bottomfish"])
     return jsonable(report) | {"markdown": report["markdown"]}
+
+
+def _invalid_level(text: str | None):
+    """`invalid=close<24100` -> 24100.0 (other forms are kept as text only)."""
+    if not text or "<" not in text:
+        return None
+    try:
+        return float(text.split("<", 1)[1].strip().replace(",", "").replace("_", ""))
+    except ValueError:
+        return None
+
+
+def bf_review(paths: DeskPaths, journal, frames: dict, fresh: dict, now: datetime) -> dict:
+    """Bottom-fish section: episodes, attempts, BF-B10 (held past time stop / below invalidation), floor-lock days."""
+    from .bottomfish import bf_buys
+    as_of = fresh.get("as_of")
+    episodes = defaultdict(list)
+    for e in bf_buys(journal):
+        episodes[(e.ticker, e.keys.get("episode", "").upper() or f"{e.ticker}-{e.date}")].append(e)
+    ep_rows = [{"ticker": t, "episode": ep, "attempts": len(v), "first": min(x.date for x in v),
+                "tranches": [x.keys.get("tranche") for x in v if x.keys.get("tranche")]} for (t, ep), v in sorted(episodes.items())]
+    open_rows = []
+    for t, p in sorted(journal.positions.items()):
+        if p.get("reason") != "bottomfish":
+            continue
+        df = frames.get(t)
+        if df is None and as_of:
+            ex = dl.extra_freshness(paths, now, t)
+            if ex["ok"]:
+                df = dl.load_frames(Path(ex["manifest"])).get(t)
+        theses = journal.theses(t)
+        keys = theses[-1].keys if theses else {}
+        inv, stop_day = _invalid_level(keys.get("invalid")), keys.get("time_stop")
+        sell_from = str(earliest_sell(date.fromisoformat(p["last_date"])))
+        row = {"ticker": t, "qty": p["qty"], "avg_cost": p["avg_cost"], "first_date": p["first_date"],
+               "sellable_from": sell_from, "invalid": keys.get("invalid"), "time_stop": stop_day,
+               "floor_lock_days": None, "b10": [], "price_data": df is not None}
+        if df is not None:
+            days = [str(d)[:10] for d in df["date"]]
+            c = df["close"].astype(float).tolist()
+            held = [k for k, d in enumerate(days) if d >= p["first_date"]]
+            row["floor_lock_days"] = sum(1 for k in held if k and (c[k] / c[k - 1] - 1) * 100 <= -6.5)
+            sellable = [days[k] for k in held if days[k] >= sell_from]
+            if stop_day:
+                late = [d for d in sellable if d > stop_day]
+                if late and as_of and as_of > late[0]:
+                    row["b10"].append(f"held past time stop {stop_day} (sellable since {late[0]})")
+            if inv is not None:
+                below = [days[k] for k in held if days[k] >= sell_from and c[k] < inv]
+                if below and as_of and as_of > below[0]:
+                    row["b10"].append(f"close {below[0]} below invalidation {inv:,.0f} and still held")
+        open_rows.append(row)
+    closed = [t for t in journal.closed if t.get("reason") == "bottomfish"]
+    nets = [t["net_pct"] for t in closed]
+    return {"episodes": ep_rows, "open": open_rows,
+            "closed": {"n": len(closed), "win_rate": sum(n > 0 for n in nets) / len(nets) * 100 if nets else None,
+                       "mean_net_pct": statistics.mean(nets) if nets else None,
+                       "descriptive_only": len(closed) < MIN_GROUP},
+            "b10_count": sum(1 for r in open_rows if r["b10"])}
+
+
+def _bf_markdown(bf: dict) -> str:
+    L = ["", "## Bắt đáy (BF)", "",
+         "Chỉ tư vấn; bắt đáy chưa có bằng chứng edge tiến cứu; loại (b) có bằng chứng trôi giảm.", "",
+         "| Mã | Episode | Số lần mua | Tầng | Lần đầu |", "|---|---|---|---|---|"]
+    for e in bf["episodes"]:
+        L.append(f"| {e['ticker']} | {e['episode']} | {e['attempts']} | {', '.join(e['tranches']) or '-'} | {e['first']} |")
+    L.append("")
+    for r in bf["open"]:
+        L.append(f"- {r['ticker']}: {vnd(r['qty'])} cp, giá vốn {vnd(r['avg_cost'])}, bán được từ {r['sellable_from']}, "
+                 f"invalid={r['invalid'] or 'chưa ghi'}, time_stop={r['time_stop'] or 'chưa ghi'}, "
+                 f"phiên sàn khi giữ {r['floor_lock_days'] if r['floor_lock_days'] is not None else 'n/a'}"
+                 + (f" — BF-B10: {'; '.join(r['b10'])}" if r["b10"] else ""))
+    c = bf["closed"]
+    L.append("")
+    L.append(f"Lệnh BF đã đóng: {c['n']}" + (f"; win {pct(c['win_rate'])}; net TB {pct(c['mean_net_pct'], 2)} (mô tả)"
+                                              if c["n"] else ""))
+    L.append("Desk không khuyến nghị bán hay giữ; BF-B10 chỉ ghi nhận việc giữ quá kế hoạch đã viết.")
+    return "\n".join(L) + "\n"
 
 
 def _markdown(r: dict, nav, nav_known: bool, show_nav: bool) -> str:

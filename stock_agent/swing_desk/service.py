@@ -36,13 +36,19 @@ def load_events(paths: DeskPaths) -> dict | None:
         return None
 
 
-def mark_events(paths: DeskPaths, ticker: str, session: str, events: list[dict], source: str) -> dict:
-    """Record that the event calendar was checked for `ticker` (agent/user supplied, cited)."""
+def mark_events(paths: DeskPaths, ticker: str, session: str, events: list[dict], source: str, *,
+                pending_dilution: bool = False) -> dict:
+    """Record that the event calendar was checked for `ticker` (agent/user supplied, cited).
+
+    `pending_dilution` marks the recorded events as an unresolved dilution vote/issue (bottom-fish
+    BF-G5) until `bf_facts.mark_resolved` records the result.
+    """
     data = load_events(paths) or {"checked": {}, "events": []}
     data["checked"][ticker.upper()] = session
     data["events"] = [e for e in data["events"] if e.get("ticker") != ticker.upper() or e.get("date", "") < session]
     for ev in events:
-        data["events"].append({"ticker": ticker.upper(), "source": source, **ev})
+        data["events"].append({"ticker": ticker.upper(), "source": source, **ev,
+                               **({"pending_dilution": True} if pending_dilution else {})})
     paths.events.parent.mkdir(parents=True, exist_ok=True)
     reclog._atomic_write(paths.events, json.dumps(data, ensure_ascii=False, indent=2))
     return data
@@ -92,7 +98,14 @@ def _portfolio(journal, nav_arg, cfg):
 def check(paths: DeskPaths, ticker: str, *, now: datetime, price: float | None = None,
           amount: float | None = None, reason: str | None = None, emotion: str | None = None,
           ack: bool = False, nav: float | None = None, record: bool = True,
-          s2_override: list[str] | None = None) -> dict:
+          s2_override: list[str] | None = None, mode: str = "swing", profile: str | None = None,
+          tranche: int | None = None, why: str | None = None) -> dict:
+    if mode == "bottomfish":
+        from .bf_service import check_bottomfish
+        return check_bottomfish(paths, ticker, now=now, price=price, amount=amount, reason=reason, emotion=emotion,
+                                ack=ack, nav=nav, record=record, profile=profile, tranche=tranche, why=why)
+    if mode != "swing":
+        raise ValueError("mode must be swing or bottomfish")
     cfg = load_config(paths.config)
     ticker = ticker.upper()
     tday = trade_session(now)
@@ -206,11 +219,13 @@ def compute_state(paths: DeskPaths, now: datetime, *, s2_override: list[str] | N
     health, flows = (dl.flows_snapshot(paths, universe, now, fresh.get("fetched_at"))
                      if with_flows_data else ({"status": "UNVERIFIED", "reason": "skipped"}, None))
     events = load_events(paths)
+    journal = load_journal(paths.portfolio, price_lookup=dl.close_lookup(frames))
+    nav_v, nav_source, _, _ = _portfolio(journal, None, cfg)
     tickers = {}
     for sym in universe:
         ind = compute_ticker(frames[sym], limit_proxy_pct=cfg["gate"]["limit_proxy_pct"],
                              excursion_lookback=cfg["excursion"]["lookback_entries"])
-        plan = size_plan(ind["close"], float(cfg["money"]["account_nav_default"]), cfg)
+        plan = size_plan(ind["close"], nav_v, cfg)
         g = evaluate_gate(ticker=sym, ind=ind, market=market, freshness=fresh, universe=universe, cfg=cfg,
                           trade_day=tday, plan=plan, s2=sym in s2_list, portfolio={}, events=events)
         fl = flow_fields(flows, sym, fresh["as_of"], ind["avg_value_20_bn"])
@@ -223,14 +238,16 @@ def compute_state(paths: DeskPaths, now: datetime, *, s2_override: list[str] | N
             "structural_gate_ex_setup": structural_verdict(g["rules"], STRUCTURAL_EXCLUDE | {"G11"}),
             "rules": g["rules"], "failed": g["failed"], "unverified": g["unverified"],
             "target": g.get("target"), "reward_risk": g.get("reward_risk"),
-            "plan_default_nav": {k: plan[k] for k in ("entry_ref", "stop_user", "stop_validated", "qty",
-                                                      "vnd_at_risk_nominal", "vnd_at_risk_effective")},
+            "plan_default_nav": {**{k: plan[k] for k in ("entry_ref", "stop_user", "stop_validated", "qty",
+                                                         "vnd_at_risk_nominal", "vnd_at_risk_effective", "nav")},
+                                 "nav_source": nav_source},
             "earliest_sell": f"{earliest_sell(tday)} {SELL_FROM}"})
     state_manifest = {
         "session": fresh["as_of"], "as_of": fresh["as_of"], "trade_session": str(tday),
         "snapshot_manifest": fresh["manifest"], "snapshot_manifest_sha256": fresh["manifest_sha256"],
         "file_sha256": fresh["file_sha256"], "flows_health": health, "s2_status": s2_status,
         "s2_symbols": s2_list, "desk_code_hash": code_hash(), "params_hash": cfg["params_hash"],
+        "nav_source": nav_source,
         "created_at": now.astimezone(timezone.utc).isoformat(),
         "limitations": ["Advisory only; no orders.", "Provider-adjusted prices; may differ from board prices.",
                         "Current fixed VN30 universe (survivorship).",

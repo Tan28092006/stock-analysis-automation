@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 
 DEFAULT_CONFIG = Path("configs/swing_desk/desk_v1.json")
+BF_CONFIG = Path("configs/swing_desk/bottomfish_v1.json")
+BF_PROTOCOL = Path("configs/swing_desk/bottomfish_prospective_v1.json")
 UNIVERSE = Path("configs/universe_vn30.json")
 
 
@@ -23,6 +25,14 @@ def load_config(path: Path | None = None) -> dict:
     path = Path(path or DEFAULT_CONFIG)
     cfg = json.loads(path.read_text(encoding="utf-8"))
     cfg["params_hash"] = sha256_bytes(canonical({k: v for k, v in cfg.items() if k != "params_hash"}))[:16]
+    return cfg
+
+
+def load_bf_config(path: Path | None = None) -> dict:
+    """Bottom-fish thresholds (separate file so desk_v1 and its params_hash stay unchanged)."""
+    path = Path(path or BF_CONFIG)
+    cfg = json.loads(path.read_text(encoding="utf-8"))
+    cfg["bf_params_hash"] = sha256_bytes(canonical({k: v for k, v in cfg.items() if k != "bf_params_hash"}))[:16]
     return cfg
 
 
@@ -90,6 +100,23 @@ class DeskPaths:
     @property
     def events(self) -> Path:
         return self.desk / "events" / "events.json"
+
+    @property
+    def bf_news(self) -> Path:
+        return self.desk / "events" / "bf_news.json"
+
+    @property
+    def extra_snapshots(self) -> Path:
+        """Isolated snapshots for held symbols outside VN30 (`refresh --held`)."""
+        return self.desk / "snapshots" / "extra"
+
+    @property
+    def bf_config(self) -> Path:
+        return self.repo / BF_CONFIG
+
+    @property
+    def bf_protocol(self) -> Path:
+        return self.repo / BF_PROTOCOL
 
     @property
     def universe(self) -> Path:

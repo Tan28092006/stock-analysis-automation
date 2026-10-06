@@ -1,6 +1,6 @@
 ---
 name: swing-desk
-description: "VN30 swing desk for this repository (advisory only). Use for: (1) a pre-trade check when the user names a VN30 ticker they want to buy now (PASS/WARN/BLOCK, failed rule ids, earliest sell T+2 afternoon, 3% and -8% stops, lot-100 size, VND at risk); (2) the daily desk run that produces at most 3 swing ideas through a deterministic data step, 4 analyst rollouts with cited news sentiment and VeriHarness verification, then freezes them in the prospective log; (3) a review of the user's journal swing_desk/portfolio.txt by gate, emotion tag and activity. Never places or authorizes broker orders and never changes data schedules."
+description: "VN30 swing desk for this repository (advisory only). Use for: (1) a pre-trade check when the user names a VN30 ticker they want to buy now (PASS/WARN/BLOCK, failed rule ids, earliest sell T+2 afternoon, 3% and -8% stops, lot-100 size, VND at risk); (2) the daily desk run that produces at most 3 swing ideas through a deterministic data step, 4 analyst rollouts with cited news sentiment and VeriHarness verification, then freezes them in the prospective log; (3) a review of the user's journal swing_desk/portfolio.txt by gate, emotion tag and activity; (4) a bottom-fish check after sharp falls. Never places or authorizes broker orders and never changes data schedules."
 ---
 
 # Swing desk (VN30, advisory)
@@ -42,6 +42,60 @@ breach, broken thesis, time stop, S1 exit), portfolio risk, closed-trade statist
 and by emotion tag (descriptive below 30 trades per group), behaviour flags B8/B9, and monthly activity
 (new entries, add-on buys, distinct entry days, zero-entry months). Never paste raw journal lines or
 NAV into chat unless the user asks (`--show-nav`).
+
+## Mode 4: bottom-fish check (when the user wants to buy after a sharp fall, "bắt đáy", or names a ticker at/near the floor)
+
+Rules, sources and profiles: `docs/audits/2026-10-06-bottom-fishing-research.md`; thresholds:
+`configs/swing_desk/bottomfish_v1.json`; protocol: `configs/swing_desk/bottomfish_prospective_v1.json`.
+Bottom-fishing has **no prospective evidence of edge**; firm-specific fundamental shocks (type b) have literature
+evidence of continued drift. Say this every time, with the caveat the desk prints:
+"Chỉ tư vấn; bắt đáy chưa có bằng chứng edge tiến cứu; loại (b) có bằng chứng trôi giảm."
+
+User decisions (2026-10-06): the default recommendation is **P0 = no bottom-fishing**; P1 (short bounce after a
+panic), P2 (up to 3 tranches, plan written before the first lot) and P3 (special situation, only after the event
+is resolved) are enabled when the user chooses them; P3 always says "no evidence of edge; measurement only".
+Risk per bottom-fish trade is 1% NAV at the effective loss (stop + one extra limit-down + costs). Held tickers
+outside VN30 can only get HOLD/SELL/AVOID facts, never BUY. BF-B2 (anchoring) and BF-B3 ("cheap now") are WARN.
+Missing data, news class or event calendar is BLOCK.
+
+1. `status --no-flows`. If the ticker is outside VN30 and held, ask before `refresh --held` (it calls VCI for the
+   held non-VN30 symbols plus VNINDEX into `swing_desk/snapshots/extra/`; no `data/` write, no schedule change).
+2. Classify the fall with sources you opened (never from memory). Search the company IR / HOSE disclosure page
+   and at least one reputable outlet for the last 20 sessions. Record what you found:
+   `bf-news <T> --session <S> --class fact_negative|none_found|opinion_only --item "date|evidence_type|impact|type|<URL>|<quote>" ...`
+   and the margin/warning status (`--margin "hose_ineligible=no|broker_cut=<date|none>|checked=<date>|<URL>"`).
+   `none_found` needs at least two `--searched <URL>` including one HOSE/HNX/SSC or company page. Check the event
+   calendar (EGM agenda, private placement, rights, ex-dates, earnings) and record it with
+   `events <T> --session <S> ... --source <URL>`; mark a pending dilution vote with `--pending-dilution` and,
+   once the result and terms are published, `events <T> --session <S> --resolved <date>:<type> --source <URL>`.
+   Unopened sources are UNVERIFIED and cannot support `none_found`.
+3. `check <T> --mode bottomfish --profile <P> --price <price the user sees> --amount <VND> [--why <code>]
+   [--reason bottomfish] [--emotion <tag>] [--tranche <k>]`. Without `--profile` the configured default P0 applies
+   (always BLOCK: no bottom-fishing).
+4. Report verbatim: verdict, fall type and its evidence, every failed BF-G/BF-B id, earliest sell (T+2 afternoon),
+   invalidation level, catastrophe stop, time-stop date, suggested quantity, VND at risk at the effective loss
+   (stop + one floor + costs) and the "3 more floors while locked" scenario. Then show the 10-question checklist
+   from `swing_desk/prompts/BOTTOMFISH_CHECKLIST.md`. A bottom-fish entry is not PASS until a THESIS line with
+   `bf_type=`, `profile=`, `invalid=`, `time_stop=`, `max_attempts=`, `checklist=done` exists (BF-G12); `--ack`
+   never replaces it.
+5. Never turn BLOCK into advice to buy, never suggest averaging down outside a pre-written `plan=scalein`, never
+   recommend buying on a floor day, and never reclassify a fall from (b) to (a)/(c) without a cited source. For a
+   held position, give the review facts (earliest sell, invalidation, time stop, upcoming events) and ask the user
+   for their plan; do not tell them to sell or hold.
+6. Daily desk run: bottom-fish ideas are **not** part of the 3 swing ideas. Phase 0 runs
+   `freeze --source bf_baseline` with the swing baseline (bf_baseline, bf_knife, bf_random, before 09:00 VN and
+   before any analyst row); analysts may add at most 1 bottom-fish idea, type (a) only, frozen with
+   `freeze --source bf_desk --file <rec.json> --model-id <model>`. No activity quota applies to bottom-fishing.
+
+Bottom-fish checklist (ask in this order, answers go in the THESIS line):
+- [ ] Fall type (a)/(b)/(c) with opened sources recorded by `bf-news`
+- [ ] Next event and date recorded by `events` (pending dilution marked; resolved only with a source)
+- [ ] Margin/warning status checked within 20 sessions
+- [ ] Profile chosen by the user (P0 default; P3 = no evidence of edge; measurement only)
+- [ ] Invalidation close, catastrophe stop and time-stop date written
+- [ ] VND loss if the stock locks at the floor 3 more sessions, and the user accepts it
+- [ ] Attempt number in this episode; for P2 the tranche plan written before tranche 1
+- [ ] THESIS line with `checklist=done`, then rerun `check`
 
 ## Mode 3: daily desk run (only when the user asks for swing ideas or a full desk review)
 

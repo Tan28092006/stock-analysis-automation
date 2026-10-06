@@ -1,0 +1,2082 @@
+{
+ "aaa_pass": {
+  "json": {
+   "ack_refused": false,
+   "acknowledged": false,
+   "amount": null,
+   "behaviour_block": false,
+   "checked_at": "2026-09-21T10:00:00+00:00",
+   "data_as_of": "2026-09-21",
+   "earliest_sell": "2026-09-24 13:00",
+   "emotion": null,
+   "eod_note": "EOD data as of 2026-09-21",
+   "exit_plan": "S1: bán khi đóng cửa > SMA5 hoặc sau 8 phiên; stop như trên",
+   "expected_session": "2026-09-21",
+   "failed": [],
+   "flows": {
+    "flow_status": "UNVERIFIED",
+    "reason": "no desk state for this session (run refresh)"
+   },
+   "horizon_warning": null,
+   "indicators": {
+    "adx14": 79.96268493848,
+    "atr14": 3827.932845046058,
+    "atr_pct": 1.979016394559749,
+    "avg_value_20_bn": 614.469702,
+    "bb_lower": 189078.5463628701,
+    "bb_upper": 220567.92163712988,
+    "close": 193426.03,
+    "date": "2026-09-21",
+    "day2_ret_given_breach": -5.90999880085058,
+    "dist_high_20_pct": 13.521763332473924,
+    "ema21": 201660.7474142422,
+    "ema50": 184350.01151066757,
+    "gap_open_1d": -3.0000008023739033,
+    "high": 194393.16,
+    "high_20": 219580.64,
+    "high_250": 219580.64,
+    "limit_down_t": false,
+    "limit_up_t": false,
+    "limit_up_t1": false,
+    "locked_breach_3pct_rate": 1.6,
+    "locked_mae_p50": -0.4999996845771737,
+    "locked_mae_p80": -0.5000046099792388,
+    "locked_mae_p90": -0.500009507577478,
+    "low": 192458.9,
+    "low_20": 191993.75,
+    "mae5_p50": -0.49999974054224516,
+    "mfe5_p50": 3.7809480322555045,
+    "minus_di14": 41.66175876922286,
+    "n_breach": 3,
+    "n_locked": 250,
+    "n_window5": 250,
+    "open": 193426.03,
+    "pct_b": 0.13806192086267374,
+    "plus_di14": 32.298637646299575,
+    "prev_close": 199408.28,
+    "ret_1d": -3.0000008023739033,
+    "ret_20d": 1.016863733585338,
+    "ret_3d": -8.7326994711314,
+    "ret_5d": -10.77692736148126,
+    "rows": 300,
+    "rsi14": 43.424343765399996,
+    "rsi2": 2.008555033016691,
+    "sma20": 204823.234,
+    "sma200": 110652.14755,
+    "sma5": 205766.322,
+    "sma50": 183293.4698,
+    "stop_atr_multiple": 1.5159045717089061,
+    "up_streak": 0,
+    "vol_ratio_20": 1.0,
+    "vsa_no_supply": 0,
+    "vsa_stopping_volume": 0
+   },
+   "journal_errors": [],
+   "market": {
+    "breadth_pct": 66.7,
+    "date": "2026-09-21",
+    "index_atr_pct": 1.0153218916774174,
+    "index_close": 1603.04,
+    "index_ema50": 1541.78,
+    "index_ret_1d": 0.17121789664438225,
+    "index_ret_5d": 0.7213048832591884,
+    "limit_down_count": 0,
+    "limit_up_count": 0,
+    "regime": "RISK_ON",
+    "state": "RISK_ON"
+   },
+   "nav_source": "journal",
+   "out_of_scope": false,
+   "params_hash": "4319bf8f482887ab",
+   "plan": {
+    "capped_by": null,
+    "effective_loss_pct": 4.6,
+    "effective_loss_pct_validated": 9.6,
+    "entry_ref": 193426.03,
+    "nav": 1000000000.0,
+    "position_value": 217217431.69,
+    "qty": 1123,
+    "qty_if_validated_stop": 538,
+    "risk_budget_vnd": 10000000.0,
+    "stop_user": 187623.2491,
+    "stop_validated": 177951.9476,
+    "vnd_at_risk_effective": 9992001.85774,
+    "vnd_at_risk_nominal": 6516522.950699999,
+    "weight_pct": 21.721743169
+   },
+   "price": null,
+   "reason": null,
+   "recheck_from": null,
+   "reward_risk": 1.6153765799956123,
+   "rules": [
+    {
+     "id": "G0",
+     "kind": "gate",
+     "reason": "verified snapshot as_of 2026-09-21",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G1",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G2",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G3",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G4",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G5",
+     "kind": "gate",
+     "reason": "no --price given",
+     "severity": "hard",
+     "status": "NA"
+    },
+    {
+     "id": "G6",
+     "kind": "gate",
+     "reason": "ATR 2.0%",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G7",
+     "kind": "gate",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G8",
+     "kind": "gate",
+     "reason": "R:R 1.62 (target 204,823)",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G9",
+     "kind": "gate",
+     "reason": "order 21.7% NAV, open risk 1.00% NAV",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G10",
+     "kind": "gate",
+     "reason": "no known event to 2026-09-25",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G11",
+     "kind": "gate",
+     "reason": "S1",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "B1",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B2",
+     "kind": "behaviour",
+     "reason": "no --price given",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B6",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "COOL",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3P",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B4",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B5",
+     "kind": "behaviour",
+     "reason": "fewer than 3 prior entries",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B7",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    }
+   ],
+   "s2_status": "override",
+   "setups": [
+    "S1"
+   ],
+   "target": 204823.234,
+   "thesis_present": false,
+   "thesis_required": false,
+   "ticker": "AAA",
+   "trade_session": "2026-09-22",
+   "unverified": [],
+   "verdict": "PASS"
+  },
+  "text": "AAA — PASS   (dữ liệu EOD tới 2026-09-21, snapshot sha <sha>)\nPhiên giao dịch: 2026-09-22. EOD data as of 2026-09-21\nLuật không đạt: không có\nSetup: S1\nBán được sớm nhất: chiều 2026-09-24 13:00 (T+2). Stop 3% KHÔNG thực thi được trước thời điểm này.\nGiá tham chiếu: 193.426 (đóng cửa gần nhất)\nStop 3%: 187.623 | stop đã kiểm định (RSI2, −8%): 177.952\nTarget: 204.823 | R:R 1.62\nSize gợi ý (rủi ro 1,0% NAV, lỗ hiệu dụng 4,6%): 1.123 cp ≈ 217,2 tr\n  VND rủi ro: ở stop 3% 6,5 tr; hiệu dụng (3% + gap + phí) 10,0 tr. Nếu dùng stop −8%: 538 cp\nNAV dùng để tính: journal\nThoát: S1: bán khi đóng cửa > SMA5 hoặc sau 8 phiên; stop như trên\nDòng tiền NN (chú thích A4, không đổi verdict): UNVERIFIED\nTư vấn, không phải lệnh. PASS = không có cờ đỏ + có setup đã biết, không phải 'sẽ thắng'."
+ },
+ "aaa_price_amount": {
+  "json": {
+   "ack_refused": false,
+   "acknowledged": false,
+   "amount": 300000000,
+   "behaviour_block": false,
+   "checked_at": "2026-09-21T10:00:00+00:00",
+   "data_as_of": "2026-09-21",
+   "earliest_sell": "2026-09-24 13:00",
+   "emotion": null,
+   "eod_note": "EOD data as of 2026-09-21",
+   "exit_plan": "S1: bán khi đóng cửa > SMA5 hoặc sau 8 phiên; stop như trên",
+   "expected_session": "2026-09-21",
+   "failed": [
+    "G9",
+    "B5"
+   ],
+   "flows": {
+    "flow_status": "UNVERIFIED",
+    "reason": "no desk state for this session (run refresh)"
+   },
+   "horizon_warning": null,
+   "indicators": {
+    "adx14": 79.96268493848,
+    "atr14": 3827.932845046058,
+    "atr_pct": 1.979016394559749,
+    "avg_value_20_bn": 614.469702,
+    "bb_lower": 189078.5463628701,
+    "bb_upper": 220567.92163712988,
+    "close": 193426.03,
+    "date": "2026-09-21",
+    "day2_ret_given_breach": -5.90999880085058,
+    "dist_high_20_pct": 13.521763332473924,
+    "ema21": 201660.7474142422,
+    "ema50": 184350.01151066757,
+    "gap_open_1d": -3.0000008023739033,
+    "high": 194393.16,
+    "high_20": 219580.64,
+    "high_250": 219580.64,
+    "limit_down_t": false,
+    "limit_up_t": false,
+    "limit_up_t1": false,
+    "locked_breach_3pct_rate": 1.6,
+    "locked_mae_p50": -0.4999996845771737,
+    "locked_mae_p80": -0.5000046099792388,
+    "locked_mae_p90": -0.500009507577478,
+    "low": 192458.9,
+    "low_20": 191993.75,
+    "mae5_p50": -0.49999974054224516,
+    "mfe5_p50": 3.7809480322555045,
+    "minus_di14": 41.66175876922286,
+    "n_breach": 3,
+    "n_locked": 250,
+    "n_window5": 250,
+    "open": 193426.03,
+    "pct_b": 0.13806192086267374,
+    "plus_di14": 32.298637646299575,
+    "prev_close": 199408.28,
+    "ret_1d": -3.0000008023739033,
+    "ret_20d": 1.016863733585338,
+    "ret_3d": -8.7326994711314,
+    "ret_5d": -10.77692736148126,
+    "rows": 300,
+    "rsi14": 43.424343765399996,
+    "rsi2": 2.008555033016691,
+    "sma20": 204823.234,
+    "sma200": 110652.14755,
+    "sma5": 205766.322,
+    "sma50": 183293.4698,
+    "stop_atr_multiple": 1.5159045717089061,
+    "up_streak": 0,
+    "vol_ratio_20": 1.0,
+    "vsa_no_supply": 0,
+    "vsa_stopping_volume": 0
+   },
+   "journal_errors": [],
+   "market": {
+    "breadth_pct": 66.7,
+    "date": "2026-09-21",
+    "index_atr_pct": 1.0153218916774174,
+    "index_close": 1603.04,
+    "index_ema50": 1541.78,
+    "index_ret_1d": 0.17121789664438225,
+    "index_ret_5d": 0.7213048832591884,
+    "limit_down_count": 0,
+    "limit_up_count": 0,
+    "regime": "RISK_ON",
+    "state": "RISK_ON"
+   },
+   "nav_source": "journal",
+   "out_of_scope": false,
+   "params_hash": "4319bf8f482887ab",
+   "plan": {
+    "capped_by": null,
+    "effective_loss_pct": 4.6,
+    "effective_loss_pct_validated": 9.6,
+    "entry_ref": 193426.03,
+    "nav": 1000000000.0,
+    "position_value": 217217431.69,
+    "qty": 1123,
+    "qty_if_validated_stop": 538,
+    "requested": {
+     "amount": 300000000,
+     "over_budget": true,
+     "qty": 1550,
+     "risk_effective_pct_nav": 1.3791275938999998,
+     "risk_nominal_pct_nav": 0.8994310395,
+     "value": 299810346.5,
+     "vnd_at_risk_effective": 13791275.939,
+     "vnd_at_risk_nominal": 8994310.395,
+     "weight_pct": 29.981034649999998
+    },
+    "risk_budget_vnd": 10000000.0,
+    "stop_user": 187623.2491,
+    "stop_validated": 177951.9476,
+    "vnd_at_risk_effective": 9992001.85774,
+    "vnd_at_risk_nominal": 6516522.950699999,
+    "weight_pct": 21.721743169
+   },
+   "price": null,
+   "reason": null,
+   "recheck_from": null,
+   "reward_risk": 1.6153765799956123,
+   "rules": [
+    {
+     "id": "G0",
+     "kind": "gate",
+     "reason": "verified snapshot as_of 2026-09-21",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G1",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G2",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G3",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G4",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G5",
+     "kind": "gate",
+     "reason": "no --price given",
+     "severity": "hard",
+     "status": "NA"
+    },
+    {
+     "id": "G6",
+     "kind": "gate",
+     "reason": "ATR 2.0%",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G7",
+     "kind": "gate",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G8",
+     "kind": "gate",
+     "reason": "R:R 1.62 (target 204,823)",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G9",
+     "kind": "gate",
+     "reason": "effective loss 13,791,276 > budget 10,000,000 (compliant size 1,123 shares); weight 30.0% > 25.0%",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "G10",
+     "kind": "gate",
+     "reason": "no known event to 2026-09-25",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G11",
+     "kind": "gate",
+     "reason": "S1",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "B1",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B2",
+     "kind": "behaviour",
+     "reason": "no --price given",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B6",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "COOL",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3P",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B4",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B5",
+     "kind": "behaviour",
+     "reason": "weight 30.0% > 25.0%",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "B7",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    }
+   ],
+   "s2_status": "override",
+   "setups": [
+    "S1"
+   ],
+   "target": 204823.234,
+   "thesis_present": false,
+   "thesis_required": false,
+   "ticker": "AAA",
+   "trade_session": "2026-09-22",
+   "unverified": [],
+   "verdict": "BLOCK"
+  },
+  "text": "AAA — BLOCK   (dữ liệu EOD tới 2026-09-21, snapshot sha <sha>)\nPhiên giao dịch: 2026-09-22. EOD data as of 2026-09-21\nLuật không đạt / chưa kiểm:\n  - G9 ngân sách rủi ro [BLOCK]: effective loss 13,791,276 > budget 10,000,000 (compliant size 1,123 shares); weight 30.0% > 25.0%\n  - B5 tăng size [WARN]: weight 30.0% > 25.0%\nSetup: S1\nBán được sớm nhất: chiều 2026-09-24 13:00 (T+2). Stop 3% KHÔNG thực thi được trước thời điểm này.\nGiá tham chiếu: 193.426 (đóng cửa gần nhất)\nStop 3%: 187.623 | stop đã kiểm định (RSI2, −8%): 177.952\nTarget: 204.823 | R:R 1.62\nSize gợi ý (rủi ro 1,0% NAV, lỗ hiệu dụng 4,6%): 1.123 cp ≈ 217,2 tr\n  VND rủi ro: ở stop 3% 6,5 tr; hiệu dụng (3% + gap + phí) 10,0 tr. Nếu dùng stop −8%: 538 cp\nSố tiền bạn nhập 300,0 tr → 1.550 cp: rủi ro ở stop 3% 9,0 tr (0,90% NAV); hiệu dụng 13,8 tr (1,38% NAV) > ngân sách\nNAV dùng để tính: journal\nThoát: S1: bán khi đóng cửa > SMA5 hoặc sau 8 phiên; stop như trên\nDòng tiền NN (chú thích A4, không đổi verdict): UNVERIFIED\nBLOCK: không mua theo luật desk (khuyến nghị dứt khoát; desk không chặn được lệnh ở CTCK).\nTư vấn, không phải lệnh. PASS = không có cờ đỏ + có setup đã biết, không phải 'sẽ thắng'."
+ },
+ "aaa_price_plus2": {
+  "json": {
+   "ack_refused": false,
+   "acknowledged": false,
+   "amount": 5000000,
+   "behaviour_block": false,
+   "checked_at": "2026-09-21T10:00:00+00:00",
+   "data_as_of": "2026-09-21",
+   "earliest_sell": "2026-09-24 13:00",
+   "emotion": "calm",
+   "eod_note": "EOD data as of 2026-09-21",
+   "exit_plan": "S1: bán khi đóng cửa > SMA5 hoặc sau 8 phiên; stop như trên",
+   "expected_session": "2026-09-21",
+   "failed": [
+    "G8",
+    "B2"
+   ],
+   "flows": {
+    "flow_status": "UNVERIFIED",
+    "reason": "no desk state for this session (run refresh)"
+   },
+   "horizon_warning": null,
+   "indicators": {
+    "adx14": 79.96268493848,
+    "atr14": 3827.932845046058,
+    "atr_pct": 1.979016394559749,
+    "avg_value_20_bn": 614.469702,
+    "bb_lower": 189078.5463628701,
+    "bb_upper": 220567.92163712988,
+    "close": 193426.03,
+    "date": "2026-09-21",
+    "day2_ret_given_breach": -5.90999880085058,
+    "dist_high_20_pct": 13.521763332473924,
+    "ema21": 201660.7474142422,
+    "ema50": 184350.01151066757,
+    "gap_open_1d": -3.0000008023739033,
+    "high": 194393.16,
+    "high_20": 219580.64,
+    "high_250": 219580.64,
+    "limit_down_t": false,
+    "limit_up_t": false,
+    "limit_up_t1": false,
+    "locked_breach_3pct_rate": 1.6,
+    "locked_mae_p50": -0.4999996845771737,
+    "locked_mae_p80": -0.5000046099792388,
+    "locked_mae_p90": -0.500009507577478,
+    "low": 192458.9,
+    "low_20": 191993.75,
+    "mae5_p50": -0.49999974054224516,
+    "mfe5_p50": 3.7809480322555045,
+    "minus_di14": 41.66175876922286,
+    "n_breach": 3,
+    "n_locked": 250,
+    "n_window5": 250,
+    "open": 193426.03,
+    "pct_b": 0.13806192086267374,
+    "plus_di14": 32.298637646299575,
+    "prev_close": 199408.28,
+    "ret_1d": -3.0000008023739033,
+    "ret_20d": 1.016863733585338,
+    "ret_3d": -8.7326994711314,
+    "ret_5d": -10.77692736148126,
+    "rows": 300,
+    "rsi14": 43.424343765399996,
+    "rsi2": 2.008555033016691,
+    "sma20": 204823.234,
+    "sma200": 110652.14755,
+    "sma5": 205766.322,
+    "sma50": 183293.4698,
+    "stop_atr_multiple": 1.5159045717089061,
+    "up_streak": 0,
+    "vol_ratio_20": 1.0,
+    "vsa_no_supply": 0,
+    "vsa_stopping_volume": 0
+   },
+   "journal_errors": [],
+   "market": {
+    "breadth_pct": 66.7,
+    "date": "2026-09-21",
+    "index_atr_pct": 1.0153218916774174,
+    "index_close": 1603.04,
+    "index_ema50": 1541.78,
+    "index_ret_1d": 0.17121789664438225,
+    "index_ret_5d": 0.7213048832591884,
+    "limit_down_count": 0,
+    "limit_up_count": 0,
+    "regime": "RISK_ON",
+    "state": "RISK_ON"
+   },
+   "nav_source": "journal",
+   "out_of_scope": false,
+   "params_hash": "4319bf8f482887ab",
+   "plan": {
+    "capped_by": null,
+    "effective_loss_pct": 4.6,
+    "effective_loss_pct_validated": 9.6,
+    "entry_ref": 197295,
+    "nav": 1000000000.0,
+    "position_value": 217221795,
+    "qty": 1101,
+    "qty_if_validated_stop": 527,
+    "requested": {
+     "amount": 5000000,
+     "over_budget": false,
+     "qty": 25,
+     "risk_effective_pct_nav": 0.022688925,
+     "risk_nominal_pct_nav": 0.014797125,
+     "value": 4932375,
+     "vnd_at_risk_effective": 226889.25,
+     "vnd_at_risk_nominal": 147971.25,
+     "weight_pct": 0.4932375
+    },
+    "risk_budget_vnd": 10000000.0,
+    "stop_user": 191376.15,
+    "stop_validated": 181511.4,
+    "vnd_at_risk_effective": 9992202.569999998,
+    "vnd_at_risk_nominal": 6516653.85,
+    "weight_pct": 21.7221795
+   },
+   "price": 197295,
+   "reason": "S1",
+   "recheck_from": null,
+   "reward_risk": 1.0046249047783016,
+   "rules": [
+    {
+     "id": "G0",
+     "kind": "gate",
+     "reason": "verified snapshot as_of 2026-09-21",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G1",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G2",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G3",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G4",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G5",
+     "kind": "gate",
+     "reason": "price +2.0% vs last close",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G6",
+     "kind": "gate",
+     "reason": "ATR 2.0%",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G7",
+     "kind": "gate",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G8",
+     "kind": "gate",
+     "reason": "R:R 1.00 < 1.5 (target 204,823)",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "G9",
+     "kind": "gate",
+     "reason": "order 0.5% NAV, open risk 0.02% NAV",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G10",
+     "kind": "gate",
+     "reason": "no known event to 2026-09-25",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G11",
+     "kind": "gate",
+     "reason": "S1",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "B1",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B2",
+     "kind": "behaviour",
+     "reason": "price +2.0% vs reference (limit +1.5%)",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "B6",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "COOL",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3P",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B4",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B5",
+     "kind": "behaviour",
+     "reason": "fewer than 3 prior entries",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B7",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    }
+   ],
+   "s2_status": "override",
+   "setups": [
+    "S1"
+   ],
+   "target": 204823.234,
+   "thesis_present": false,
+   "thesis_required": true,
+   "ticker": "AAA",
+   "trade_session": "2026-09-22",
+   "unverified": [],
+   "verdict": "WARN"
+  },
+  "text": "AAA — WARN   (dữ liệu EOD tới 2026-09-21, snapshot sha <sha>)\nPhiên giao dịch: 2026-09-22. EOD data as of 2026-09-21\nLuật không đạt / chưa kiểm:\n  - G8 R:R [WARN]: R:R 1.00 < 1.5 (target 204,823)\n  - B2 đuổi gap [WARN]: price +2.0% vs reference (limit +1.5%)\nSetup: S1\nBán được sớm nhất: chiều 2026-09-24 13:00 (T+2). Stop 3% KHÔNG thực thi được trước thời điểm này.\nGiá tham chiếu: 197.295 (giá bạn nhập)\nStop 3%: 191.376 | stop đã kiểm định (RSI2, −8%): 181.511\nTarget: 204.823 | R:R 1.00\nSize gợi ý (rủi ro 1,0% NAV, lỗ hiệu dụng 4,6%): 1.101 cp ≈ 217,2 tr\n  VND rủi ro: ở stop 3% 6,5 tr; hiệu dụng (3% + gap + phí) 10,0 tr. Nếu dùng stop −8%: 527 cp\nSố tiền bạn nhập 5,0 tr → 25 cp: rủi ro ở stop 3% 0,1 tr (0,01% NAV); hiệu dụng 0,2 tr (0,02% NAV)\nNAV dùng để tính: journal\nThoát: S1: bán khi đóng cửa > SMA5 hoặc sau 8 phiên; stop như trên\nDòng tiền NN (chú thích A4, không đổi verdict): UNVERIFIED\nCần: viết 1 dòng THESIS (setup, stop, target, điều kiện sai) vào portfolio.txt rồi chạy lại với --ack; hoặc chờ phiên sau.\nTư vấn, không phải lệnh. PASS = không có cờ đỏ + có setup đã biết, không phải 'sẽ thắng'."
+ },
+ "aaa_price_plus6": {
+  "json": {
+   "ack_refused": false,
+   "acknowledged": false,
+   "amount": 5000000,
+   "behaviour_block": true,
+   "checked_at": "2026-09-21T10:00:00+00:00",
+   "data_as_of": "2026-09-21",
+   "earliest_sell": "2026-09-24 13:00",
+   "emotion": "calm",
+   "eod_note": "EOD data as of 2026-09-21",
+   "exit_plan": "S1: bán khi đóng cửa > SMA5 hoặc sau 8 phiên; stop như trên",
+   "expected_session": "2026-09-21",
+   "failed": [
+    "G5",
+    "G8",
+    "B1",
+    "B2"
+   ],
+   "flows": {
+    "flow_status": "UNVERIFIED",
+    "reason": "no desk state for this session (run refresh)"
+   },
+   "horizon_warning": null,
+   "indicators": {
+    "adx14": 79.96268493848,
+    "atr14": 3827.932845046058,
+    "atr_pct": 1.979016394559749,
+    "avg_value_20_bn": 614.469702,
+    "bb_lower": 189078.5463628701,
+    "bb_upper": 220567.92163712988,
+    "close": 193426.03,
+    "date": "2026-09-21",
+    "day2_ret_given_breach": -5.90999880085058,
+    "dist_high_20_pct": 13.521763332473924,
+    "ema21": 201660.7474142422,
+    "ema50": 184350.01151066757,
+    "gap_open_1d": -3.0000008023739033,
+    "high": 194393.16,
+    "high_20": 219580.64,
+    "high_250": 219580.64,
+    "limit_down_t": false,
+    "limit_up_t": false,
+    "limit_up_t1": false,
+    "locked_breach_3pct_rate": 1.6,
+    "locked_mae_p50": -0.4999996845771737,
+    "locked_mae_p80": -0.5000046099792388,
+    "locked_mae_p90": -0.500009507577478,
+    "low": 192458.9,
+    "low_20": 191993.75,
+    "mae5_p50": -0.49999974054224516,
+    "mfe5_p50": 3.7809480322555045,
+    "minus_di14": 41.66175876922286,
+    "n_breach": 3,
+    "n_locked": 250,
+    "n_window5": 250,
+    "open": 193426.03,
+    "pct_b": 0.13806192086267374,
+    "plus_di14": 32.298637646299575,
+    "prev_close": 199408.28,
+    "ret_1d": -3.0000008023739033,
+    "ret_20d": 1.016863733585338,
+    "ret_3d": -8.7326994711314,
+    "ret_5d": -10.77692736148126,
+    "rows": 300,
+    "rsi14": 43.424343765399996,
+    "rsi2": 2.008555033016691,
+    "sma20": 204823.234,
+    "sma200": 110652.14755,
+    "sma5": 205766.322,
+    "sma50": 183293.4698,
+    "stop_atr_multiple": 1.5159045717089061,
+    "up_streak": 0,
+    "vol_ratio_20": 1.0,
+    "vsa_no_supply": 0,
+    "vsa_stopping_volume": 0
+   },
+   "journal_errors": [],
+   "market": {
+    "breadth_pct": 66.7,
+    "date": "2026-09-21",
+    "index_atr_pct": 1.0153218916774174,
+    "index_close": 1603.04,
+    "index_ema50": 1541.78,
+    "index_ret_1d": 0.17121789664438225,
+    "index_ret_5d": 0.7213048832591884,
+    "limit_down_count": 0,
+    "limit_up_count": 0,
+    "regime": "RISK_ON",
+    "state": "RISK_ON"
+   },
+   "nav_source": "journal",
+   "out_of_scope": false,
+   "params_hash": "4319bf8f482887ab",
+   "plan": {
+    "capped_by": null,
+    "effective_loss_pct": 4.6,
+    "effective_loss_pct_validated": 9.6,
+    "entry_ref": 205032,
+    "nav": 1000000000.0,
+    "position_value": 217333920,
+    "qty": 1060,
+    "qty_if_validated_stop": 508,
+    "requested": {
+     "amount": 5000000,
+     "over_budget": false,
+     "qty": 24,
+     "risk_effective_pct_nav": 0.022635532799999997,
+     "risk_nominal_pct_nav": 0.014762304,
+     "value": 4920768,
+     "vnd_at_risk_effective": 226355.32799999998,
+     "vnd_at_risk_nominal": 147623.04,
+     "weight_pct": 0.4920768
+    },
+    "risk_budget_vnd": 10000000.0,
+    "stop_user": 198881.04,
+    "stop_validated": 188629.44,
+    "vnd_at_risk_effective": 9997360.319999998,
+    "vnd_at_risk_nominal": 6520017.6,
+    "weight_pct": 21.733392000000002
+   },
+   "price": 205032,
+   "reason": "S1",
+   "recheck_from": "2026-09-23 09:00 (ATO)",
+   "reward_risk": -0.14759446445088695,
+   "rules": [
+    {
+     "id": "G0",
+     "kind": "gate",
+     "reason": "verified snapshot as_of 2026-09-21",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G1",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G2",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G3",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G4",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G5",
+     "kind": "gate",
+     "reason": "price +6.0% vs last close",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "G6",
+     "kind": "gate",
+     "reason": "ATR 2.0%",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G7",
+     "kind": "gate",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G8",
+     "kind": "gate",
+     "reason": "R:R -0.15 < 1.5 (target 204,823)",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "G9",
+     "kind": "gate",
+     "reason": "order 0.5% NAV, open risk 0.02% NAV",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G10",
+     "kind": "gate",
+     "reason": "no known event to 2026-09-25",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G11",
+     "kind": "gate",
+     "reason": "S1",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "B1",
+     "kind": "behaviour",
+     "reason": "FOMO: price within 1.0% of ceiling 206,966",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "B2",
+     "kind": "behaviour",
+     "reason": "price +6.0% vs reference (limit +1.5%)",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "B6",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "COOL",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3P",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B4",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B5",
+     "kind": "behaviour",
+     "reason": "fewer than 3 prior entries",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B7",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    }
+   ],
+   "s2_status": "override",
+   "setups": [
+    "S1"
+   ],
+   "target": 204823.234,
+   "thesis_present": false,
+   "thesis_required": false,
+   "ticker": "AAA",
+   "trade_session": "2026-09-22",
+   "unverified": [],
+   "verdict": "BLOCK"
+  },
+  "text": "AAA — BLOCK   (dữ liệu EOD tới 2026-09-21, snapshot sha <sha>)\nPhiên giao dịch: 2026-09-22. EOD data as of 2026-09-21\nLuật không đạt / chưa kiểm:\n  - G5 đuổi trong phiên [BLOCK]: price +6.0% vs last close\n  - G8 R:R [WARN]: R:R -0.15 < 1.5 (target 204,823)\n  - B1 FOMO/trần [BLOCK]: FOMO: price within 1.0% of ceiling 206,966\n  - B2 đuổi gap [WARN]: price +6.0% vs reference (limit +1.5%)\nSetup: S1\nBán được sớm nhất: chiều 2026-09-24 13:00 (T+2). Stop 3% KHÔNG thực thi được trước thời điểm này.\nGiá tham chiếu: 205.032 (giá bạn nhập)\nStop 3%: 198.881 | stop đã kiểm định (RSI2, −8%): 188.629\nTarget: 204.823 | R:R -0.15\nSize gợi ý (rủi ro 1,0% NAV, lỗ hiệu dụng 4,6%): 1.060 cp ≈ 217,3 tr\n  VND rủi ro: ở stop 3% 6,5 tr; hiệu dụng (3% + gap + phí) 10,0 tr. Nếu dùng stop −8%: 508 cp\nSố tiền bạn nhập 5,0 tr → 24 cp: rủi ro ở stop 3% 0,1 tr (0,01% NAV); hiệu dụng 0,2 tr (0,02% NAV)\nNAV dùng để tính: journal\nThoát: S1: bán khi đóng cửa > SMA5 hoặc sau 8 phiên; stop như trên\nDòng tiền NN (chú thích A4, không đổi verdict): UNVERIFIED\nBLOCK do hành vi: chỉ kiểm lại từ 2026-09-23 09:00 (ATO).\nTư vấn, không phải lệnh. PASS = không có cờ đỏ + có setup đã biết, không phải 'sẽ thắng'."
+ },
+ "aaa_revenge_block": {
+  "json": {
+   "ack_refused": false,
+   "acknowledged": false,
+   "amount": null,
+   "behaviour_block": true,
+   "checked_at": "2026-09-21T10:00:00+00:00",
+   "data_as_of": "2026-09-21",
+   "earliest_sell": "2026-09-24 13:00",
+   "emotion": null,
+   "eod_note": "EOD data as of 2026-09-21",
+   "exit_plan": "S1: bán khi đóng cửa > SMA5 hoặc sau 8 phiên; stop như trên",
+   "expected_session": "2026-09-21",
+   "failed": [
+    "B3"
+   ],
+   "flows": {
+    "flow_status": "UNVERIFIED",
+    "reason": "no desk state for this session (run refresh)"
+   },
+   "horizon_warning": null,
+   "indicators": {
+    "adx14": 79.96268493848,
+    "atr14": 3827.932845046058,
+    "atr_pct": 1.979016394559749,
+    "avg_value_20_bn": 614.469702,
+    "bb_lower": 189078.5463628701,
+    "bb_upper": 220567.92163712988,
+    "close": 193426.03,
+    "date": "2026-09-21",
+    "day2_ret_given_breach": -5.90999880085058,
+    "dist_high_20_pct": 13.521763332473924,
+    "ema21": 201660.7474142422,
+    "ema50": 184350.01151066757,
+    "gap_open_1d": -3.0000008023739033,
+    "high": 194393.16,
+    "high_20": 219580.64,
+    "high_250": 219580.64,
+    "limit_down_t": false,
+    "limit_up_t": false,
+    "limit_up_t1": false,
+    "locked_breach_3pct_rate": 1.6,
+    "locked_mae_p50": -0.4999996845771737,
+    "locked_mae_p80": -0.5000046099792388,
+    "locked_mae_p90": -0.500009507577478,
+    "low": 192458.9,
+    "low_20": 191993.75,
+    "mae5_p50": -0.49999974054224516,
+    "mfe5_p50": 3.7809480322555045,
+    "minus_di14": 41.66175876922286,
+    "n_breach": 3,
+    "n_locked": 250,
+    "n_window5": 250,
+    "open": 193426.03,
+    "pct_b": 0.13806192086267374,
+    "plus_di14": 32.298637646299575,
+    "prev_close": 199408.28,
+    "ret_1d": -3.0000008023739033,
+    "ret_20d": 1.016863733585338,
+    "ret_3d": -8.7326994711314,
+    "ret_5d": -10.77692736148126,
+    "rows": 300,
+    "rsi14": 43.424343765399996,
+    "rsi2": 2.008555033016691,
+    "sma20": 204823.234,
+    "sma200": 110652.14755,
+    "sma5": 205766.322,
+    "sma50": 183293.4698,
+    "stop_atr_multiple": 1.5159045717089061,
+    "up_streak": 0,
+    "vol_ratio_20": 1.0,
+    "vsa_no_supply": 0,
+    "vsa_stopping_volume": 0
+   },
+   "journal_errors": [],
+   "market": {
+    "breadth_pct": 66.7,
+    "date": "2026-09-21",
+    "index_atr_pct": 1.0153218916774174,
+    "index_close": 1603.04,
+    "index_ema50": 1541.78,
+    "index_ret_1d": 0.17121789664438225,
+    "index_ret_5d": 0.7213048832591884,
+    "limit_down_count": 0,
+    "limit_up_count": 0,
+    "regime": "RISK_ON",
+    "state": "RISK_ON"
+   },
+   "nav_source": "journal",
+   "out_of_scope": false,
+   "params_hash": "4319bf8f482887ab",
+   "plan": {
+    "capped_by": null,
+    "effective_loss_pct": 4.6,
+    "effective_loss_pct_validated": 9.6,
+    "entry_ref": 193426.03,
+    "nav": 998922500.0,
+    "position_value": 217024005.66,
+    "qty": 1122,
+    "qty_if_validated_stop": 537,
+    "risk_budget_vnd": 9989225.0,
+    "stop_user": 187623.2491,
+    "stop_validated": 177951.9476,
+    "vnd_at_risk_effective": 9983104.260359999,
+    "vnd_at_risk_nominal": 6510720.1698,
+    "weight_pct": 21.725810126411208
+   },
+   "price": null,
+   "reason": null,
+   "recheck_from": "2026-09-23 09:00 (ATO)",
+   "reward_risk": 1.6153765799956123,
+   "rules": [
+    {
+     "id": "G0",
+     "kind": "gate",
+     "reason": "verified snapshot as_of 2026-09-21",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G1",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G2",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G3",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G4",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G5",
+     "kind": "gate",
+     "reason": "no --price given",
+     "severity": "hard",
+     "status": "NA"
+    },
+    {
+     "id": "G6",
+     "kind": "gate",
+     "reason": "ATR 2.0%",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G7",
+     "kind": "gate",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G8",
+     "kind": "gate",
+     "reason": "R:R 1.62 (target 204,823)",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G9",
+     "kind": "gate",
+     "reason": "order 21.7% NAV, open risk 1.00% NAV",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G10",
+     "kind": "gate",
+     "reason": "no known event to 2026-09-25",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G11",
+     "kind": "gate",
+     "reason": "S1",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "B1",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B2",
+     "kind": "behaviour",
+     "reason": "no --price given",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B6",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "COOL",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3",
+     "kind": "behaviour",
+     "reason": "revenge: realized loss BBB on 2026-09-21",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "B3P",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B4",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B5",
+     "kind": "behaviour",
+     "reason": "fewer than 3 prior entries",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B7",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    }
+   ],
+   "s2_status": "override",
+   "setups": [
+    "S1"
+   ],
+   "target": 204823.234,
+   "thesis_present": false,
+   "thesis_required": false,
+   "ticker": "AAA",
+   "trade_session": "2026-09-22",
+   "unverified": [],
+   "verdict": "BLOCK"
+  },
+  "text": "AAA — BLOCK   (dữ liệu EOD tới 2026-09-21, snapshot sha <sha>)\nPhiên giao dịch: 2026-09-22. EOD data as of 2026-09-21\nLuật không đạt / chưa kiểm:\n  - B3 gỡ lỗ (revenge) [BLOCK]: revenge: realized loss BBB on 2026-09-21\nSetup: S1\nBán được sớm nhất: chiều 2026-09-24 13:00 (T+2). Stop 3% KHÔNG thực thi được trước thời điểm này.\nGiá tham chiếu: 193.426 (đóng cửa gần nhất)\nStop 3%: 187.623 | stop đã kiểm định (RSI2, −8%): 177.952\nTarget: 204.823 | R:R 1.62\nSize gợi ý (rủi ro 1,0% NAV, lỗ hiệu dụng 4,6%): 1.122 cp ≈ 217,0 tr\n  VND rủi ro: ở stop 3% 6,5 tr; hiệu dụng (3% + gap + phí) 10,0 tr. Nếu dùng stop −8%: 537 cp\nNAV dùng để tính: journal\nThoát: S1: bán khi đóng cửa > SMA5 hoặc sau 8 phiên; stop như trên\nDòng tiền NN (chú thích A4, không đổi verdict): UNVERIFIED\nBLOCK do hành vi: chỉ kiểm lại từ 2026-09-23 09:00 (ATO).\nTư vấn, không phải lệnh. PASS = không có cờ đỏ + có setup đã biết, không phải 'sẽ thắng'."
+ },
+ "bbb_warn_ack": {
+  "json": {
+   "ack_refused": true,
+   "acknowledged": false,
+   "amount": null,
+   "behaviour_block": false,
+   "checked_at": "2026-09-21T10:00:00+00:00",
+   "data_as_of": "2026-09-21",
+   "earliest_sell": "2026-09-24 13:00",
+   "emotion": null,
+   "eod_note": "EOD data as of 2026-09-21",
+   "exit_plan": "Chung: target / stop / tối đa 8 phiên",
+   "expected_session": "2026-09-21",
+   "failed": [
+    "G4",
+    "G8",
+    "G11"
+   ],
+   "flows": {
+    "flow_status": "UNVERIFIED",
+    "reason": "no desk state for this session (run refresh)"
+   },
+   "horizon_warning": null,
+   "indicators": {
+    "adx14": 57.98446103683304,
+    "atr14": 349.62731854204003,
+    "atr_pct": 1.0137037002282105,
+    "avg_value_20_bn": 100.899564,
+    "bb_lower": 32746.901842968182,
+    "bb_upper": 34519.47415703182,
+    "close": 34490.09,
+    "date": "2026-09-21",
+    "day2_ret_given_breach": null,
+    "dist_high_20_pct": 0.4999986952774149,
+    "ema21": 33599.02322834222,
+    "ema50": 32645.128604473022,
+    "gap_open_1d": 0.30425641993550023,
+    "high": 34662.54,
+    "high_20": 34662.54,
+    "high_250": 34662.54,
+    "limit_down_t": false,
+    "limit_up_t": false,
+    "limit_up_t1": false,
+    "locked_breach_3pct_rate": 0.0,
+    "locked_mae_p50": -0.5000098949010101,
+    "locked_mae_p80": -0.6628187279559804,
+    "locked_mae_p90": -0.8573485959453264,
+    "low": 34317.64,
+    "low_20": 32665.33,
+    "mae5_p50": -0.5000223362667922,
+    "mfe5_p50": 1.2842723460063432,
+    "minus_di14": 4.963900887713213,
+    "n_breach": 0,
+    "n_locked": 250,
+    "n_window5": 250,
+    "open": 34490.09,
+    "pct_b": 0.9834228726248906,
+    "plus_di14": 29.36453601319457,
+    "prev_close": 34385.47,
+    "ret_1d": 0.30425641993550023,
+    "ret_20d": 5.803079784946363,
+    "ret_3d": 1.2892094528517362,
+    "ret_5d": 2.1612271163447216,
+    "rows": 300,
+    "rsi14": 85.41612706428873,
+    "rsi2": 99.29049615947834,
+    "sma20": 33633.188,
+    "sma200": 28784.79115,
+    "sma5": 34196.810000000005,
+    "sma50": 32555.624200000006,
+    "stop_atr_multiple": 2.959444657570672,
+    "up_streak": 6,
+    "vol_ratio_20": 1.0,
+    "vsa_no_supply": 0,
+    "vsa_stopping_volume": 0
+   },
+   "journal_errors": [],
+   "market": {
+    "breadth_pct": 66.7,
+    "date": "2026-09-21",
+    "index_atr_pct": 1.0153218916774174,
+    "index_close": 1603.04,
+    "index_ema50": 1541.78,
+    "index_ret_1d": 0.17121789664438225,
+    "index_ret_5d": 0.7213048832591884,
+    "limit_down_count": 0,
+    "limit_up_count": 0,
+    "regime": "RISK_ON",
+    "state": "RISK_ON"
+   },
+   "nav_source": "journal",
+   "out_of_scope": false,
+   "params_hash": "4319bf8f482887ab",
+   "plan": {
+    "capped_by": null,
+    "effective_loss_pct": 4.6,
+    "effective_loss_pct_validated": 9.6,
+    "entry_ref": 34490.09,
+    "nav": 1000000000.0,
+    "position_value": 217391037.26999998,
+    "qty": 6303,
+    "qty_if_validated_stop": 3020,
+    "risk_budget_vnd": 10000000.0,
+    "stop_user": 33455.387299999995,
+    "stop_validated": 31730.8828,
+    "vnd_at_risk_effective": 9999987.714419998,
+    "vnd_at_risk_nominal": 6521731.1181,
+    "weight_pct": 21.739103726999996
+   },
+   "price": null,
+   "reason": null,
+   "recheck_from": null,
+   "reward_risk": 0.029411380963943988,
+   "rules": [
+    {
+     "id": "G0",
+     "kind": "gate",
+     "reason": "verified snapshot as_of 2026-09-21",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G1",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G2",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G3",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G4",
+     "kind": "gate",
+     "reason": "chasing: RSI2 99",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "G5",
+     "kind": "gate",
+     "reason": "no --price given",
+     "severity": "hard",
+     "status": "NA"
+    },
+    {
+     "id": "G6",
+     "kind": "gate",
+     "reason": "ATR 1.0%",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G7",
+     "kind": "gate",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G8",
+     "kind": "gate",
+     "reason": "R:R 0.03 < 1.5 (target 34,663)",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "G9",
+     "kind": "gate",
+     "reason": "order 21.7% NAV, open risk 1.00% NAV",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G10",
+     "kind": "gate",
+     "reason": "event calendar not checked for this ticker/session",
+     "severity": "soft",
+     "status": "UNVERIFIED"
+    },
+    {
+     "id": "G11",
+     "kind": "gate",
+     "reason": "no S1/S2 setup: buying without a signal",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "B1",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B2",
+     "kind": "behaviour",
+     "reason": "no --price given",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B6",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "COOL",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3P",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B4",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B5",
+     "kind": "behaviour",
+     "reason": "fewer than 3 prior entries",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B7",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    }
+   ],
+   "s2_status": "override",
+   "setups": [],
+   "target": 34662.54,
+   "thesis_present": false,
+   "thesis_required": true,
+   "ticker": "BBB",
+   "trade_session": "2026-09-22",
+   "unverified": [
+    "G10"
+   ],
+   "verdict": "WARN"
+  },
+  "text": "BBB — WARN   (dữ liệu EOD tới 2026-09-21, snapshot sha <sha>)\nPhiên giao dịch: 2026-09-22. EOD data as of 2026-09-21\nLuật không đạt / chưa kiểm:\n  - G4 không đuổi giá [WARN]: chasing: RSI2 99\n  - G8 R:R [WARN]: R:R 0.03 < 1.5 (target 34,663)\n  - G10 sự kiện [UNVERIFIED]: event calendar not checked for this ticker/session\n  - G11 có setup [WARN]: no S1/S2 setup: buying without a signal\nSetup: không có (G11) — bạn đang mua không có tín hiệu\nBán được sớm nhất: chiều 2026-09-24 13:00 (T+2). Stop 3% KHÔNG thực thi được trước thời điểm này.\nGiá tham chiếu: 34.490 (đóng cửa gần nhất)\nStop 3%: 33.455 | stop đã kiểm định (RSI2, −8%): 31.731\nTarget: 34.663 | R:R 0.03\nSize gợi ý (rủi ro 1,0% NAV, lỗ hiệu dụng 4,6%): 6.303 cp ≈ 217,4 tr\n  VND rủi ro: ở stop 3% 6,5 tr; hiệu dụng (3% + gap + phí) 10,0 tr. Nếu dùng stop −8%: 3.020 cp\nNAV dùng để tính: journal\nThoát: Chung: target / stop / tối đa 8 phiên\nDòng tiền NN (chú thích A4, không đổi verdict): UNVERIFIED\nCần: viết 1 dòng THESIS (setup, stop, target, điều kiện sai) vào portfolio.txt rồi chạy lại với --ack; hoặc chờ phiên sau.\n--ack bị từ chối: chưa có dòng THESIS cho mã này từ phiên dữ liệu hiện tại.\nTư vấn, không phải lệnh. PASS = không có cờ đỏ + có setup đã biết, không phải 'sẽ thắng'."
+ },
+ "desk_v1_sha256": "92cd19374775f88e4b93f2786cef977fe06c47eed4fe66851f078c070ee3d5c8",
+ "params_hash": "4319bf8f482887ab",
+ "prospective_v1_sha256": "40533dba1c8bc7bfc43ff68e706262d76454fdf85e5fb9cac0c0bc855b03d23b",
+ "scan_table": "# Gate table — dữ liệu EOD tới 2026-09-21 (snapshot sha <sha>)\n\nRegime: RISK_ON | VNINDEX 1603.04 vs EMA50 1541.78 | breadth 66.7% | phiên giao dịch kế: 2026-09-22 | đáo hạn VN30F kế: 2026-10-15\n\nStructural = G0-G8 + G11 (G9 portfolio, G10 events đánh giá trong `check`).\n\n| Mã | Structural | Setup | Close | RSI2 | ATR% | SMA50 | R:R | Luật trượt |\n|---|---|---|---|---|---|---|---|---|\n| AAA | PASS | S1 | 193,426 | 2.0 | 2.0 | 183,293 | 1.62 | - |\n| VCB | WARN | - | 35,432 | 29.2 | 1.0 | 34,553 | 0.22 | G8, G11 |\n| BBB | WARN | - | 34,490 | 99.3 | 1.0 | 32,556 | 0.03 | G4, G8, G11 |\n\nAdvisory only. PASS = không có cờ cấu trúc và có setup đã biết, không phải 'sẽ thắng'.\n",
+ "stale_g0": {
+  "json": {
+   "ack_refused": false,
+   "acknowledged": false,
+   "amount": null,
+   "behaviour_block": false,
+   "checked_at": "2026-09-22T10:00:00+00:00",
+   "data_as_of": "2026-09-21",
+   "earliest_sell": "2026-09-25 13:00",
+   "emotion": null,
+   "eod_note": "EOD data as of 2026-09-21",
+   "expected_session": "2026-09-22",
+   "failed": [
+    "G0"
+   ],
+   "flows": {
+    "flow_status": "UNVERIFIED",
+    "reason": "no desk state for this session (run refresh)"
+   },
+   "horizon_warning": null,
+   "indicators": null,
+   "market": null,
+   "out_of_scope": false,
+   "params_hash": "4319bf8f482887ab",
+   "plan": null,
+   "price": null,
+   "reason": null,
+   "recheck_from": null,
+   "rules": [
+    {
+     "id": "G0",
+     "kind": "gate",
+     "reason": "stale: snapshot as_of 2026-09-21 != completed session 2026-09-22; run `refresh`",
+     "severity": "hard",
+     "status": "FAIL"
+    }
+   ],
+   "setups": [],
+   "thesis_present": false,
+   "thesis_required": false,
+   "ticker": "AAA",
+   "trade_session": "2026-09-23",
+   "unverified": [],
+   "verdict": "BLOCK"
+  },
+  "text": "AAA — BLOCK   (dữ liệu EOD tới 2026-09-21, snapshot sha <sha>)\nPhiên giao dịch: 2026-09-23. EOD data as of 2026-09-21\nLuật không đạt / chưa kiểm:\n  - G0 dữ liệu tươi [BLOCK]: stale: snapshot as_of 2026-09-21 != completed session 2026-09-22; run `refresh`\nSetup: không có (G11) — bạn đang mua không có tín hiệu\nBán được sớm nhất: chiều 2026-09-25 13:00 (T+2). Stop 3% KHÔNG thực thi được trước thời điểm này.\nDòng tiền NN (chú thích A4, không đổi verdict): UNVERIFIED\nBLOCK: không mua theo luật desk (khuyến nghị dứt khoát; desk không chặn được lệnh ở CTCK).\nTư vấn, không phải lệnh. PASS = không có cờ đỏ + có setup đã biết, không phải 'sẽ thắng'."
+ },
+ "vcb_reason_forum": {
+  "json": {
+   "ack_refused": false,
+   "acknowledged": false,
+   "amount": null,
+   "behaviour_block": false,
+   "checked_at": "2026-09-21T10:00:00+00:00",
+   "data_as_of": "2026-09-21",
+   "earliest_sell": "2026-09-24 13:00",
+   "emotion": "fomo",
+   "eod_note": "EOD data as of 2026-09-21",
+   "exit_plan": "Chung: target / stop / tối đa 8 phiên",
+   "expected_session": "2026-09-21",
+   "failed": [
+    "G8",
+    "G11",
+    "B6"
+   ],
+   "flows": {
+    "flow_status": "UNVERIFIED",
+    "reason": "no desk state for this session (run refresh)"
+   },
+   "horizon_warning": null,
+   "indicators": {
+    "adx14": 29.98312530273008,
+    "atr14": 363.93828159398197,
+    "atr_pct": 1.027141979875277,
+    "avg_value_20_bn": 104.6816115,
+    "bb_lower": 34049.160338173555,
+    "bb_upper": 35738.58066182644,
+    "close": 35432.13,
+    "date": "2026-09-21",
+    "day2_ret_given_breach": null,
+    "dist_high_20_pct": 1.155222675012757,
+    "ema21": 34993.239940029234,
+    "ema50": 34507.331910607005,
+    "gap_open_1d": -0.6477277793620506,
+    "high": 35609.29,
+    "high_20": 35841.45,
+    "high_250": 35841.45,
+    "limit_down_t": false,
+    "limit_up_t": false,
+    "limit_up_t1": false,
+    "locked_breach_3pct_rate": 0.0,
+    "locked_mae_p50": -0.500008988277717,
+    "locked_mae_p80": -0.7175447285636016,
+    "locked_mae_p90": -0.8855884637947575,
+    "low": 35254.97,
+    "low_20": 34254.26,
+    "mae5_p50": -0.5000325316662668,
+    "mfe5_p50": 1.2407654908854981,
+    "minus_di14": 11.093979626898713,
+    "n_breach": 0,
+    "n_locked": 250,
+    "n_window5": 250,
+    "open": 35432.13,
+    "pct_b": 0.8186060286265344,
+    "plus_di14": 22.805346813537025,
+    "prev_close": 35663.13,
+    "ret_1d": -0.6477277793620506,
+    "ret_20d": 2.465146448681277,
+    "ret_3d": -0.4233509645258038,
+    "ret_5d": 0.7244446630197965,
+    "rows": 300,
+    "rsi14": 67.05344278366957,
+    "rsi2": 29.233212093030787,
+    "sma20": 34893.8705,
+    "sma200": 31433.6232,
+    "sma5": 35539.34999999999,
+    "sma50": 34552.841199999995,
+    "stop_atr_multiple": 2.920725721252559,
+    "up_streak": 0,
+    "vol_ratio_20": 1.0,
+    "vsa_no_supply": 0,
+    "vsa_stopping_volume": 0
+   },
+   "journal_errors": [],
+   "market": {
+    "breadth_pct": 66.7,
+    "date": "2026-09-21",
+    "index_atr_pct": 1.0153218916774174,
+    "index_close": 1603.04,
+    "index_ema50": 1541.78,
+    "index_ret_1d": 0.17121789664438225,
+    "index_ret_5d": 0.7213048832591884,
+    "limit_down_count": 0,
+    "limit_up_count": 0,
+    "regime": "RISK_ON",
+    "state": "RISK_ON"
+   },
+   "nav_source": "journal",
+   "out_of_scope": false,
+   "params_hash": "4319bf8f482887ab",
+   "plan": {
+    "capped_by": null,
+    "effective_loss_pct": 4.6,
+    "effective_loss_pct_validated": 9.6,
+    "entry_ref": 35432.13,
+    "nav": 1000000000.0,
+    "position_value": 217376117.54999998,
+    "qty": 6135,
+    "qty_if_validated_stop": 2939,
+    "risk_budget_vnd": 10000000.0,
+    "stop_user": 34369.166099999995,
+    "stop_validated": 32597.5596,
+    "vnd_at_risk_effective": 9999301.4073,
+    "vnd_at_risk_nominal": 6521283.5265,
+    "weight_pct": 21.737611754999996
+   },
+   "price": null,
+   "reason": "forum",
+   "recheck_from": null,
+   "reward_risk": 0.22212431618022394,
+   "rules": [
+    {
+     "id": "G0",
+     "kind": "gate",
+     "reason": "verified snapshot as_of 2026-09-21",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G1",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G2",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G3",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G4",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G5",
+     "kind": "gate",
+     "reason": "no --price given",
+     "severity": "hard",
+     "status": "NA"
+    },
+    {
+     "id": "G6",
+     "kind": "gate",
+     "reason": "ATR 1.0%",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G7",
+     "kind": "gate",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G8",
+     "kind": "gate",
+     "reason": "R:R 0.22 < 1.5 (target 35,841)",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "G9",
+     "kind": "gate",
+     "reason": "order 21.7% NAV, open risk 1.00% NAV",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G10",
+     "kind": "gate",
+     "reason": "event calendar not checked for this ticker/session",
+     "severity": "soft",
+     "status": "UNVERIFIED"
+    },
+    {
+     "id": "G11",
+     "kind": "gate",
+     "reason": "no S1/S2 setup: buying without a signal",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "B1",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B2",
+     "kind": "behaviour",
+     "reason": "no --price given",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B6",
+     "kind": "behaviour",
+     "reason": "hype: reason 'forum' without S-setup",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "COOL",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3P",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B4",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B5",
+     "kind": "behaviour",
+     "reason": "fewer than 3 prior entries",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B7",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    }
+   ],
+   "s2_status": "override",
+   "setups": [],
+   "target": 35841.45,
+   "thesis_present": false,
+   "thesis_required": true,
+   "ticker": "VCB",
+   "trade_session": "2026-09-22",
+   "unverified": [
+    "G10"
+   ],
+   "verdict": "WARN"
+  },
+  "text": "VCB — WARN   (dữ liệu EOD tới 2026-09-21, snapshot sha <sha>)\nPhiên giao dịch: 2026-09-22. EOD data as of 2026-09-21\nLuật không đạt / chưa kiểm:\n  - G8 R:R [WARN]: R:R 0.22 < 1.5 (target 35,841)\n  - G10 sự kiện [UNVERIFIED]: event calendar not checked for this ticker/session\n  - G11 có setup [WARN]: no S1/S2 setup: buying without a signal\n  - B6 hype [WARN]: hype: reason 'forum' without S-setup\nSetup: không có (G11) — bạn đang mua không có tín hiệu\nBán được sớm nhất: chiều 2026-09-24 13:00 (T+2). Stop 3% KHÔNG thực thi được trước thời điểm này.\nGiá tham chiếu: 35.432 (đóng cửa gần nhất)\nStop 3%: 34.369 | stop đã kiểm định (RSI2, −8%): 32.598\nTarget: 35.841 | R:R 0.22\nSize gợi ý (rủi ro 1,0% NAV, lỗ hiệu dụng 4,6%): 6.135 cp ≈ 217,4 tr\n  VND rủi ro: ở stop 3% 6,5 tr; hiệu dụng (3% + gap + phí) 10,0 tr. Nếu dùng stop −8%: 2.939 cp\nNAV dùng để tính: journal\nThoát: Chung: target / stop / tối đa 8 phiên\nDòng tiền NN (chú thích A4, không đổi verdict): UNVERIFIED\nCần: viết 1 dòng THESIS (setup, stop, target, điều kiện sai) vào portfolio.txt rồi chạy lại với --ack; hoặc chờ phiên sau.\nTư vấn, không phải lệnh. PASS = không có cờ đỏ + có setup đã biết, không phải 'sẽ thắng'."
+ },
+ "xyz_out_of_scope": {
+  "json": {
+   "ack_refused": false,
+   "acknowledged": false,
+   "amount": null,
+   "behaviour_block": false,
+   "checked_at": "2026-09-21T10:00:00+00:00",
+   "data_as_of": "2026-09-21",
+   "earliest_sell": "2026-09-24 13:00",
+   "emotion": null,
+   "eod_note": "EOD data as of 2026-09-21",
+   "expected_session": "2026-09-21",
+   "failed": [
+    "G1"
+   ],
+   "flows": {
+    "flow_status": "UNVERIFIED",
+    "reason": "no desk state for this session (run refresh)"
+   },
+   "horizon_warning": null,
+   "indicators": null,
+   "journal_errors": [],
+   "market": {
+    "breadth_pct": 66.7,
+    "date": "2026-09-21",
+    "index_atr_pct": 1.0153218916774174,
+    "index_close": 1603.04,
+    "index_ema50": 1541.78,
+    "index_ret_1d": 0.17121789664438225,
+    "index_ret_5d": 0.7213048832591884,
+    "limit_down_count": 0,
+    "limit_up_count": 0,
+    "regime": "RISK_ON",
+    "state": "RISK_ON"
+   },
+   "nav_source": "journal",
+   "out_of_scope": true,
+   "params_hash": "4319bf8f482887ab",
+   "plan": null,
+   "price": null,
+   "reason": null,
+   "recheck_from": null,
+   "reward_risk": null,
+   "rules": [
+    {
+     "id": "G0",
+     "kind": "gate",
+     "reason": "verified snapshot as_of 2026-09-21",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G1",
+     "kind": "gate",
+     "reason": "OUT_OF_SCOPE: XYZ not in current VN30 universe",
+     "severity": "hard",
+     "status": "FAIL"
+    }
+   ],
+   "s2_status": "override",
+   "setups": [],
+   "target": null,
+   "thesis_present": false,
+   "thesis_required": false,
+   "ticker": "XYZ",
+   "trade_session": "2026-09-22",
+   "unverified": [],
+   "verdict": "BLOCK"
+  },
+  "text": "XYZ — BLOCK   (dữ liệu EOD tới 2026-09-21, snapshot sha <sha>)\nPhiên giao dịch: 2026-09-22. EOD data as of 2026-09-21\nLuật không đạt / chưa kiểm:\n  - G1 thuộc VN30 [BLOCK]: OUT_OF_SCOPE: XYZ not in current VN30 universe\nSetup: không có (G11) — bạn đang mua không có tín hiệu\nBán được sớm nhất: chiều 2026-09-24 13:00 (T+2). Stop 3% KHÔNG thực thi được trước thời điểm này.\nDòng tiền NN (chú thích A4, không đổi verdict): UNVERIFIED\nBLOCK: không mua theo luật desk (khuyến nghị dứt khoát; desk không chặn được lệnh ở CTCK).\nTư vấn, không phải lệnh. PASS = không có cờ đỏ + có setup đã biết, không phải 'sẽ thắng'."
+ }
+}
