@@ -356,3 +356,79 @@ def validate_feature_states(frame: pd.DataFrame, feature_ids: list[str]) -> None
             raise ContractError(f"{fid}: unexplained missing value marked observed")
         if (finite & (states == MissingState.OBSERVED_ZERO.value).to_numpy() & (values != 0)).any():
             raise ContractError(f"{fid}: observed_zero state with a non-zero value")
+
+
+# --- Membership (VN30 / VN100 dated timelines in configs/research) ---------------
+MEMBERSHIP_INDEXES = ("VN30", "VN100")
+
+
+@dataclass(frozen=True)
+class MembershipResult:
+    status: str                       # eligible | blocked | quarantined
+    members: frozenset[str] | None    # None unless eligible
+    reasons: tuple[str, ...] = ()
+
+
+def _iso_day(value, name: str) -> pd.Timestamp:
+    try:
+        day = pd.Timestamp(str(value))
+    except (TypeError, ValueError):
+        raise ContractError(f"membership: invalid date {name}={value!r}") from None
+    if pd.isna(day) or day.tzinfo is not None or day != day.normalize():
+        raise ContractError(f"membership: invalid date {name}={value!r}")
+    return day
+
+
+def _has_source(value) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def membership_as_of(data: dict, decision_time, *, index: str, execution_date=None) -> MembershipResult:
+    """Index members knowable at ``decision_time`` and effective on ``execution_date``.
+
+    An event (and the initial list) is available at 16:00 Asia/Ho_Chi_Minh on its
+    ``known_on``; ``effective_on`` is valid time and is applied separately. Decisions
+    or executions outside ``coverage_start..coverage_end`` are BLOCKED: no event
+    never means "unchanged" outside documented coverage. A missing source quarantines
+    the whole timeline; inconsistent chronology or membership sets raise.
+    """
+    if index not in MEMBERSHIP_INDEXES or data.get("index", index) != index:
+        raise ContractError(f"membership: index {data.get('index', index)!r} is not contracted as {index!r}")
+    decision = pd.Timestamp(decision_time)
+    if decision.tzinfo is None:
+        raise ContractError("membership: decision_time must be timezone-aware")
+    start, end = _iso_day(data["coverage_start"], "coverage_start"), _iso_day(data["coverage_end"], "coverage_end")
+    initial_known = _iso_day(data["initial_known_on"], "initial_known_on")
+    current, count = set(data["initial_members"]), data["member_count"]
+    if (initial_known > start or start > end or count <= 0 or len(current) != count
+            or len(current) != len(data["initial_members"])):
+        raise ContractError("membership: invalid initial membership or coverage")
+    sources_ok = _has_source(data.get("initial_source"))
+    events, previous = [], start
+    for i, event in enumerate(data["changes"]):
+        known, effective = _iso_day(event["known_on"], "known_on"), _iso_day(event["effective_on"], "effective_on")
+        added, removed = set(event["add"]), set(event["remove"])
+        if not start <= known <= effective <= end or effective <= previous:
+            raise ContractError(f"membership: change {i} chronology outside coverage or out of order")
+        if (len(added) != len(event["add"]) or len(removed) != len(event["remove"]) or added & current
+                or not removed <= current or added & removed or len((current - removed) | added) != count):
+            raise ContractError(f"membership: change {i} is not a valid membership change")
+        current = (current - removed) | added
+        sources_ok &= _has_source(event.get("source"))
+        events.append((known.tz_localize(VN_TZ) + pd.Timedelta(hours=CLOSE_HOUR), effective, added, removed))
+        previous = effective
+    if not sources_ok:
+        return MembershipResult(QUARANTINED, None, ("missing_provenance:source",))
+    local_day = decision.tz_convert(VN_TZ).tz_localize(None).normalize()
+    execution = local_day if execution_date is None else _iso_day(execution_date, "execution_date")
+    if execution < local_day:
+        raise ContractError("membership: execution_date before decision date")
+    if not start <= local_day <= execution <= end:
+        return MembershipResult(BLOCKED, None, ("outside_membership_coverage",))
+    if initial_known.tz_localize(VN_TZ) + pd.Timedelta(hours=CLOSE_HOUR) > decision:
+        return MembershipResult(BLOCKED, None, ("initial_membership_not_yet_known",))
+    members = set(data["initial_members"])
+    for available_at, effective, added, removed in events:
+        if available_at <= decision and effective <= execution:
+            members = (members - removed) | added
+    return MembershipResult(ELIGIBLE, frozenset(members))

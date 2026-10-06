@@ -167,3 +167,98 @@ def test_existing_feature_builder_output_satisfies_state_contract():
                          "volume": [0.0 if i == 30 else 1000.0 for i in range(150)]})
     out = F.build_price_features(bars)
     C.validate_feature_states(out, [c for c in F.REGISTRY if c in out])
+
+
+# --- 4. membership contract ----------------------------------------------------------
+
+import copy
+import json
+from pathlib import Path
+
+VN30 = json.loads(Path("configs/research/vn30_membership_2022_2026.json").read_text(encoding="utf-8"))
+VN100_PATH = Path("configs/research/vn100_membership_2026_h1.json")
+
+
+def at(day, hour=16, minute=0):
+    return pd.Timestamp(f"{day} {hour:02d}:{minute:02d}", tz=TZ)
+
+
+def test_membership_change_is_known_only_from_16h_on_known_on():
+    # LPB replaced POW with known_on == effective_on == 2025-02-03.
+    before = C.membership_as_of(VN30, at("2025-02-03", 10), index="VN30")
+    after = C.membership_as_of(VN30, at("2025-02-03", 16), index="VN30")
+    assert before.status == after.status == C.ELIGIBLE
+    assert "POW" in before.members and "LPB" not in before.members
+    assert "LPB" in after.members and "POW" not in after.members
+    assert len(before.members) == len(after.members) == 30
+
+
+def test_membership_effective_on_is_separate_from_knowledge():
+    # Known 2026-01-23 close, effective 2026-02-02.
+    known_only = C.membership_as_of(VN30, at("2026-01-23"), index="VN30")
+    executed = C.membership_as_of(VN30, at("2026-01-23"), index="VN30",
+                                  execution_date="2026-02-02")
+    unknown = C.membership_as_of(VN30, at("2026-01-23", 15, 59), index="VN30",
+                                 execution_date="2026-02-02")
+    assert known_only.members != executed.members
+    assert unknown.members == known_only.members  # effective but not yet known -> not applied
+
+
+@pytest.mark.parametrize("when, execution", [
+    (at("2022-07-29"), None),           # before coverage_start
+    (at("2026-09-30"), None),           # after coverage_end
+    (at("2026-09-29"), "2026-10-01"),   # execution beyond coverage
+])
+def test_membership_outside_coverage_is_blocked(when, execution):
+    result = C.membership_as_of(VN30, when, index="VN30", execution_date=execution)
+    assert result.status == C.BLOCKED and result.members is None
+    assert result.reasons == ("outside_membership_coverage",)
+
+
+def test_membership_initial_list_unknown_before_its_close_is_blocked():
+    data = dict(copy.deepcopy(VN30), initial_known_on=VN30["coverage_start"])
+    assert C.membership_as_of(data, at(VN30["coverage_start"], 9), index="VN30").status == C.BLOCKED
+    assert C.membership_as_of(data, at(VN30["coverage_start"]), index="VN30").status == C.ELIGIBLE
+
+
+def test_membership_requires_source_and_aware_decision_time():
+    unsourced = copy.deepcopy(VN30)
+    unsourced["changes"][0]["source"] = " "
+    result = C.membership_as_of(unsourced, at("2024-01-02"), index="VN30")
+    assert result.status == C.QUARANTINED and result.members is None
+    assert C.membership_as_of(dict(VN30, initial_source=""), at("2024-01-02"),
+                              index="VN30").status == C.QUARANTINED
+    with pytest.raises(C.ContractError, match="timezone"):
+        C.membership_as_of(VN30, pd.Timestamp("2024-01-02 16:00"), index="VN30")
+
+
+@pytest.mark.parametrize("mutate, match", [
+    (lambda d: d["changes"][0].update(effective_on="2023-01-01"), "chronology"),
+    (lambda d: d["changes"][0].update(add=["ACB"]), "membership change"),
+    (lambda d: d.update(index="VN100"), "index"),
+    (lambda d: d.update(member_count=31), "initial"),
+])
+def test_invalid_membership_timeline_fails_closed(mutate, match):
+    data = copy.deepcopy(VN30)
+    mutate(data)
+    with pytest.raises(C.ContractError, match=match):
+        C.membership_as_of(data, at("2024-01-02"), index="VN30")
+    with pytest.raises(C.ContractError, match="index"):
+        C.membership_as_of(VN30, at("2024-01-02"), index="HNX30")
+
+
+@pytest.mark.parametrize("path, index", [("configs/research/vn30_membership_2022_2026.json", "VN30"),
+                                         ("configs/research/vn30_membership_2025_2026.json", "VN30"),
+                                         (str(VN100_PATH), "VN100")])
+def test_membership_matches_r5_timeline_at_session_close(path, index):
+    if not Path(path).exists():
+        pytest.skip(f"{path} not present")
+    from scripts.historical_universe import Timeline
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    tl = Timeline(data)
+    for day in pd.bdate_range(tl.start, tl.end):
+        d = day.strftime("%Y-%m-%d")
+        result = C.membership_as_of(data, at(d), index=index)
+        assert result.status == C.ELIGIBLE and result.members == tl.members(d, d), d
+    beyond = (pd.Timestamp(tl.end) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    assert C.membership_as_of(data, at(beyond), index=index).status == C.BLOCKED
