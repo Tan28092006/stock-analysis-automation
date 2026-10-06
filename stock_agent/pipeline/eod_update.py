@@ -18,6 +18,7 @@ import io
 import json
 import os
 import time
+import uuid
 from contextlib import redirect_stdout
 from datetime import date, datetime
 from pathlib import Path
@@ -85,9 +86,13 @@ def refresh_prices() -> dict:
                 merged = pd.concat([df, new], ignore_index=True).drop_duplicates(subset=["date"], keep="last").sort_values("date")
                 # Atomic write: a killed/slept process mid-write must not truncate the CSV
                 # (a partial history would make the next run backfill from a wrong last date).
-                tmp = path.with_suffix(".csv.tmp")
-                merged.to_csv(tmp, index=False)
-                os.replace(tmp, path)
+                # Unique temp name: the CLI and the dashboard thread must not share one temp file.
+                tmp = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+                try:
+                    merged.to_csv(tmp, index=False)
+                    os.replace(tmp, path)
+                finally:
+                    tmp.unlink(missing_ok=True)
                 updated += 1
                 got = True
                 print(f"  [prices] {sym}: +{len(new)} -> {merged['date'].max()}", flush=True)

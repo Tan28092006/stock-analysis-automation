@@ -8,9 +8,11 @@ from __future__ import annotations
 from datetime import date, datetime, time as daytime, timedelta, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import time
+import uuid
 
 import numpy as np
 import pandas as pd
@@ -26,6 +28,19 @@ HEADERS = {"Content-Type": "application/json", "Origin": "https://trading.vietca
 
 def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _atomic_write_text(path: Path, text: str) -> None:
+    """Same bytes as Path.write_text(text, encoding='utf-8'), but temp + fsync + replace."""
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        with temporary.open("x", encoding="utf-8") as stream:
+            stream.write(text)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def _invalid(frame: pd.DataFrame) -> pd.Series:
@@ -135,7 +150,7 @@ def build_market_snapshot(symbols: list[str], output_dir: Path, start: date, as_
             manifest["failures"].append({"symbol": symbol, "error": f"{type(exc).__name__}: {exc}"})
     manifest["status"] = "blocked" if manifest["failures"] else "verified"
     manifest["completed_at"] = datetime.now(timezone.utc).isoformat()
-    (output_dir / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+    _atomic_write_text(output_dir / "manifest.json", json.dumps(manifest, indent=2, ensure_ascii=False))
     return manifest
 
 
