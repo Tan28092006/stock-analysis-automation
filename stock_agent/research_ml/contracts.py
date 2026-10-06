@@ -208,6 +208,7 @@ LEGACY_FLOW_PROVIDERS = ("ndtnn", "ndtnn_chart", "tudoanh_chart", "price_board_s
 FOREIGN_FLOW_SCHEMA_VERSION = 2
 FOREIGN_FLOW_SCOPE = "provider_chart_aggregate"  # matched_only/unknown are never mixed in
 _PATH_COLUMNS = ("source_path", "path", "raw_path")
+CLOSE_HOUR = 16  # same buffer as completed_session_date() and features.CLOSE_HOUR
 
 
 def is_legacy_path(path) -> bool:
@@ -252,11 +253,45 @@ def _check_flow_row(row: dict) -> None:
         raise _Reject(QUARANTINED, "legacy_provider")
     if row.get("trade_scope") != FOREIGN_FLOW_SCOPE:
         raise _Reject(QUARANTINED, "trade_scope_not_contracted")
-    for name in ("observed_at", "available_at"):
-        _row_ts(row, name)
+    observed, available = _row_ts(row, "observed_at"), _row_ts(row, "available_at")
     sha = row.get("raw_sha256")
     if not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{64}", sha):
         raise _Reject(QUARANTINED, "missing_provenance:raw_sha256")
+    close = session_close(row.get("session_date"))
+    if available < observed:
+        raise _Reject(INVALID, "available_before_observed")
+    if available < close:
+        raise _Reject(INVALID, "available_before_session_close")
+    if observed < close:
+        raise _Reject(INVALID, "observed_before_session_close")
+    buy, sell = _row_value(row, "buy_value"), _row_value(row, "sell_value")
+    net = row.get("net_value")
+    if not _absent(net) and not np.isclose(float(net), buy - sell, rtol=0, atol=1e-3):
+        raise _Reject(INVALID, "inconsistent_net_value")
+
+
+def session_close(session_date) -> pd.Timestamp:
+    """Conservative EOD availability: 16:00 Asia/Ho_Chi_Minh on the session date."""
+    try:
+        day = pd.Timestamp(session_date)
+    except (TypeError, ValueError):
+        raise _Reject(INVALID, "invalid_date:session_date") from None
+    if pd.isna(day) or day.tzinfo is not None:
+        raise _Reject(INVALID, "invalid_date:session_date")
+    return day.normalize().tz_localize(VN_TZ) + pd.Timedelta(hours=CLOSE_HOUR)
+
+
+def _row_value(row: dict, name: str) -> float:
+    value = row.get(name)
+    if _absent(value) or isinstance(value, bool):
+        raise _Reject(INVALID, f"missing_value_in_observed_row:{name}")  # never zero
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        raise _Reject(INVALID, f"non_numeric:{name}") from None
+    if not np.isfinite(value) or value < 0:
+        raise _Reject(INVALID, f"invalid_value:{name}")
+    return value
 
 
 def screen_foreign_flow(frame: pd.DataFrame) -> pd.DataFrame:

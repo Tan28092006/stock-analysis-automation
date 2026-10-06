@@ -80,3 +80,40 @@ def test_eligible_rows_are_returned_validated_and_quarantined_rows_dropped():
     assert out.symbol.tolist() == ["MBB"]
     assert str(out.available_at.dt.tz) == "UTC"  # passed through validate_source(FOREIGN_FLOW)
     assert "contract_status" not in out
+
+
+# --- 3. foreign-flow row checks ----------------------------------------------------
+
+@pytest.mark.parametrize("over, reason", [
+    (dict(observed_at="2026-10-02 18:00+07:00", available_at="2026-10-02 17:30+07:00"),
+     "available_before_observed"),
+    (dict(observed_at="2026-10-02 11:00+07:00", available_at="2026-10-02 11:00+07:00"),
+     "available_before_session_close"),
+    (dict(observed_at="2026-10-02 15:59:59+07:00", available_at="2026-10-02 17:00+07:00"),
+     "observed_before_session_close"),
+    (dict(available_at="2026-10-02 17:12"), "naive_timestamp:available_at"),
+    (dict(net_value=1.0), "inconsistent_net_value"),
+    (dict(buy_value=None), "missing_value_in_observed_row:buy_value"),
+    (dict(sell_value=float("nan")), "missing_value_in_observed_row:sell_value"),
+    (dict(buy_value=float("inf")), "invalid_value:buy_value"),
+    (dict(sell_value=-1.0, net_value=1.25e9 + 1.0), "invalid_value:sell_value"),
+])
+def test_flow_timing_and_value_violations_are_invalid(over, reason):
+    out = screen(flow(**over))
+    assert (out.contract_status.iloc[0], out.contract_reason.iloc[0]) == (C.INVALID, reason)
+
+
+def test_session_close_is_vietnam_16h_even_for_utc_stamps():
+    # 09:00Z == 16:00 VN: exactly at close is allowed.
+    at_close = screen(flow(observed_at="2026-10-02T09:00:00Z", available_at="2026-10-02T09:00:00Z"))
+    assert at_close.contract_status.iloc[0] == C.ELIGIBLE
+    early = screen(flow(observed_at="2026-10-02T08:59:59Z", available_at="2026-10-02T09:30:00Z"))
+    assert early.contract_status.iloc[0] == C.INVALID
+
+
+def test_net_is_optional_but_checked_when_present_and_zero_flow_is_observed():
+    assert screen(flow(net_value=None)).contract_status.iloc[0] == C.ELIGIBLE
+    no_net = pd.DataFrame([flow()]).drop(columns="net_value")
+    assert C.screen_foreign_flow(no_net).contract_status.iloc[0] == C.ELIGIBLE
+    zero = flow(buy_value=0.0, sell_value=0.0, net_value=0.0)
+    assert screen(zero).contract_status.iloc[0] == C.ELIGIBLE
