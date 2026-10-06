@@ -33,4 +33,5 @@
 - Codex should consume this file plus any `SKILL.md` adapters and MCP wiring.
 - Antigravity should consume `.agents/skills/**/SKILL.md` and plugin manifests.
 - Hermes-style skill format may be borrowed, but Hermes runtime is not a dependency.
+- Swing desk (advisory VN30 pre-trade check, desk run, journal review): `.claude/skills/swing-desk/SKILL.md` (Claude Code) and `.codex/skills/swing-desk/SKILL.md` (Codex); code `stock_agent/swing_desk/`, folder `swing_desk/`.
 
