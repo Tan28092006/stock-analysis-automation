@@ -124,6 +124,19 @@ def test_status_shows_history_store_line(tmp_path, monkeypatch):
     h = st["history_store"]
     assert h["newest_store"] == store.name and h["stale"] is False and h["mode"] == "on"
     assert h["matches_snapshot_as_of"] is True and h["counts"] == {"ok": 4, "partial": 0, "failed": 0}
+    assert h["stores_for_snapshot"] == [{"store_id": store.name, "aborted": None,
+                                         "counts": {"ok": 4, "partial": 0, "failed": 0}}]
+
+
+def test_status_lists_complete_store_before_newer_aborted_one(tmp_path, monkeypatch):
+    from stock_agent.swing_desk import service
+    paths, _, long, _, full = history_desk(tmp_path, monkeypatch, store_id="full",
+                                           completed_at="2026-09-21T10:00:00+00:00")
+    aborted = write_store(paths.history_root, long, store_id="aborted", fail=("AAA",),
+                          completed_at="2026-09-21T11:00:00+00:00", aborted="5 consecutive fetch failures")
+    h = service.status(paths, NOW_EOD, with_flows=False)["history_store"]
+    assert [s["store_id"] for s in h["stores_for_snapshot"]] == [full.name, aborted.name]
+    assert h["stores_for_snapshot"][1]["aborted"] == "5 consecutive fetch failures"
 
 
 def test_cli_history_flags(tmp_path, monkeypatch):

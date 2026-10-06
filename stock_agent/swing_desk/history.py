@@ -228,4 +228,8 @@ def store_line(paths: DeskPaths, now, snapshot_as_of: str | None) -> dict:
             "counts": st.get("counts"), "aborted": aborted or None, "incomplete_dirs": st.get("incomplete_dirs", []),
             "snapshot_as_of": snapshot_as_of,
             "matches_snapshot_as_of": bool(st.get("as_of")) and st.get("as_of") == snapshot_as_of,
+            # selection order for this snapshot: non-aborted first, then newest (not verified here)
+            "stores_for_snapshot": [{"store_id": s["store_id"], "aborted": s["manifest"].get("aborted") or None,
+                                     "counts": s["manifest"].get("counts")}
+                                    for s in HistoryResolver(paths, snapshot_as_of).stores()],
             "verified": "not checked here; refresh/check/scan run `verify` before using a store"}
