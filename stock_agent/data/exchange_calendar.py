@@ -82,6 +82,34 @@ HOSE_HOLIDAYS = {
 }
 
 
+def calendar_coverage_warning(now: datetime | None = None, horizon_days: int = 30) -> dict | None:
+    """Warn when today (Vietnam date) or the next ``horizon_days`` pass the holiday table.
+
+    Report only: a missing year silently turns holidays into trading days, so
+    readiness fails closed without explaining why. Holidays are never added here;
+    they must come from the exchange notice for that year.
+    """
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("now must be timezone-aware")
+    if horizon_days < 0:
+        raise ValueError("horizon_days must be non-negative")
+    last_year = max(day.year for day in HOSE_HOLIDAYS)
+    today = now.astimezone(VN_TIMEZONE).date()
+    horizon = today + timedelta(days=horizon_days)
+    if horizon.year <= last_year:
+        return None
+    today_covered = today.year <= last_year
+    if today_covered:
+        message = (f"HOSE holiday table ends {last_year}; sessions from {last_year + 1}-01-01 fall within "
+                   f"the next {horizon_days} days. Add the official {last_year + 1} holidays before then.")
+    else:
+        message = (f"HOSE holiday table ends {last_year} but today is {today}: {today.year} holidays are "
+                   f"treated as trading days and readiness may block. Add the official holidays.")
+    return {"last_holiday_year": last_year, "today": str(today), "horizon_end": str(horizon),
+            "today_covered": today_covered, "horizon_covered": False, "message": message}
+
+
 def is_trading_day(day: date) -> bool:
     return day.weekday() < 5 and day not in HOSE_HOLIDAYS
 

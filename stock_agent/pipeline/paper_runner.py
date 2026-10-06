@@ -14,7 +14,7 @@ import pandas as pd
 
 from ..config import load_universe
 from ..data.exchange_calendar import (
-    VN_TIMEZONE, completed_session_date, is_trading_day, next_trading_day,
+    VN_TIMEZONE, calendar_coverage_warning, completed_session_date, is_trading_day, next_trading_day,
     symbol_trading_days_between,
 )
 from ..data.reconciliation import _invalid, build_market_snapshot, verify_snapshot
@@ -194,6 +194,20 @@ def run_paper(prices_dir: Path, symbols: list[str], *, output_dir: Path = DEFAUL
     return result
 
 
+def _operational_notes(output_dir: Path) -> dict:
+    """Report-only notes for latest.json/output; never part of a paper record or exit code."""
+    notes = {}
+    try:
+        notes["calendar_warning"] = calendar_coverage_warning(_now())
+    except Exception as exc:
+        notes["calendar_warning"] = {"message": f"calendar coverage check failed: {type(exc).__name__}"}
+    return notes
+
+
+def _operational_notes_keys(report: dict) -> list[str]:
+    return [key for key in ("calendar_warning",) if report.get(key)]
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--refresh", action="store_true", help="Fetch a NEW source-backed snapshot")
@@ -233,10 +247,11 @@ def main(argv=None) -> int:
             return 0 if scores["status"] in {"ok", "ok_with_revisions"} else 2
         result = run_paper(prices_dir, symbols, output_dir=args.output_dir,
                            manifest_path=manifest, record=args.run)
+        result = {**result, **_operational_notes(args.output_dir)}
         _atomic_json(args.output_dir / "latest.json", result)
         print(json.dumps({k: result.get(k) for k in (
-            "status", "session", "data_ready", "source_verified", "recording_window_open", "path", "issues")},
-                         ensure_ascii=False), flush=True)
+            "status", "session", "data_ready", "source_verified", "recording_window_open", "path", "issues",
+            *_operational_notes_keys(result))}, ensure_ascii=False), flush=True)
         if result["status"] == "blocked" or not result["source_verified"]:
             return 2
         if args.run:
@@ -251,9 +266,13 @@ def main(argv=None) -> int:
         return 3 if args.run and result["status"] == "preview_only" else 0
     except Exception as exc:
         report = "scores/latest.json" if args.score else "latest.json"
-        _atomic_json(args.output_dir / report, {"status": "failed", "error": str(exc),
-                                                      "generated_at": _now().isoformat()})
+        failure = {"status": "failed", "error": str(exc), "generated_at": _now().isoformat()}
+        if not args.score:
+            failure.update(_operational_notes(args.output_dir))
+        _atomic_json(args.output_dir / report, failure)
         print(f"FAILED: {exc}", flush=True)
+        for key in _operational_notes_keys(failure):
+            print(json.dumps({key: failure[key]}, ensure_ascii=False), flush=True)
         return 2
 
 

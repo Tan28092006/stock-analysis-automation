@@ -8,6 +8,7 @@ from pathlib import Path
 
 from ..config import load_universe
 from ..data import foreign_flows as ff
+from ..data.exchange_calendar import calendar_coverage_warning
 
 
 def collection_symbols():
@@ -76,6 +77,14 @@ def refresh_with_retries(symbols, *, root=ff.STORE, clock=None, sleep=time.sleep
             remaining -= step
 
 
+def _calendar_warning():
+    """Report-only; a calendar check must never change the collector's exit code."""
+    try:
+        return calendar_coverage_warning(ff.aware())
+    except Exception as exc:
+        return {'message': f'calendar coverage check failed: {type(exc).__name__}'}
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--root', type=Path, default=ff.STORE)
@@ -99,10 +108,12 @@ def main(argv=None):
                 result['status'] = current['status']
                 result['gaps'] = current['gaps']
                 result['missing_latest'] = current['missing_latest']
+        result['calendar_warning'] = _calendar_warning()
         # Keep terminal/log output short; detailed errors, dates and hashes are on disk.
         keys = ('status','expected_session','rows','normalized_rows','quarantined_rows','date_recovered_rows',
                 'missing_latest','gaps','manifest_path','rows_path','errors','quarantine_rows','quarantined_intraday_rows',
-                'requested_symbols','attempts','attempt_manifest_paths','retry_exhausted','retry_reason')
+                'requested_symbols','attempts','attempt_manifest_paths','retry_exhausted','retry_reason',
+                'incomplete_runs','calendar_warning')
         print(json.dumps({k:result[k] for k in keys if k in result}, ensure_ascii=False), flush=True)
         return 0 if result['status'] in ('ready','research_only') else 2
     except Exception as exc:
