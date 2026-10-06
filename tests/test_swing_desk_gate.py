@@ -158,3 +158,10 @@ def test_unverified_never_yields_pass():
     assert verdict([{"id": "G3", "status": "PASS", "severity": "hard"}]) == "PASS"
     assert verdict([{"id": "G3", "status": "FAIL", "severity": "hard"},
                     {"id": "G7", "status": "UNVERIFIED", "severity": "soft"}]) == "BLOCK"
+
+
+@pytest.mark.parametrize("mult", [1.10, 0.90])
+def test_g5_price_outside_daily_band_is_flagged_as_input_error(mult):
+    res = run(price=27350.0 * mult)
+    g5 = status(res, "G5")
+    assert g5["status"] == "FAIL" and g5["severity"] == "hard" and "±7%" in g5["reason"]

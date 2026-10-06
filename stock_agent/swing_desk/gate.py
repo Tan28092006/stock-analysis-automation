@@ -169,7 +169,10 @@ def evaluate_gate(*, ticker: str, ind: dict | None, market: dict, freshness: dic
         rules.append(rule("G5", NA, "hard", "no --price given"))
     else:
         move = (price / ind["close"] - 1) * 100
-        if move >= g["g5_hard_pct"]:
+        if abs(move) > 7.0:
+            rules.append(rule("G5", FAIL, "hard", f"price {move:+.1f}% vs last close is outside the ±7% band: "
+                                                  "check the price (adjusted snapshot prices may differ from the board)"))
+        elif move >= g["g5_hard_pct"]:
             rules.append(rule("G5", FAIL, "hard", f"price {move:+.1f}% vs last close"))
         elif move >= g["g5_soft_pct"]:
             rules.append(rule("G5", FAIL, "soft", f"price {move:+.1f}% vs last close"))
