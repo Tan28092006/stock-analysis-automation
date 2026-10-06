@@ -15,7 +15,7 @@ import pandas as pd
 from ..config import load_universe
 from ..data.exchange_calendar import (
     VN_TIMEZONE, calendar_coverage_warning, completed_session_date, is_trading_day, next_trading_day,
-    symbol_trading_days_between,
+    symbol_trading_days_between, trading_days_between,
 )
 from ..data.reconciliation import _invalid, build_market_snapshot, verify_snapshot
 from ..features import mr_scan, momentum_scan
@@ -194,6 +194,31 @@ def run_paper(prices_dir: Path, symbols: list[str], *, output_dir: Path = DEFAUL
     return result
 
 
+def missed_sessions(output_dir: Path, *, now=None) -> dict:
+    """Trading sessions since the first record that have no runs/<session>/paper.json.
+
+    Report only. A session whose window (09:00 VN next session) has closed is lost:
+    it is listed under ``missed`` and must never be backfilled.
+    """
+    now = _now(now)
+    runs = Path(output_dir) / "runs"
+    recorded = sorted(date.fromisoformat(p.parent.name) for p in runs.glob("*/paper.json")
+                      if re.fullmatch(r"\d{4}-\d{2}-\d{2}", p.parent.name))
+    report = {"since": None, "through": None, "recorded_sessions": len(recorded), "missed": [],
+              "window_open_unrecorded": [],
+              "note": "report only; sessions whose window closed are never backfilled"}
+    if not recorded:
+        return report
+    through = completed_session_date(now)
+    report.update(since=str(recorded[0]), through=str(through))
+    for day in trading_days_between(recorded[0], through):
+        if (runs / str(day) / "paper.json").exists():
+            continue
+        closes = datetime.combine(next_trading_day(day), time(9), VN_TIMEZONE)
+        report["missed" if now >= closes else "window_open_unrecorded"].append(str(day))
+    return report
+
+
 def _operational_notes(output_dir: Path) -> dict:
     """Report-only notes for latest.json/output; never part of a paper record or exit code."""
     notes = {}
@@ -201,11 +226,15 @@ def _operational_notes(output_dir: Path) -> dict:
         notes["calendar_warning"] = calendar_coverage_warning(_now())
     except Exception as exc:
         notes["calendar_warning"] = {"message": f"calendar coverage check failed: {type(exc).__name__}"}
+    try:
+        notes["missed_sessions"] = missed_sessions(output_dir)
+    except Exception as exc:
+        notes["missed_sessions"] = {"error": f"missed-session check failed: {type(exc).__name__}"}
     return notes
 
 
 def _operational_notes_keys(report: dict) -> list[str]:
-    return [key for key in ("calendar_warning",) if report.get(key)]
+    return [key for key in ("calendar_warning", "missed_sessions") if report.get(key)]
 
 
 def main(argv=None) -> int:
@@ -214,10 +243,24 @@ def main(argv=None) -> int:
     parser.add_argument("--run", action="store_true", help="Record only within the ex-ante EOD window")
     parser.add_argument("--check", action="store_true", help="Check/preview without recording")
     parser.add_argument("--score", action="store_true", help="Score existing paper records only; preserve scan report")
+    parser.add_argument("--status", action="store_true",
+                        help="Read-only: calendar coverage and missed sessions; fetches and writes nothing")
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--prices-dir", type=Path)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args(argv)
+    if args.status:
+        if args.check or args.run or args.score or args.refresh or args.manifest or args.prices_dir:
+            print("FAILED: --status is read-only and cannot be combined with other modes", flush=True)
+            return 2
+        latest = args.output_dir / "latest.json"
+        try:
+            previous = json.loads(latest.read_text(encoding="utf-8")) if latest.exists() else {}
+        except ValueError:
+            previous = {"status": "unreadable"}
+        print(json.dumps({"latest": {k: previous.get(k) for k in ("status", "session", "generated_at", "path")},
+                          **_operational_notes(args.output_dir)}, ensure_ascii=False), flush=True)
+        return 0
     try:
         if sum((args.check, args.run, args.score)) > 1:
             raise ValueError("--check, --run and --score are mutually exclusive")

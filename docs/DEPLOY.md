@@ -206,9 +206,12 @@ record paper runs or change the schedule.
 3. Open `data/paper/latest.json` — `status` should be `recorded` or `already_recorded`
    with `session` = today. Exit 2 after a recorded run usually means scoring was blocked by
    a provider revision; check `data/paper/scores/latest.json`.
-4. Check `data/paper/runs/` has a folder for every trading session since the first
-   recorded run. A session whose window closed (09:00 VN next session) without a record is
-   **lost** and must not be backfilled.
+4. `python -m stock_agent.pipeline.paper_runner --status` (read-only) — prints
+   `calendar_warning` (HOSE holiday table about to run out) and `missed_sessions`: trading
+   sessions since the first record with no `runs/<session>/paper.json`. Entries under
+   `missed` had their window close (09:00 VN next session) and are **lost**; never backfill
+   them. `window_open_unrecorded` can still be recorded today. The same block is written to
+   `data/paper/latest.json` on every run.
 5. Remember: `prices_hist` and the dashboard are **not** part of this job; their dates
    reflect the last manual `eod_update`.
 
