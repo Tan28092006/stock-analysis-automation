@@ -38,11 +38,54 @@ def _sessions(df: pd.DataFrame, as_of) -> pd.DataFrame:
     return out.sort_values("date").reset_index(drop=True)
 
 
+# Fields whose window can exceed the 650-day snapshot (about 440 sessions) or that the desk
+# defines as long-window: taken from the long series when one is supplied (`long_df`).
+EXCURSION_FIELDS = ("locked_mae_p50", "locked_mae_p80", "locked_mae_p90", "locked_breach_3pct_rate",
+                    "day2_ret_given_breach", "n_locked", "n_breach", "mfe5_p50", "mae5_p50", "n_window5")
+LONG_WINDOW_FIELDS = ("sma200", "high_250") + EXCURSION_FIELDS
+
+
+def long_series(df: pd.DataFrame, long_df: pd.DataFrame | None, as_of=None) -> pd.DataFrame:
+    """The series long-window fields use: `long_df` (cut at as_of) when given, else `df` itself.
+
+    The caller guarantees the long series equals `df` over df's sessions (history.compare); here
+    only the last session is re-checked so a misaligned series can never be used silently.
+    """
+    if long_df is None:
+        return df
+    long = _sessions(long_df, as_of)
+    if long.empty or long["date"].iloc[-1] != df["date"].iloc[-1] or len(long) < len(df):
+        raise ValueError("long series does not end on the short series' last session")
+    return long
+
+
+def _long_window(df: pd.DataFrame, excursion_lookback: int, short_rows: int | None = None) -> dict:
+    """Long-window fields of `df`. Max/min/quantile fields are exact, so a longer series that agrees
+    with the snapshot gives bit-identical values; the rolling mean is evaluated over the last
+    max(short_rows, 200) closes so it is also bit-identical when the snapshot already covers it."""
+    c = df["close"].astype(float)
+    if short_rows is not None:
+        c = c.tail(max(short_rows, 200))
+    out = {"sma200": _f(base.sma(c, 200).iloc[-1]),
+           "high_250": _f(df["high"].tail(250).max()) if len(df) >= 250 else float("nan")}
+    ex = excursion_stats(df, excursion_lookback)
+    ex.pop("_locked_mae", None)
+    out.update(ex)
+    return out
+
+
 def compute_ticker(df: pd.DataFrame, as_of=None, *, limit_proxy_pct: float = 6.5,
-                   excursion_lookback: int = 250) -> dict:
+                   excursion_lookback: int = 250, long_df: pd.DataFrame | None = None) -> dict:
+    """Indicators at the last session <= as_of.
+
+    Short-window fields always come from `df` (the verified snapshot). With `long_df` (a longer
+    series equal to `df` over df's sessions), LONG_WINDOW_FIELDS come from `long_df`; without it
+    the output is exactly the pre-history behaviour.
+    """
     df = _sessions(df, as_of)
     if len(df) < 3:
         raise ValueError("at least 3 completed bars required")
+    lw = _long_window(long_series(df, long_df, as_of), excursion_lookback, len(df) if long_df is not None else None)
     c = df["close"].astype(float)
     cv = c.to_numpy()
     vol = df["volume"].astype(float)
@@ -77,7 +120,7 @@ def compute_ticker(df: pd.DataFrame, as_of=None, *, limit_proxy_pct: float = 6.5
         "sma5": _f(base.sma(c, 5).iloc[-1]),
         "sma20": _f(base.sma(c, 20).iloc[-1]),
         "sma50": _f(base.sma(c, 50).iloc[-1]),
-        "sma200": _f(base.sma(c, 200).iloc[-1]),
+        "sma200": lw["sma200"],
         "ema21": _f(base.ema(c, 21).iloc[-1]),
         "ema50": _f(base.ema(c, 50).iloc[-1]),
         "rsi2": _f(_rsi(c, 2).iloc[-1]),
@@ -94,7 +137,7 @@ def compute_ticker(df: pd.DataFrame, as_of=None, *, limit_proxy_pct: float = 6.5
         "avg_value_20_bn": float((c * vol).tail(20).mean() / 1e9) if len(df) >= 20 else float("nan"),
         "high_20": high_20,
         "low_20": _f(df["low"].tail(20).min()) if len(df) >= 20 else float("nan"),
-        "high_250": _f(df["high"].tail(250).max()) if len(df) >= 250 else float("nan"),
+        "high_250": lw["high_250"],
         "dist_high_20_pct": (high_20 / close - 1) * 100 if math.isfinite(high_20) else float("nan"),
         "limit_up_t": bool(_ret(cv, 1) >= limit_proxy_pct),
         "limit_down_t": bool(_ret(cv, 1) <= -limit_proxy_pct),
@@ -103,9 +146,7 @@ def compute_ticker(df: pd.DataFrame, as_of=None, *, limit_proxy_pct: float = 6.5
         "vsa_stopping_volume": int(vsa["vsa_stopping_volume"].iloc[-1]),
         "vsa_no_supply": int(vsa["vsa_no_supply"].iloc[-1]),
     }
-    ex = excursion_stats(df, excursion_lookback)
-    ex.pop("_locked_mae", None)
-    out.update(ex)
+    out.update({k: lw[k] for k in EXCURSION_FIELDS})
     out["stop_atr_multiple"] = 3.0 / out["atr_pct"] if out["atr_pct"] and math.isfinite(out["atr_pct"]) else float("nan")
     return out
 

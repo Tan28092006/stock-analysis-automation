@@ -12,7 +12,14 @@ import numpy as np
 import pandas as pd
 
 from ..features import indicators as base
-from .indicators import _sessions
+from .indicators import _sessions, long_series
+
+# Episode statistics look back an unbounded number of sessions (to the last near-high close) and
+# drawdown_250 needs 250 sessions: with `long_df` they come from the long series. They use only
+# max/min/comparisons/ratios of the same values, so they are bit-identical to the snapshot result
+# whenever the episode and the 250-session window fit inside the snapshot.
+BF_LONG_WINDOW_FIELDS = ("high_250", "drawdown_250_pct", "episode_start_date", "episode_sessions",
+                         "episode_depth_pct", "panic_low", "new_episode_low_2", "stab_state")
 
 
 def tick_size(price: float) -> int:
@@ -119,10 +126,16 @@ def _index_fields(df: pd.DataFrame, idx: pd.DataFrame | None, cfg: dict, ret_10d
 
 def compute_bottomfish_fields(df: pd.DataFrame, index_df: pd.DataFrame | None = None, *, cfg: dict,
                               as_of=None, sector_mean_ret_10d: float | None = None,
-                              flows: pd.DataFrame | None = None, symbol: str | None = None) -> dict:
+                              flows: pd.DataFrame | None = None, symbol: str | None = None,
+                              long_df: pd.DataFrame | None = None) -> dict:
+    """Without `long_df` the output is exactly the pre-history behaviour. With it (a longer series
+    equal to `df` over df's sessions), BF_LONG_WINDOW_FIELDS come from the long series."""
     df = _sessions(df, as_of)
     if len(df) < 3:
         raise ValueError("at least 3 completed bars required")
+    long = long_series(df, long_df, as_of)
+    hl, lol, cl = (long[k].astype(float).to_numpy() for k in ("high", "low", "close"))
+    nl, dates_l = len(long), [str(d) for d in long["date"]]
     idx = _sessions(index_df, as_of) if index_df is not None else None
     lim = cfg["limit"]
     o, h, lo, c, v = (df[k].astype(float).to_numpy() for k in ("open", "high", "low", "close", "volume"))
@@ -139,21 +152,21 @@ def compute_bottomfish_fields(df: pd.DataFrame, index_df: pd.DataFrame | None = 
     since = n - 1 - last_floor if last_floor is not None else None
 
     ep = cfg["episode"]
-    high_roll = pd.Series(h).rolling(int(ep["lookback_high_sessions"]), min_periods=1).max().to_numpy()
-    near = np.where(c >= ep["reset_recovery_pct"] * high_roll)[0]
+    high_roll = pd.Series(hl).rolling(int(ep["lookback_high_sessions"]), min_periods=1).max().to_numpy()
+    near = np.where(cl >= ep["reset_recovery_pct"] * high_roll)[0]
     start = int(near[-1]) + 1 if len(near) else 0
-    if start <= n - 1:
-        ep_sessions = n - start
-        panic_low = float(lo[start:].min())
-        depth = (c[-1] / c[start - 1] - 1) * 100 if start >= 1 else _nan()
-        new_low_2 = bool(min(lo[-2], lo[-1]) <= panic_low)
-        ep_date = dates[start]
+    if start <= nl - 1:
+        ep_sessions = nl - start
+        panic_low = float(lol[start:].min())
+        depth = (cl[-1] / cl[start - 1] - 1) * 100 if start >= 1 else _nan()
+        new_low_2 = bool(min(lol[-2], lol[-1]) <= panic_low)
+        ep_date = dates_l[start]
     else:
         ep_sessions, panic_low, depth, new_low_2, ep_date = 0, None, 0.0, False, None
 
     high_60 = float(h[-60:].max())
     dd60 = (c[-1] / high_60 - 1) * 100
-    high_250 = float(h[-250:].max()) if n >= 250 else _nan()
+    high_250 = float(hl[-250:].max()) if nl >= 250 else _nan()
     higher_low = bool(lo[-1] > lo[-2])
     stab = cfg["stabilisation"]
     locked_streak = _streak(locked)
