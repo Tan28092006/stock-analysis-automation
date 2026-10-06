@@ -33,13 +33,14 @@ def init_bundle(root: Path, protocol: str, experiment_id: str, run_id: str) -> P
 
 
 def write_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False))
+    # LF on every OS: sealed bundles are hashed byte-for-byte.
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False), newline="\n")
 
 
 def seal(run: Path) -> dict:
     """Record hashes of every artifact file in experiment.json['artifact_hashes']."""
     exp = json.loads((run / "experiment.json").read_text())
-    exp["artifact_hashes"] = {str(p.relative_to(run)): sha256_file(p) for p in sorted(run.rglob("*"))
+    exp["artifact_hashes"] = {p.relative_to(run).as_posix(): sha256_file(p) for p in sorted(run.rglob("*"))
                               if p.is_file() and p.name not in ("experiment.json", "decision.json")}
     write_json(run / "experiment.json", exp)
     return exp["artifact_hashes"]
@@ -85,7 +86,7 @@ def validate_bundle(run: Path) -> dict:
                 problems.append(f"sealed_file_missing:{rel}")
             elif sha256_file(p) != digest:
                 problems.append(f"hash_drift:{rel}")
-        extra = {str(p.relative_to(run)) for p in run.rglob("*") if p.is_file()} - set(sealed) - {
+        extra = {p.relative_to(run).as_posix() for p in run.rglob("*") if p.is_file()} - set(sealed) - {
             "experiment.json", "decision.json"}
         if extra:
             problems.append(f"unsealed_files:{sorted(extra)[:5]}")
