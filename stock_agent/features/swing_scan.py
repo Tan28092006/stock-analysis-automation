@@ -16,6 +16,7 @@ high-frequency small-edge tactic, and the current-basket survivorship caveat sti
 from __future__ import annotations
 
 import json
+import logging
 import math
 from pathlib import Path
 
@@ -31,6 +32,7 @@ RSI2_MAX = 5.0
 STOP_PCT = 0.08          # -8% disaster stop
 MAX_HOLD = 8
 CACHE_PATH = Path("data/pipeline/swing_scan_cache.json")
+_log = logging.getLogger(__name__)
 
 
 def _rsi(series: pd.Series, n: int) -> pd.Series:
@@ -98,13 +100,13 @@ def swing_scan(force: bool = False) -> dict:
             if (cached.get("rules_hash") == rules_hash and cached.get("data_date") == latest
                     and cached.get("input_snapshot") == snapshot):
                 return cached
-        except Exception:
-            pass
+        except Exception as exc:
+            _log.warning("swing_scan cache read failed (%s); recomputing: %r", CACHE_PATH, exc)
     payload = _compute()
     payload["input_snapshot"] = snapshot
     try:
         CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         CACHE_PATH.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
-    except Exception:
-        pass
+    except Exception as exc:
+        _log.warning("swing_scan cache write failed (%s); serving uncached result: %r", CACHE_PATH, exc)
     return payload

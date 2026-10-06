@@ -18,6 +18,7 @@ handles risk. See memory: momentum-excess-gate, crash-response-by-shape.
 from __future__ import annotations
 
 import json
+import logging
 import math
 from pathlib import Path
 
@@ -37,6 +38,7 @@ TARGET_VOL = 0.20        # annualized portfolio vol target
 DEFAULT_TOP_N = 10
 BUFFER_MULT = 2          # hold a name until it leaves the top (2 x top_n)
 CACHE_PATH = Path("data/pipeline/momentum_scan_cache.json")
+_log = logging.getLogger(__name__)
 
 
 def _vn30() -> set:
@@ -155,16 +157,16 @@ def momentum_scan(top_n: int = DEFAULT_TOP_N, force: bool = False) -> dict:
                     buf = set(cached.get("buffer_symbols", []))
                     cached["positions"] = check_momentum_positions(PositionStore(), buf, True)
                     cached["sell_alerts"] = [p for p in cached["positions"] if p.get("live_status") == "SELL"]
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _log.warning("momentum_scan position refresh failed; serving cached positions: %r", exc)
                 return cached
-        except Exception:
-            pass
+        except Exception as exc:
+            _log.warning("momentum_scan cache read failed (%s); recomputing: %r", CACHE_PATH, exc)
     payload = _compute(top_n)
     payload["input_snapshot"] = snapshot
     try:
         CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         CACHE_PATH.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
-    except Exception:
-        pass
+    except Exception as exc:
+        _log.warning("momentum_scan cache write failed (%s); serving uncached result: %r", CACHE_PATH, exc)
     return payload
