@@ -15,6 +15,7 @@ from .behaviour import review_flags
 from .calendar_events import earliest_sell, session_distance, trade_session
 from .config import DeskPaths, load_config, load_universe_symbols
 from .gate import evaluate_gate
+from .history import HistoryResolver
 from .indicators import compute_ticker, jsonable
 from .journal import load_journal
 from . import reclog
@@ -119,7 +120,9 @@ def build_review(paths: DeskPaths, *, now: datetime, show_nav: bool = False) -> 
                                                  date.fromisoformat(fresh["as_of"] or str(tday))),
                "actions": []}
         if t in frames:
-            ind = compute_ticker(frames[t])
+            long_df, hist = HistoryResolver(paths, fresh["as_of"]).series(t, frames[t])
+            ind = compute_ticker(frames[t], long_df=long_df)
+            row["history_source"] = hist["history_source"]
             g = evaluate_gate(ticker=t, ind=ind, market=market, freshness=fresh, universe=universe, cfg=cfg,
                               trade_day=tday, plan=None, portfolio={}, events=None)
             stop = p["avg_cost"] * (1 - stop_pct / 100)

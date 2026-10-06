@@ -29,7 +29,7 @@ class _Clock:
 
 
 def write_store(root: Path, frames: dict[str, pd.DataFrame], *, store_id: str = "fx1", as_of: date = AS_OF,
-                fail=(), edit=None, completed_at: str | None = None) -> Path:
+                fail=(), edit=None, completed_at: str | None = None, aborted: str | None = None) -> Path:
     """Build a store; `fail` symbols get HTTP 404; `edit(symbol, payload)` may alter the provider bytes."""
     from stock_agent.data import history_store as hs
     payloads = {}
@@ -49,10 +49,16 @@ def write_store(root: Path, frames: dict[str, pd.DataFrame], *, store_id: str = 
     start = min(df["date"].iloc[0] for df in frames.values())
     store, _ = hs.build_store(list(frames), root, start=start, as_of=as_of, now=NOW_EOD, post=post,
                               clock=clock.clock, sleep=clock.sleep, store_id=store_id)
-    if completed_at is not None:   # manifest.json is not itself hashed by verify; pin ordering for tests
+    if completed_at is not None or aborted is not None:
+        # manifest.json is not itself hashed by verify: pin ordering / mark an aborted run for tests
         path = store / "manifest.json"
         data = json.loads(path.read_text(encoding="utf-8"))
-        data["completed_at"] = completed_at
+        if completed_at is not None:
+            data["completed_at"] = completed_at
+        if aborted is not None:
+            data["aborted"] = aborted
+            for sym in fail:
+                data["symbols"][sym]["error"] = f"not attempted: {aborted}"
         path.write_text(json.dumps(data, indent=2), encoding="utf-8")
     return store
 

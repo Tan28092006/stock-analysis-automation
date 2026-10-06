@@ -113,6 +113,38 @@ def test_older_store_is_used_for_a_symbol_that_failed_in_the_newest(tmp_path, mo
     assert res.series("BBB", snap["BBB"])[1]["history_store_id"].endswith("_new")
 
 
+def test_newer_aborted_store_missing_the_ticker_falls_through_to_the_complete_store(tmp_path, monkeypatch):
+    """Real case 2026-10-06: a later run aborted after 5 consecutive failures (AAA never attempted)."""
+    paths, _, long, snap, _ = history_desk(tmp_path, monkeypatch, store_id="full",
+                                           completed_at="2026-09-21T10:00:00+00:00")
+    write_store(paths.history_root, long, store_id="aborted", fail=("AAA",),
+                completed_at="2026-09-21T11:00:00+00:00", aborted="5 consecutive fetch failures")
+    res = _resolver(paths)
+    df, prov = res.series("AAA", snap["AAA"])
+    assert df is not None and prov["history_source"] == "history_store"
+    assert prov["history_store_id"].endswith("_full")
+    assert res.summary({"AAA": prov})["per_ticker"]["AAA"]["history_store_id"].endswith("_full")
+
+
+def test_non_aborted_store_is_preferred_when_both_have_the_ticker(tmp_path, monkeypatch):
+    paths, _, long, snap, _ = history_desk(tmp_path, monkeypatch, store_id="full",
+                                           completed_at="2026-09-21T10:00:00+00:00")
+    write_store(paths.history_root, long, store_id="aborted", fail=("VCB",),
+                completed_at="2026-09-21T11:00:00+00:00", aborted="5 consecutive fetch failures")
+    res = _resolver(paths)
+    assert res.series("BBB", snap["BBB"])[1]["history_store_id"].endswith("_full")
+    assert res.series("VCB", snap["VCB"])[1]["history_store_id"].endswith("_full")
+
+
+def test_aborted_store_is_used_when_it_is_the_only_one_with_the_ticker(tmp_path, monkeypatch):
+    paths, _, long, snap, _ = history_desk(tmp_path, monkeypatch, store_id="full", fail=("BBB",),
+                                           completed_at="2026-09-21T10:00:00+00:00")
+    write_store(paths.history_root, long, store_id="aborted", fail=("VCB",),
+                completed_at="2026-09-21T11:00:00+00:00", aborted="5 consecutive fetch failures")
+    _, prov = _resolver(paths).series("BBB", snap["BBB"])
+    assert prov["history_store_id"].endswith("_aborted") and prov["history_source"] == "history_store"
+
+
 def test_quarantined_rows_stay_out_and_are_listed(tmp_path, monkeypatch):
     def edit(sym, body):
         if sym == "BBB":

@@ -15,6 +15,7 @@ from .calendar_events import (SELL_FROM, earliest_sell, holiday_table_end, horiz
                               next_vn30f_expiry, trade_session)
 from .config import DeskPaths, code_hash, load_config, load_universe_symbols
 from .gate import FAIL, evaluate_gate, verdict
+from .history import HistoryResolver, provenance_fields
 from .indicators import compute_ticker, flow_fields, jsonable
 from .journal import load_journal
 from . import reclog
@@ -118,7 +119,7 @@ def check(paths: DeskPaths, ticker: str, *, now: datetime, price: float | None =
            "reason": reason, "emotion": emotion, "params_hash": cfg["params_hash"], "desk_code_hash": code_hash(),
            "earliest_sell": f"{earliest_sell(tday)} {SELL_FROM}", "horizon_warning": horizon_warning(tday),
            "eod_note": f"EOD data as of {fresh['as_of'] or 'n/a'}"}
-    ind = market = plan = None
+    ind = market = plan = hist = None
     rules = []
     if fresh["ok"]:
         frames = dl.load_frames(Path(fresh["manifest"]))
@@ -129,8 +130,9 @@ def check(paths: DeskPaths, ticker: str, *, now: datetime, price: float | None =
         out["journal_errors"] = journal.errors if journal else None
         market = dl.market_summary(Path(fresh["manifest"]), frames, universe, cfg)
         if ticker in universe and ticker in frames:
+            long_df, hist = HistoryResolver(paths, fresh["as_of"]).series(ticker, frames[ticker])
             ind = compute_ticker(frames[ticker], limit_proxy_pct=cfg["gate"]["limit_proxy_pct"],
-                                 excursion_lookback=cfg["excursion"]["lookback_entries"])
+                                 excursion_lookback=cfg["excursion"]["lookback_entries"], long_df=long_df)
             entry = price or ind["close"]
             plan = size_plan(entry, nav_v, cfg, current_exposure=exposure, amount=amount)
         if s2_override is not None:
@@ -167,6 +169,7 @@ def check(paths: DeskPaths, ticker: str, *, now: datetime, price: float | None =
     out["acknowledged"] = bool(ack and out["verdict"] == "WARN" and out["thesis_present"])
     out["ack_refused"] = bool(ack and not out["acknowledged"])
     out["indicators"] = ind
+    out["history"] = hist   # which series the long-window fields used (None: no indicators computed)
     out["market"] = market
     out["plan"] = plan
     if ind is not None:
@@ -186,6 +189,7 @@ def check(paths: DeskPaths, ticker: str, *, now: datetime, price: float | None =
                                    "snapshot_manifest_sha256", "params_hash", "desk_code_hash", "thesis_present",
                                    "acknowledged", "setups")}
         row["source"] = "user_check"
+        row.update(provenance_fields(out["history"]))
         row["qty_suggested"] = (out["plan"] or {}).get("qty")
         row["entry_ref"] = (out["plan"] or {}).get("entry_ref")
         row["stop_user"] = (out["plan"] or {}).get("stop_user")
@@ -221,10 +225,12 @@ def compute_state(paths: DeskPaths, now: datetime, *, s2_override: list[str] | N
     events = load_events(paths)
     journal = load_journal(paths.portfolio, price_lookup=dl.close_lookup(frames))
     nav_v, nav_source, _, _ = _portfolio(journal, None, cfg)
-    tickers = {}
+    resolver = HistoryResolver(paths, fresh["as_of"])
+    tickers, provs = {}, {}
     for sym in universe:
+        long_df, provs[sym] = resolver.series(sym, frames[sym])
         ind = compute_ticker(frames[sym], limit_proxy_pct=cfg["gate"]["limit_proxy_pct"],
-                             excursion_lookback=cfg["excursion"]["lookback_entries"])
+                             excursion_lookback=cfg["excursion"]["lookback_entries"], long_df=long_df)
         plan = size_plan(ind["close"], nav_v, cfg)
         g = evaluate_gate(ticker=sym, ind=ind, market=market, freshness=fresh, universe=universe, cfg=cfg,
                           trade_day=tday, plan=plan, s2=sym in s2_list, portfolio={}, events=events)
@@ -241,18 +247,33 @@ def compute_state(paths: DeskPaths, now: datetime, *, s2_override: list[str] | N
             "plan_default_nav": {**{k: plan[k] for k in ("entry_ref", "stop_user", "stop_validated", "qty",
                                                          "vnd_at_risk_nominal", "vnd_at_risk_effective", "nav")},
                                  "nav_source": nav_source},
-            "earliest_sell": f"{earliest_sell(tday)} {SELL_FROM}"})
+            "earliest_sell": f"{earliest_sell(tday)} {SELL_FROM}",
+            **provenance_fields(provs[sym]),
+            **{k: provs[sym][k] for k in ("history_data_issues", "history_notes", "history_mismatch_detail")
+               if k in provs[sym]}})
     state_manifest = {
         "session": fresh["as_of"], "as_of": fresh["as_of"], "trade_session": str(tday),
         "snapshot_manifest": fresh["manifest"], "snapshot_manifest_sha256": fresh["manifest_sha256"],
         "file_sha256": fresh["file_sha256"], "flows_health": health, "s2_status": s2_status,
         "s2_symbols": s2_list, "desk_code_hash": code_hash(), "params_hash": cfg["params_hash"],
-        "nav_source": nav_source,
+        "nav_source": nav_source, "history": resolver.summary(provs),
         "created_at": now.astimezone(timezone.utc).isoformat(),
         "limitations": ["Advisory only; no orders.", "Provider-adjusted prices; may differ from board prices.",
                         "Current fixed VN30 universe (survivorship).",
                         "G9 (portfolio) and G10 (events) are UNVERIFIED in state; `check` evaluates them."]}
     return {"manifest": jsonable(state_manifest), "market": jsonable(market), "tickers": tickers}
+
+
+def history_lines(summary: dict | None) -> list[str]:
+    """Gate/scan table lines naming the long-window source (none with --history off: old tables)."""
+    if not summary or summary.get("history_mode") != "on":
+        return []
+    stores = ", ".join(summary.get("stores") or {}) or "none"
+    lines = [f"Long windows (SMA200, high_250, MAE/MFE, episode): history_source {summary.get('history_source')} "
+             f"(store {stores}); snapshot_650d fallback: {', '.join(summary.get('fallbacks') or []) or 'none'}"]
+    if summary.get("mismatches"):
+        lines.append(f"WARN history_mismatch (store != snapshot, not stitched): {', '.join(summary['mismatches'])}")
+    return lines + [""]
 
 
 def gate_table(state: dict) -> str:
@@ -262,6 +283,7 @@ def gate_table(state: dict) -> str:
              f"breadth {mk.get('breadth_pct')}% | phiên giao dịch kế: {m['trade_session']} | "
              f"đáo hạn VN30F kế: {mk.get('next_vn30f_expiry')}", "",
              "Structural = G0-G8 + G11 (G9 portfolio, G10 events đánh giá trong `check`).", "",
+             *history_lines(m.get("history")),
              "| Mã | Structural | Setup | Close | RSI2 | ATR% | SMA50 | R:R | Luật trượt |",
              "|---|---|---|---|---|---|---|---|---|"]
     order = sorted(state["tickers"].values(), key=lambda t: ({"PASS": 0, "WARN": 1, "BLOCK": 2}[t["structural_gate"]],

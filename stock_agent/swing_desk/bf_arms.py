@@ -19,6 +19,7 @@ from ..data.exchange_calendar import next_trading_day
 from . import bf_facts, reclog
 from .bf_service import scan_rows
 from .config import DeskPaths, code_hash, load_bf_config, load_config
+from .history import provenance_fields
 
 CODE_ARMS = ("bf_baseline", "bf_knife", "bf_random")
 MIN_EPISODES, MIN_MARKET_EPISODES, MIN_MONTHS = 30, 3, 12
@@ -57,7 +58,7 @@ def _row(r: dict, scan: dict, bf: dict, *, bf_type: str, entry: dict, invalidati
             "structural_verdict": r["structural_verdict"], "structural_failed": r["structural_failed"],
             "price_only_classification": news is None, "bf_news_sha": (news or {}).get("source_sha"),
             "events_sha": events_sha, "data_as_of": scan["as_of"],
-            "snapshot_sha256": scan["snapshot_manifest_sha256"]}
+            "snapshot_sha256": scan["snapshot_manifest_sha256"], **provenance_fields(r.get("history"))}
 
 
 def _first_floor_entry(df, f: dict, as_of: str, trade_session: str, floor_pct: float):
@@ -160,7 +161,9 @@ def freeze_bf_desk(paths: DeskPaths, rows: list[dict], *, now: datetime, model_i
     for row in rows:
         if str(row.get("ticker", "")).upper() not in state["tickers"]:
             raise ValueError(f"{row.get('ticker')}: bf_desk ideas must be VN30 tickers in the desk state")
-    return reclog.freeze(paths.rec_log, rows, source="bf_desk", target_session=date.fromisoformat(session),
+    from .baseline import with_history
+    return reclog.freeze(paths.rec_log, with_history(rows, state), source="bf_desk",
+                         target_session=date.fromisoformat(session),
                          session_as_of=state["manifest"]["as_of"], now=now,
                          meta=_meta(paths, state, bf, cfg, model_id=model_id, n_rollouts=n_rollouts))
 

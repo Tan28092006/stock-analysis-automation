@@ -23,6 +23,7 @@ import pandas as pd
 from . import data as dl
 from . import reclog
 from .config import DeskPaths, code_hash, load_config
+from .history import provenance_fields
 from .scorer import score_bf_row, score_row, summarize
 from .service import load_state, state_freshness
 
@@ -59,7 +60,17 @@ def _plan_row(t: dict, state: dict, cfg: dict, gate_key: str) -> dict | None:
             "size": {"qty": plan["qty"], "risk_vnd_effective": plan["vnd_at_risk_effective"],
                      "risk_pct_nav": cfg["money"]["risk_per_trade_pct"],
                      "nav_source": plan.get("nav_source")},
-            "rsi2": ind.get("rsi2"), "data_as_of": m["as_of"], "snapshot_sha256": m["snapshot_manifest_sha256"]}
+            "rsi2": ind.get("rsi2"), "data_as_of": m["as_of"], "snapshot_sha256": m["snapshot_manifest_sha256"],
+            **provenance_fields(t)}
+
+
+def with_history(rows: list[dict], state: dict) -> list[dict]:
+    """Stamp each row with the long-window source the desk state used for its ticker (authoritative)."""
+    out = []
+    for row in rows:
+        t = state["tickers"].get(str(row.get("ticker", "")).upper())
+        out.append({**row, **provenance_fields(t)} if t is not None else dict(row))
+    return out
 
 
 def candidate_rows(state: dict, source: str, cfg: dict | None = None) -> list[dict]:
@@ -128,7 +139,8 @@ def freeze_analyst(paths: DeskPaths, rows: list[dict], *, source: str, now: date
             raise ValueError(f"{row.get('ticker')}: not in VN30 state or structural gate BLOCK")
         if row.get("snapshot_sha256") not in (None, state["manifest"]["snapshot_manifest_sha256"]):
             raise ValueError(f"{row.get('ticker')}: snapshot_sha256 does not match the desk state")
-    return reclog.freeze(paths.rec_log, rows, source=source, target_session=date.fromisoformat(session),
+    return reclog.freeze(paths.rec_log, with_history(rows, state), source=source,
+                         target_session=date.fromisoformat(session),
                          session_as_of=state["manifest"]["as_of"], now=now,
                          meta=_meta(paths, state, cfg, model_id=model_id, n_rollouts=n_rollouts,
                                     adjudication=adjudication))

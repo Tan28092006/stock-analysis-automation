@@ -8,7 +8,8 @@ longer series for long-window fields, and only when, per ticker:
 2. the store is complete (manifest present), its `as_of` equals the snapshot's `as_of`, and
    `history_store.verify_store` passes (re-hash + re-parse from raw bytes);
 3. the ticker's status in that store is ok or partial (quarantined rows stay out and are listed
-   as data issues); the newest such store wins;
+   as data issues). Selection is per ticker: among qualifying stores a non-aborted run (manifest
+   `aborted` empty) is preferred, then the newest; the chosen store_id is recorded per ticker;
 4. over the snapshot's window the store has exactly the snapshot's sessions and the same OHLCV
    (exact for VND prices and volume; 1e-6 points for indices).
 
@@ -123,10 +124,13 @@ class HistoryResolver:
         self.skipped: list[dict] = []
 
     def stores(self) -> list[dict]:
-        """Complete stores whose as_of equals the snapshot's, newest first (not yet verified)."""
+        """Complete stores whose as_of equals the snapshot's (not yet verified): non-aborted runs
+        first, then newest first. An aborted run (e.g. 5 consecutive fetch failures) is still a
+        valid store for the symbols it did fetch, but loses to a complete run of the same session."""
         if self._stores is None:
-            self._stores = [s for s in complete_stores(self.paths.history_root)
-                            if self.as_of is not None and s["manifest"].get("as_of") == self.as_of]
+            matching = [s for s in complete_stores(self.paths.history_root)
+                        if self.as_of is not None and s["manifest"].get("as_of") == self.as_of]
+            self._stores = sorted(matching, key=lambda s: bool(s["manifest"].get("aborted")))  # stable
         return self._stores
 
     def _ok(self, store: dict) -> bool:
@@ -137,7 +141,7 @@ class HistoryResolver:
 
     def _base(self, snap_df: pd.DataFrame) -> dict:
         return {"history_mode": self.mode, "history_source": SNAPSHOT_SOURCE, "history_store_id": None,
-                "history_store_manifest_sha256": None, "history_store_as_of": None,
+                "history_store_manifest_sha256": None, "history_store_as_of": None, "history_store_aborted": None,
                 "history_first_date": str(snap_df["date"].iloc[0]) if len(snap_df) else None,
                 "history_rows": int(len(snap_df)), "history_mismatch": False, "history_data_issues": [],
                 "history_notes": []}
@@ -167,6 +171,7 @@ class HistoryResolver:
         issues = json.loads((chosen["dir"] / entry["issues_path"]).read_text(encoding="utf-8"))
         prov.update(history_store_id=chosen["store_id"], history_store_manifest_sha256=chosen["manifest_sha256"],
                     history_store_as_of=chosen["manifest"]["as_of"],
+                    history_store_aborted=chosen["manifest"].get("aborted") or None,
                     history_data_issues=[{"date": q.get("date"), "reasons": q.get("reasons")}
                                          for q in issues.get("quarantined", [])])
         mismatch = compare(store_df, snap_df, entry.get("unit", "VND"))

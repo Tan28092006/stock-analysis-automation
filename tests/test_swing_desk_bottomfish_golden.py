@@ -5,7 +5,13 @@ running this module with SWING_DESK_WRITE_GOLDEN=1 against an export of that rev
 Ignored fields: `desk_code_hash` (hashes every module in the package, so it changes when modules
 are added) and `snapshot_manifest_sha256` / the gate-table sha prefix (manifest.json embeds the
 temporary directory path).
+
+T16 (history store): the golden runs with `--history off` (DeskPaths.history="off"), the old
+snapshot-only behaviour. The only addition in that mode is the `history` provenance block of a
+check, which `_off` asserts to be the snapshot/off provenance and then removes. History-on
+outputs have their own golden (tests/test_swing_desk_history_golden.py).
 """
+from dataclasses import replace
 from datetime import datetime
 import hashlib
 import json
@@ -32,6 +38,14 @@ def _clean(value):
     return value
 
 
+def _off(r: dict) -> dict:
+    """Assert the check used the snapshot with history off, then drop the provenance block."""
+    h = r.pop("history")
+    assert h is None or (h["history_mode"] == "off" and h["history_source"] == "snapshot_650d"
+                         and h["history_store_id"] is None and not h["history_mismatch"]), h
+    return r
+
+
 def _text(text: str) -> str:
     return re.sub(r"snapshot sha [0-9a-f]{12}", "snapshot sha <sha>", text)
 
@@ -41,6 +55,7 @@ def collect(tmp_path, monkeypatch) -> dict:
     from stock_agent.swing_desk.config import load_config
     out = {}
     paths, _ = setup_desk(tmp_path, monkeypatch)
+    paths = replace(paths, history="off")
     ready(paths)
     kw = dict(now=NOW_EOD, s2_override=[], record=False)
     cases = {
@@ -53,18 +68,18 @@ def collect(tmp_path, monkeypatch) -> dict:
     for name, args in cases.items():
         ticker = args.pop("ticker")
         r = service.check(paths, ticker, **kw, **args)
-        out[name] = {"json": _clean(r), "text": _text(render.render_check(r))}
+        out[name] = {"text": _text(render.render_check(r)), "json": _clean(_off(r))}
     close = out["aaa_pass"]["json"]["indicators"]["close"]
     for name, price in (("aaa_price_plus2", round(close * 1.02)), ("aaa_price_plus6", round(close * 1.06))):
         r = service.check(paths, "AAA", price=price, amount=5_000_000, reason="S1", emotion="calm", **kw)
-        out[name] = {"json": _clean(r), "text": _text(render.render_check(r))}
+        out[name] = {"text": _text(render.render_check(r)), "json": _clean(_off(r))}
     later = datetime(2026, 9, 22, 17, 0, tzinfo=VN_TIMEZONE)
     r = service.check(paths, "AAA", now=later, s2_override=[], record=False)
-    out["stale_g0"] = {"json": _clean(r), "text": _text(render.render_check(r))}
+    out["stale_g0"] = {"text": _text(render.render_check(r)), "json": _clean(_off(r))}
     paths.portfolio.write_text("2026-09-01|NAV||1000000000||||||\n2026-09-17|BUY|BBB||20000|1000|S1|PASS|calm||\n"
                                "2026-09-21|SELL|BBB||19000|1000|stop||fear||\n", encoding="utf-8")
     r = service.check(paths, "AAA", **kw)
-    out["aaa_revenge_block"] = {"json": _clean(r), "text": _text(render.render_check(r))}
+    out["aaa_revenge_block"] = {"text": _text(render.render_check(r)), "json": _clean(_off(r))}
     paths.portfolio.unlink()
     state = service.compute_state(paths, NOW_EOD, s2_override=[], with_flows_data=False)
     out["scan_table"] = _text(service.gate_table(state))

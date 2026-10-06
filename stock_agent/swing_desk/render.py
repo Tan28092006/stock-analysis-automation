@@ -25,6 +25,23 @@ def mil(value) -> str:
     return "n/a" if value is None else f"{value / 1e6:,.1f} tr".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def history_line(h: dict | None) -> list[str]:
+    """Which series the long-window fields used; nothing with --history off (old output)."""
+    if not h or h.get("history_mode") != "on":
+        return []
+    if h.get("history_source") == "history_store":
+        src = (f"history_store {h.get('history_store_id')} (sha {(h.get('history_store_manifest_sha256') or '')[:12]}), "
+               f"từ {h.get('history_first_date')}, {h.get('history_rows')} phiên")
+    else:
+        src = f"snapshot_650d ({h.get('history_rows')} phiên từ {h.get('history_first_date')})"
+    lines = [f"Lịch sử dài (SMA200, đỉnh 250, MAE/MFE, đợt giảm): {src}"]
+    lines += [f"  {n['level']}: {n['text']}" for n in h.get("history_notes") or [] if n.get("level") == "WARN"]
+    if h.get("history_data_issues"):
+        lines.append(f"  {len(h['history_data_issues'])} dòng store bị cách ly (không dùng): "
+                     + ", ".join(str(i.get("date")) for i in h["history_data_issues"][:5]))
+    return lines
+
+
 def render_check(r: dict) -> str:
     sha = (r.get("snapshot_manifest_sha256") or "")[:12]
     lines = [f"{r['ticker']} — {r['verdict']}   (dữ liệu EOD tới {r.get('data_as_of') or 'n/a'}, snapshot sha {sha or 'n/a'})",
@@ -66,6 +83,7 @@ def render_check(r: dict) -> str:
     if fl.get("flow_status"):
         lines.append(f"Dòng tiền NN (chú thích A4, không đổi verdict): {fl.get('flow_status')}"
                      + (f", ròng 5 phiên {fl['f_net_5d_bn']:.1f} tỷ" if fl.get("f_net_5d_bn") is not None else ""))
+    lines += history_line(r.get("history"))
     if r.get("horizon_warning"):
         lines.append(f"Cảnh báo lịch: {r['horizon_warning']}")
     if r.get("journal_errors"):
@@ -158,6 +176,7 @@ def render_bf_check(r: dict) -> str:
                      f"{held['earliest_sell']}; THESIS invalid={held.get('invalid') or 'chưa ghi'}, "
                      f"time_stop={held.get('time_stop') or 'chưa ghi'}. {held['note']}")
     lines.append(f"NAV dùng để tính: {r.get('nav_source')}")
+    lines += history_line(r.get("history"))
     if r.get("recheck_conditions"):
         lines.append("Kiểm lại sớm nhất khi: " + "; ".join(r["recheck_conditions"]) + ".")
     if r.get("ack_refused"):

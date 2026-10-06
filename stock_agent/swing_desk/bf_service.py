@@ -18,6 +18,7 @@ from .bottomfish import (CAVEAT, P3_NOTE, bf_plan, classify_fall, evaluate_bf_be
 from .calendar_events import SELL_FROM, earliest_sell, horizon_warning, trade_session
 from .config import DeskPaths, code_hash, load_bf_config, load_config, load_universe_symbols
 from .gate import FAIL, PASS, verdict
+from .history import HistoryResolver, provenance_fields
 from .indicators import compute_ticker, jsonable
 from .journal import load_journal
 from .sizing import effective_loss_pct
@@ -97,10 +98,12 @@ def check_bottomfish(paths: DeskPaths, ticker: str, *, now: datetime, price: flo
     all_frames = {**frames, **extra}
     journal = load_journal(paths.portfolio, price_lookup=dl.close_lookup(all_frames), checks=checks)
     nav_v, nav_source, _, _ = _portfolio(journal, nav, cfg)
+    long_df, hist = (HistoryResolver(paths, data_as_of).series(ticker, df) if df is not None else (None, None))
     fields = (compute_bottomfish_fields(df, idx, cfg=bf, sector_mean_ret_10d=_sector_mean(ticker, frames, cfg),
-                                        symbol=ticker) if df is not None else None)
+                                        symbol=ticker, long_df=long_df) if df is not None else None)
     ind = (compute_ticker(df, limit_proxy_pct=cfg["gate"]["limit_proxy_pct"],
-                          excursion_lookback=cfg["excursion"]["lookback_entries"]) if df is not None else None)
+                          excursion_lookback=cfg["excursion"]["lookback_entries"], long_df=long_df)
+           if df is not None else None)
     news = bf_facts.latest_news(bf_facts.load_bf_news(paths), ticker)
     events = load_events(paths)
     fall = classify_fall(fields, market, news, data_as_of=data_as_of, cfg=bf)
@@ -134,7 +137,7 @@ def check_bottomfish(paths: DeskPaths, ticker: str, *, now: datetime, price: flo
            "earliest_sell": f"{earliest_sell(tday)} {SELL_FROM}", "horizon_warning": horizon_warning(tday),
            "eod_note": f"EOD data as of {data_as_of or 'n/a'}", "nav_source": nav_source,
            "journal_errors": journal.errors if journal else None, "in_scope": in_scope, "held": held_facts(journal, ticker, tday),
-           "fall": fall, "fields": fields, "market": market, "plan": plan, "news_class": (news or {}).get("class"),
+           "fall": fall, "fields": fields, "history": hist, "market": market, "plan": plan, "news_class": (news or {}).get("class"),
            "bf_news_sha": (news or {}).get("source_sha"), "events_sha": bf_facts.file_sha(paths.events),
            "episode_id": episode_id(ticker, fields) if fields else None,
            "checklist_path": str(CHECKLIST).replace("\\", "/"), "setups": []}
@@ -162,6 +165,7 @@ def check_bottomfish(paths: DeskPaths, ticker: str, *, now: datetime, price: flo
                                    "acknowledged", "setups", "mode", "profile", "why", "tranche", "episode_id",
                                    "attempt_no", "bf_news_sha", "events_sha", "bf_params_hash")}
         p = out["plan"] or {}
+        row.update(provenance_fields(out["history"]))
         row.update(source="user_check", bf_type=fall["fall_type"], qty_suggested=p.get("order_qty"),
                    entry_ref=p.get("entry_ref"), invalidation=p.get("invalidation"),
                    catastrophe_stop=p.get("catastrophe_stop"), time_stop_session=p.get("time_stop_session"),
@@ -201,10 +205,12 @@ def scan_rows(paths: DeskPaths, now: datetime) -> dict:
     from .service import _portfolio
     journal = load_journal(paths.portfolio, price_lookup=dl.close_lookup(frames))
     nav_v, nav_source, _, _ = _portfolio(journal, None, cfg)
-    rows = []
+    resolver = HistoryResolver(paths, fresh["as_of"])
+    rows, provs = [], {}
     for sym in universe:
+        long_df, provs[sym] = resolver.series(sym, frames[sym])
         f = compute_bottomfish_fields(frames[sym], frames.get("VNINDEX"), cfg=bf,
-                                      sector_mean_ret_10d=_sector_mean(sym, frames, cfg), symbol=sym)
+                                      sector_mean_ret_10d=_sector_mean(sym, frames, cfg), symbol=sym, long_df=long_df)
         auto = fall_type_auto(f, market, bf)
         plan = bf_plan(f["close"], nav_v, profile="P1", cfg=bf,
                        fall_type="a", fields=f, trade_day=tday, lot=int(cfg["money"]["lot_size"]))
@@ -216,19 +222,22 @@ def scan_rows(paths: DeskPaths, now: datetime) -> dict:
         rows.append(jsonable({"ticker": sym, "fall_type_auto": auto, "fields": f, "episode_id": episode_id(sym, f),
                               "structural_verdict": verdict(structural),
                               "structural_failed": [r["id"] for r in structural if r["status"] == FAIL],
-                              "plan_p1": plan}))
+                              "plan_p1": plan, "history": provs[sym]}))
     return {"as_of": fresh["as_of"], "trade_session": str(tday), "market": jsonable(market),
             "snapshot_manifest_sha256": fresh["manifest_sha256"], "nav_source": nav_source,
-            "bf_params_hash": bf["bf_params_hash"], "frames": frames, "rows": rows}
+            "bf_params_hash": bf["bf_params_hash"], "frames": frames, "rows": rows,
+            "history": jsonable(resolver.summary(provs))}
 
 
 def scan_table(scan: dict) -> str:
+    from .service import history_lines
     fmt = lambda v, f: (f.format(v) if isinstance(v, (int, float)) and not (isinstance(v, float) and math.isnan(v)) else "n/a")  # noqa: E731
     mk = scan["market"]
     lines = [f"# Bảng bắt đáy (VN30) — dữ liệu EOD tới {scan['as_of']} (snapshot sha {scan['snapshot_manifest_sha256'][:12]})", "",
              f"Regime: {mk.get('regime')} | breadth {mk.get('breadth_pct')}% | phiên giao dịch kế: {scan['trade_session']}", "",
              "Chỉ giá: tin tức, lịch sự kiện và trạng thái margin KHÔNG có trong bảng này (BF-G2/G5/G6/G8 cần `check --mode bottomfish`).",
              "fall_type_auto là proxy giá (MARKET/IDIO/NONE), không phải phân loại (a)/(b)/(c). Structural = BF-G3/G4/G7.", "",
+             *history_lines(scan.get("history")),
              "| Mã | fall_type_auto | stab_state | floor_streak | phiên từ sàn | idio_ret_10d | drawdown_60 | panic_low | capitulation | Structural |",
              "|---|---|---|---|---|---|---|---|---|---|"]
     order = {"STAB2": 0, "STAB1": 1, "WEAK": 2, "FALLING": 3, "LOCKED": 4, "NONE": 5}
