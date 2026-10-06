@@ -223,6 +223,9 @@ record paper runs or change the schedule.
    `data/paper/latest.json` on every run.
 5. Remember: `prices_hist` and the dashboard are **not** part of this job; their dates
    reflect the last manual `eod_update`.
+6. Occasionally: `python -m stock_agent.pipeline.retention_report --days 30` lists snapshot
+   and flow run dirs older than 30 days with sizes, flagging snapshots referenced by paper
+   records. Report only — it deletes nothing, and no deletion policy exists yet.
 
 ---
 
