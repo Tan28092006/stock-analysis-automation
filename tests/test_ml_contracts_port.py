@@ -117,3 +117,53 @@ def test_net_is_optional_but_checked_when_present_and_zero_flow_is_observed():
     assert C.screen_foreign_flow(no_net).contract_status.iloc[0] == C.ELIGIBLE
     zero = flow(buy_value=0.0, sell_value=0.0, net_value=0.0)
     assert screen(zero).contract_status.iloc[0] == C.ELIGIBLE
+
+
+# --- 2. missing-reason codes and value/state consistency ---------------------------
+
+def test_missing_state_codes_reuse_existing_names_and_add_invalid():
+    # insufficient_warmup is already spelled insufficient_history in research_ml (features.py).
+    assert C.MissingState.INSUFFICIENT_HISTORY.value == "insufficient_history"
+    assert C.MissingState.NOT_APPLICABLE.value == "not_applicable"
+    assert C.MissingState("invalid") is C.MissingState.INVALID
+    assert [m.value for m in C.MissingState][:6] == [  # existing values untouched (R5 bundles)
+        "observed", "observed_zero", "missing", "stale", "not_applicable", "insufficient_history"]
+
+
+def feats(values, states):
+    return pd.DataFrame({"f": values, "f_state": states})
+
+
+def test_feature_states_accept_consistent_rows():
+    ok = feats([0.5, 0.0, 0.0, None, None, None, None, 1.2],
+               ["observed", "observed", "observed_zero", "missing", "insufficient_history",
+                "not_applicable", "invalid", "stale"])
+    C.validate_feature_states(ok, ["f"])  # stale may carry its last observed value (asof_join)
+
+
+@pytest.mark.parametrize("values, states, match", [
+    ([0.0], ["missing"], "coded as a value"),        # zero-fill of a missing value
+    ([0.0], ["insufficient_history"], "coded as a value"),
+    ([None], ["observed"], "unexplained missing"),
+    ([float("inf")], ["observed"], "unexplained missing"),
+    ([0.3], ["observed_zero"], "observed_zero"),
+    ([None], ["zero"], "unknown state"),
+])
+def test_feature_states_reject_zero_fill_and_unexplained_missing(values, states, match):
+    with pytest.raises(C.ContractError, match=match):
+        C.validate_feature_states(feats(values, states), ["f"])
+
+
+def test_feature_states_require_state_column():
+    with pytest.raises(C.ContractError, match="f_state"):
+        C.validate_feature_states(pd.DataFrame({"f": [1.0]}), ["f"])
+
+
+def test_existing_feature_builder_output_satisfies_state_contract():
+    from stock_agent.research_ml import features as F
+    days = pd.bdate_range("2025-01-01", periods=150)
+    close = pd.Series(range(150), dtype=float) % 7 + 10
+    bars = pd.DataFrame({"symbol": "AAA", "session_date": days, "close": close,
+                         "volume": [0.0 if i == 30 else 1000.0 for i in range(150)]})
+    out = F.build_price_features(bars)
+    C.validate_feature_states(out, [c for c in F.REGISTRY if c in out])

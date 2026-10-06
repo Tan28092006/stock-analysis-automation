@@ -21,7 +21,8 @@ class MissingState(str, Enum):
     MISSING = "missing"
     STALE = "stale"
     NOT_APPLICABLE = "not_applicable"
-    INSUFFICIENT_HISTORY = "insufficient_history"
+    INSUFFICIENT_HISTORY = "insufficient_history"  # a.k.a. insufficient_warmup
+    INVALID = "invalid"  # value failed validation; excluded, never repaired to zero
 
 
 class ContractError(ValueError):
@@ -325,3 +326,33 @@ def eligible_foreign_flow(frame: pd.DataFrame) -> pd.DataFrame:
     if keep.empty:
         return keep.reset_index(drop=True)
     return validate_source(keep.reset_index(drop=True), FOREIGN_FLOW)
+
+
+_VALUE_STATES = {MissingState.OBSERVED.value, MissingState.OBSERVED_ZERO.value}
+_ABSENT_STATES = {MissingState.MISSING.value, MissingState.NOT_APPLICABLE.value,
+                  MissingState.INSUFFICIENT_HISTORY.value, MissingState.INVALID.value}
+
+
+def validate_feature_states(frame: pd.DataFrame, feature_ids: list[str]) -> None:
+    """``<feature>_state`` must explain every absent value and never label a value as missing.
+
+    A finite value with an absent-state (zero-fill) or a non-finite value without one
+    is a contract violation. ``stale`` may carry its last observed value.
+    """
+    known = {m.value for m in MissingState}
+    for fid in feature_ids:
+        col = fid + "_state"
+        if col not in frame:
+            raise ContractError(f"{fid}: missing {col} column")
+        states = frame[col].astype(str)
+        unknown = sorted(set(states) - known)
+        if unknown:
+            raise ContractError(f"{fid}: unknown state {unknown}")
+        values = pd.to_numeric(frame[fid], errors="coerce").to_numpy(dtype=float)
+        finite = np.isfinite(values)
+        if (finite & states.isin(_ABSENT_STATES).to_numpy()).any():
+            raise ContractError(f"{fid}: missing state coded as a value (zero-fill)")
+        if (~finite & states.isin(_VALUE_STATES).to_numpy()).any():
+            raise ContractError(f"{fid}: unexplained missing value marked observed")
+        if (finite & (states == MissingState.OBSERVED_ZERO.value).to_numpy() & (values != 0)).any():
+            raise ContractError(f"{fid}: observed_zero state with a non-zero value")
