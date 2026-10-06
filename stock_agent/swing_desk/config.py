@@ -54,13 +54,17 @@ def code_hash() -> str:
 class DeskPaths:
     """Where the desk reads (repo configs, data root) and writes (desk dir).
 
-    `data_root` holds `data/paper/snapshots` and `data/foreign_flows_v2`; it is read-only
-    for the desk. `desk` is the git-ignored-runtime workspace `swing_desk/`.
+    `data_root` holds `data/paper/snapshots`, `data/foreign_flows_v2` and `data/history`; it is
+    read-only for the desk (only the explicit `refresh --with-flows` / `refresh --history` triggers
+    run the owning collectors). `desk` is the git-ignored-runtime workspace `swing_desk/`.
+    `history` is "on" (long windows from the verified 10-year store when consistent) or "off"
+    (snapshot only: the pre-history behaviour).
     """
 
     repo: Path
     data_root: Path
     desk: Path
+    history: str = "on"
 
     @classmethod
     def default(cls, repo: Path | None = None, data_root: Path | None = None,
@@ -80,6 +84,11 @@ class DeskPaths:
     @property
     def flows_root(self) -> Path:
         return self.data_root / "data" / "foreign_flows_v2"
+
+    @property
+    def history_root(self) -> Path:
+        """Verified long price history stores (`stock_agent.data.history_store`), read-only here."""
+        return self.data_root / "data" / "history"
 
     @property
     def portfolio(self) -> Path:
