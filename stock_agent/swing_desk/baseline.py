@@ -57,7 +57,8 @@ def _plan_row(t: dict, state: dict, cfg: dict, gate_key: str) -> dict | None:
             "entry_ref": close, "stop": stop, "stop_basis": "user_3pct", "target": round(target, 2),
             "max_hold_sessions": cfg["setups"]["generic_max_hold_sessions"], "earliest_sell": t["earliest_sell"],
             "size": {"qty": plan["qty"], "risk_vnd_effective": plan["vnd_at_risk_effective"],
-                     "risk_pct_nav": cfg["money"]["risk_per_trade_pct"]},
+                     "risk_pct_nav": cfg["money"]["risk_per_trade_pct"],
+                     "nav_source": plan.get("nav_source")},
             "rsi2": ind.get("rsi2"), "data_as_of": m["as_of"], "snapshot_sha256": m["snapshot_manifest_sha256"]}
 
 

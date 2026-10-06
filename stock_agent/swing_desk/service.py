@@ -206,11 +206,13 @@ def compute_state(paths: DeskPaths, now: datetime, *, s2_override: list[str] | N
     health, flows = (dl.flows_snapshot(paths, universe, now, fresh.get("fetched_at"))
                      if with_flows_data else ({"status": "UNVERIFIED", "reason": "skipped"}, None))
     events = load_events(paths)
+    journal = load_journal(paths.portfolio, price_lookup=dl.close_lookup(frames))
+    nav_v, nav_source, _, _ = _portfolio(journal, None, cfg)
     tickers = {}
     for sym in universe:
         ind = compute_ticker(frames[sym], limit_proxy_pct=cfg["gate"]["limit_proxy_pct"],
                              excursion_lookback=cfg["excursion"]["lookback_entries"])
-        plan = size_plan(ind["close"], float(cfg["money"]["account_nav_default"]), cfg)
+        plan = size_plan(ind["close"], nav_v, cfg)
         g = evaluate_gate(ticker=sym, ind=ind, market=market, freshness=fresh, universe=universe, cfg=cfg,
                           trade_day=tday, plan=plan, s2=sym in s2_list, portfolio={}, events=events)
         fl = flow_fields(flows, sym, fresh["as_of"], ind["avg_value_20_bn"])
@@ -223,14 +225,16 @@ def compute_state(paths: DeskPaths, now: datetime, *, s2_override: list[str] | N
             "structural_gate_ex_setup": structural_verdict(g["rules"], STRUCTURAL_EXCLUDE | {"G11"}),
             "rules": g["rules"], "failed": g["failed"], "unverified": g["unverified"],
             "target": g.get("target"), "reward_risk": g.get("reward_risk"),
-            "plan_default_nav": {k: plan[k] for k in ("entry_ref", "stop_user", "stop_validated", "qty",
-                                                      "vnd_at_risk_nominal", "vnd_at_risk_effective")},
+            "plan_default_nav": {**{k: plan[k] for k in ("entry_ref", "stop_user", "stop_validated", "qty",
+                                                         "vnd_at_risk_nominal", "vnd_at_risk_effective", "nav")},
+                                 "nav_source": nav_source},
             "earliest_sell": f"{earliest_sell(tday)} {SELL_FROM}"})
     state_manifest = {
         "session": fresh["as_of"], "as_of": fresh["as_of"], "trade_session": str(tday),
         "snapshot_manifest": fresh["manifest"], "snapshot_manifest_sha256": fresh["manifest_sha256"],
         "file_sha256": fresh["file_sha256"], "flows_health": health, "s2_status": s2_status,
         "s2_symbols": s2_list, "desk_code_hash": code_hash(), "params_hash": cfg["params_hash"],
+        "nav_source": nav_source,
         "created_at": now.astimezone(timezone.utc).isoformat(),
         "limitations": ["Advisory only; no orders.", "Provider-adjusted prices; may differ from board prices.",
                         "Current fixed VN30 universe (survivorship).",
