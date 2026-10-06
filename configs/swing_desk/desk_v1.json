@@ -1,0 +1,83 @@
+{
+  "version": "desk_v1",
+  "status": "advisory_filter_not_validated_alpha",
+  "notes": [
+    "Every threshold here is a design parameter from docs/audits/2026-10-06-swing-desk-signal-research.md (sections 4, 5, 7, 8), not a fitted value.",
+    "Changing any value changes params_hash; prospective evaluation counters restart under a new protocol version.",
+    "User decisions 2026-10-06: risk 1% NAV on the effective loss of the 3% stop; behavioural rules on; B3 revenge and B4 averaging-down are hard; WARN needs a written THESIS; behavioural BLOCK waits for the next session; two consecutive losses pause one extra session; activity floor 4 desk ideas/month."
+  ],
+  "money": {
+    "account_nav_default": 1000000000,
+    "risk_per_trade_pct": 1.0,
+    "max_open_risk_pct": 4.0,
+    "max_positions": 4,
+    "max_weight_pct": 25.0,
+    "max_exposure_pct": 60.0,
+    "lot_size": 100,
+    "buy_cost_pct": 0.15,
+    "sell_cost_pct": 0.25,
+    "stress_round_trip_cost_pct": 0.6
+  },
+  "stops": {
+    "user_stop_pct": 3.0,
+    "validated_stop_pct": 8.0,
+    "gap_allowance_pct": 1.0,
+    "round_trip_cost_pct": 0.6
+  },
+  "gate": {
+    "limit_proxy_pct": 6.5,
+    "g4_soft_ret_1d_pct": 4.0,
+    "g4_soft_ret_3d_pct": 8.0,
+    "g4_soft_rsi2": 90.0,
+    "g5_soft_pct": 3.0,
+    "g5_hard_pct": 5.0,
+    "g6_atr_soft_pct": 3.0,
+    "g6_atr_hard_pct": 4.0,
+    "g6_locked_mae_p80_pct": -3.0,
+    "g7_min_avg_value_bn": 20.0,
+    "g7_max_order_share_pct": 5.0,
+    "g8_min_reward_risk": 1.5,
+    "g8_cost_pct": 0.4,
+    "g10_event_window_sessions": 3,
+    "max_bank_positions": 2,
+    "max_vingroup_positions": 2
+  },
+  "setups": {
+    "s1_rsi2_max": 5.0,
+    "s1_max_hold_sessions": 8,
+    "generic_max_hold_sessions": 8
+  },
+  "behaviour": {
+    "b1_ret_1d_pct": 5.0,
+    "b1_ceiling_buffer_pct": 1.0,
+    "b2_gap_pct": 3.0,
+    "b2_setup_gap_pct": 1.5,
+    "b3_loss_window_sessions": 1,
+    "b3_consecutive_losses": 2,
+    "b3_consecutive_pause_sessions": 2,
+    "b5_size_creep_ratio": 1.25,
+    "b5_lookback_entries": 10,
+    "b5_min_entries": 3,
+    "b6_hype_reasons": ["forum", "tip", "kol", "group", "news"],
+    "b6_vol_ratio": 3.0,
+    "b6_ret_1d_pct": 4.0,
+    "b7_max_entries_5": 3,
+    "b7_max_entries_21": 8,
+    "b9_min_closed_trades": 10,
+    "b9_ratio": 1.5,
+    "cooling_off_enabled": true
+  },
+  "sectors": {
+    "bank": ["ACB", "BID", "CTG", "EIB", "HDB", "LPB", "MBB", "MSB", "SHB", "SSB", "STB", "TCB", "TPB", "VCB", "VIB", "VPB"],
+    "vingroup": ["VIC", "VHM", "VRE", "VPL"]
+  },
+  "excursion": {
+    "lookback_entries": 250
+  },
+  "evaluation": {
+    "activity_floor_desk_ideas_per_month": 4,
+    "baseline_top_n": 3,
+    "control_n": 3,
+    "freeze_deadline_vn": "09:00"
+  }
+}
