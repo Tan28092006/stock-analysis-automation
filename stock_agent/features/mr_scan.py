@@ -12,6 +12,7 @@ Results are cached per (latest data date, rules hash) because a full VN100 pass 
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -26,6 +27,8 @@ from .position_manager import money_cfg, suggest_size
 
 DEFAULT_MIN_WIN_PROB = 0.55
 MODEL_SERVING_CONTRACT = "explicit-ml-live-approval-override-v1"
+
+_log = logging.getLogger(__name__)
 
 PRICES_DIR = Path("data/raw/prices_hist")
 MR_RULES_PATH = Path("configs/rules_mr.json")
@@ -300,11 +303,11 @@ def mr_scan(recent_days: int = 120, force: bool = False,
                     from .position_manager import PositionStore, check_positions
                     cached["positions"] = check_positions(PositionStore())
                     cached["sell_alerts"] = [p for p in cached["positions"] if p.get("live_status") == "SELL"]
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _log.warning("mr_scan position refresh failed; serving cached positions: %r", exc)
                 return cached
-        except Exception:
-            pass
+        except Exception as exc:
+            _log.warning("mr_scan cache read failed (%s); recomputing: %r", CACHE_PATH, exc)
     payload = _compute(recent_days, min_win_prob)
     payload["input_snapshot"] = snapshot
     payload["model_serving_contract"] = MODEL_SERVING_CONTRACT
@@ -312,6 +315,6 @@ def mr_scan(recent_days: int = 120, force: bool = False,
     try:
         CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         CACHE_PATH.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
-    except Exception:
-        pass
+    except Exception as exc:
+        _log.warning("mr_scan cache write failed (%s); serving uncached result: %r", CACHE_PATH, exc)
     return payload

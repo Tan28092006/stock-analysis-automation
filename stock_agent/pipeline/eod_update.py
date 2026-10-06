@@ -16,8 +16,10 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import os
 import time
+import uuid
 from contextlib import redirect_stdout
 from datetime import date, datetime
 from pathlib import Path
@@ -25,6 +27,7 @@ from ..data.exchange_calendar import completed_session_date
 from ..data.eod import completed_bars
 
 PRICES_DIR = Path("data/raw/prices_hist")
+_log = logging.getLogger(__name__)
 
 
 def _symbols() -> list[str]:
@@ -85,9 +88,13 @@ def refresh_prices() -> dict:
                 merged = pd.concat([df, new], ignore_index=True).drop_duplicates(subset=["date"], keep="last").sort_values("date")
                 # Atomic write: a killed/slept process mid-write must not truncate the CSV
                 # (a partial history would make the next run backfill from a wrong last date).
-                tmp = path.with_suffix(".csv.tmp")
-                merged.to_csv(tmp, index=False)
-                os.replace(tmp, path)
+                # Unique temp name: the CLI and the dashboard thread must not share one temp file.
+                tmp = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+                try:
+                    merged.to_csv(tmp, index=False)
+                    os.replace(tmp, path)
+                finally:
+                    tmp.unlink(missing_ok=True)
                 updated += 1
                 got = True
                 print(f"  [prices] {sym}: +{len(new)} -> {merged['date'].max()}", flush=True)
@@ -137,8 +144,8 @@ def rebuild_momentum_cache() -> dict:
         try:
             from ..features.swing_scan import swing_scan
             swing_scan(force=True)   # warm the RSI2 swing cache too
-        except Exception:
-            pass
+        except Exception as exc:     # fail-safe: momentum still rebuilds, but never silently
+            _log.warning("swing cache warm-up failed; swing panel may be stale: %r", exc)
         payload = momentum_scan(force=True)
         for p in payload.get("sell_alerts", []):
             print(f"  *** MOMENTUM SELL: {p['symbol']} — {p['sell_reason']} "

@@ -3,11 +3,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 from pathlib import Path
 
 from ..config import load_universe
 from ..data import foreign_flows as ff
+from ..data.exchange_calendar import calendar_coverage_warning
+from . import flow_orphans
+from .eod_status import safe_record_step
 
 
 def collection_symbols():
@@ -76,6 +80,14 @@ def refresh_with_retries(symbols, *, root=ff.STORE, clock=None, sleep=time.sleep
             remaining -= step
 
 
+def _calendar_warning():
+    """Report-only; a calendar check must never change the collector's exit code."""
+    try:
+        return calendar_coverage_warning(ff.aware())
+    except Exception as exc:
+        return {'message': f'calendar coverage check failed: {type(exc).__name__}'}
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--root', type=Path, default=ff.STORE)
@@ -84,12 +96,33 @@ def main(argv=None):
     mode.add_argument('--migrate-legacy', action='store_true')
     mode.add_argument('--status', action='store_true')
     mode.add_argument('--retry-stale', action='store_true', help='Bounded retries for delayed valid EOD rows')
+    mode.add_argument('--quarantine-orphans', action='store_true',
+                      help='Move run dirs without manifest.json to quarantine/<UTC>/ (dry run unless --apply)')
+    p.add_argument('--apply', action='store_true', help='With --quarantine-orphans: actually move/remove stale lock')
+    p.add_argument('--stale-after-minutes', type=int, default=flow_orphans.DEFAULT_STALE_AFTER_SECONDS // 60,
+                   help='Lock/run activity younger than this means a collector may still be running')
     args = p.parse_args(argv)
+    if args.apply and not args.quarantine_orphans:
+        p.error('--apply is only valid with --quarantine-orphans')
+    stale_after = args.stale_after_minutes * 60
+    if args.quarantine_orphans:
+        try:
+            result = flow_orphans.quarantine_orphans(args.root, apply=args.apply, stale_after=stale_after)
+        except Exception as exc:
+            result = dict(status='failed', error=type(exc).__name__,
+                          reason='Quarantine interrupted; inspect quarantine/*/reason.json and the collector lock')
+        print(json.dumps(result, ensure_ascii=False), flush=True)
+        return 2 if result['status'] in ('refused', 'failed') else 0
+    diagnosis = {}
+    collecting = not (args.migrate_legacy or args.status)
+    started = ff.aware()
+    result = {}
     try:
         if args.migrate_legacy:
             result = ff.migrate_legacy(root=args.root)
         elif args.status:
-            result = ff.health(args.symbols or collection_symbols(), root=args.root)
+            diagnosis = flow_orphans.diagnose(args.root, stale_after=stale_after)
+            result = dict(ff.health(args.symbols or collection_symbols(), root=args.root), **diagnosis)
         elif args.retry_stale:
             result = refresh_with_retries(args.symbols or collection_symbols(), root=args.root)
         else:
@@ -99,16 +132,44 @@ def main(argv=None):
                 result['status'] = current['status']
                 result['gaps'] = current['gaps']
                 result['missing_latest'] = current['missing_latest']
+        result['calendar_warning'] = _calendar_warning()
         # Keep terminal/log output short; detailed errors, dates and hashes are on disk.
         keys = ('status','expected_session','rows','normalized_rows','quarantined_rows','date_recovered_rows',
                 'missing_latest','gaps','manifest_path','rows_path','errors','quarantine_rows','quarantined_intraday_rows',
-                'requested_symbols','attempts','attempt_manifest_paths','retry_exhausted','retry_reason')
+                'requested_symbols','attempts','attempt_manifest_paths','retry_exhausted','retry_reason',
+                'incomplete_runs','calendar_warning','lock','orphan_runs','collector_plausibly_running',
+                'orphan_assessment')
         print(json.dumps({k:result[k] for k in keys if k in result}, ensure_ascii=False), flush=True)
-        return 0 if result['status'] in ('ready','research_only') else 2
+        code = 0 if result['status'] in ('ready','research_only') else 2
+        error = None
     except Exception as exc:
         print(json.dumps(dict(status='blocked', error=type(exc).__name__,
-                              reason='See run artifacts; no fallback to unverified legacy data')), flush=True)
-        return 2
+                              reason='See run artifacts; no fallback to unverified legacy data', **diagnosis),
+                         ensure_ascii=False), flush=True)
+        code, error = 2, type(exc).__name__
+    if collecting:
+        _record_status('retry_stale' if args.retry_stale else 'collect', started, result, code, error)
+    return code
+
+
+def _record_status(mode, started, result, code, error):
+    """Step status for collection runs only; never changes the exit code."""
+    try:
+        session = result.get('expected_session') or str(ff.completed_session_date(started))
+        missing = result.get('missing_latest') or {}
+        safe_record_step(session, 'foreign_refresh', {
+            'mode': mode, 'started_at': started.isoformat(), 'finished_at': ff.aware().isoformat(),
+            'outcome': 'blocked' if error else result.get('status'), 'exit_code': code, 'error': error,
+            'manifest_path': result.get('manifest_path'),
+            'attempt_manifest_paths': result.get('attempt_manifest_paths'),
+            'attempts': result.get('attempts'), 'retry_exhausted': result.get('retry_exhausted'),
+            'retry_reason': result.get('retry_reason'),
+            'missing_latest_count': sum(len(v) for v in missing.values()) if isinstance(missing, dict) else None,
+            'gap_series': len(result.get('gaps') or {}), 'errors': len(result.get('errors') or []),
+            'incomplete_runs': result.get('incomplete_runs'),
+        })
+    except Exception as exc:
+        print(f'WARNING: eod_status not written for foreign_refresh: {type(exc).__name__}', file=sys.stderr, flush=True)
 
 
 if __name__ == '__main__':
