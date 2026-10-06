@@ -36,13 +36,19 @@ def load_events(paths: DeskPaths) -> dict | None:
         return None
 
 
-def mark_events(paths: DeskPaths, ticker: str, session: str, events: list[dict], source: str) -> dict:
-    """Record that the event calendar was checked for `ticker` (agent/user supplied, cited)."""
+def mark_events(paths: DeskPaths, ticker: str, session: str, events: list[dict], source: str, *,
+                pending_dilution: bool = False) -> dict:
+    """Record that the event calendar was checked for `ticker` (agent/user supplied, cited).
+
+    `pending_dilution` marks the recorded events as an unresolved dilution vote/issue (bottom-fish
+    BF-G5) until `bf_facts.mark_resolved` records the result.
+    """
     data = load_events(paths) or {"checked": {}, "events": []}
     data["checked"][ticker.upper()] = session
     data["events"] = [e for e in data["events"] if e.get("ticker") != ticker.upper() or e.get("date", "") < session]
     for ev in events:
-        data["events"].append({"ticker": ticker.upper(), "source": source, **ev})
+        data["events"].append({"ticker": ticker.upper(), "source": source, **ev,
+                               **({"pending_dilution": True} if pending_dilution else {})})
     paths.events.parent.mkdir(parents=True, exist_ok=True)
     reclog._atomic_write(paths.events, json.dumps(data, ensure_ascii=False, indent=2))
     return data
