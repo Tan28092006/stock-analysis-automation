@@ -17,7 +17,10 @@ from ..data.exchange_calendar import VN_TIMEZONE, is_trading_day
 from .config import canonical, sha256_bytes
 
 GENESIS = "0" * 64
-SOURCES = {"desk", "single", "baseline", "control"}
+SOURCES = {"desk", "single", "baseline", "control", "bf_baseline", "bf_knife", "bf_random", "bf_desk"}
+BF_SOURCES = {"bf_baseline", "bf_knife", "bf_random", "bf_desk"}
+BF_REQUIRED = ("ticker", "action", "entry", "mode", "bf_type", "profile", "episode_id", "catastrophe_stop_pct",
+               "time_stop_sessions", "data_as_of")
 ANALYST_SOURCES = {"desk", "single"}
 REQUIRED = ("ticker", "action", "entry", "stop", "target", "max_hold_sessions", "data_as_of")
 ANALYST_REQUIRED = REQUIRED + ("p_win_stated", "stop_basis", "earliest_sell", "invalidation", "sentiment")
@@ -117,7 +120,35 @@ def freeze_deadline(target_session: date) -> datetime:
     return datetime.combine(target_session, time(9, 0), VN_TIMEZONE)
 
 
+def validate_bf_row(row: dict, source: str, session_as_of: str) -> None:
+    """Bottom-fish arms (configs/swing_desk/bottomfish_prospective_v1.json)."""
+    missing = [k for k in BF_REQUIRED if k not in row or row[k] in (None, "")]
+    if source == "bf_desk":
+        missing += [k for k in ("p_win_stated", "sentiment") if k not in row or row[k] in (None, "")]
+    if missing:
+        raise ValueError(f"bottom-fish row {row.get('ticker', '?')}: missing required fields {missing}")
+    if row["mode"] != "bottomfish" or row["action"] not in ACTIONS:
+        raise ValueError("bottom-fish rows need mode=bottomfish and a valid action")
+    if row["data_as_of"] != session_as_of:
+        raise ValueError(f"data_as_of {row['data_as_of']} != state session {session_as_of}")
+    entry = row["entry"]
+    if not isinstance(entry, dict) or entry.get("type") not in {"limit", "ato"}:
+        raise ValueError("entry must be {type: limit|ato, ...}")
+    if entry["type"] == "limit" and not entry.get("limit_price"):
+        raise ValueError("limit entry needs limit_price")
+    if source == "bf_desk":
+        if row["bf_type"] != "a":
+            raise ValueError("bf_desk ideas must be type a")
+        if row.get("gate") == "BLOCK":
+            raise ValueError(f"{row['ticker']}: BUY against a BLOCK gate is not allowed")
+        p = row["p_win_stated"]
+        if not isinstance(p, (int, float)) or not 0 <= p <= 1:
+            raise ValueError("p_win_stated must be a probability in [0, 1]")
+
+
 def validate_row(row: dict, source: str, session_as_of: str) -> None:
+    if source in BF_SOURCES:
+        return validate_bf_row(row, source, session_as_of)
     required = ANALYST_REQUIRED if source in ANALYST_SOURCES else REQUIRED
     missing = [k for k in required if k not in row or row[k] in (None, "")]
     if missing:

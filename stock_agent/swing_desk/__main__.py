@@ -182,7 +182,8 @@ def main(argv=None) -> int:
         elif args.cmd == "score":
             res = baseline.score_log(paths, now=now)
             _print({"as_of": res["as_of"], "chain": res["chain"], "summary": res["summary"],
-                    "user_checks_by_verdict": res["user_checks_by_verdict"]})
+                    "user_checks_by_verdict": res["user_checks_by_verdict"],
+                    **({"bf_summary": res["bf_summary"]} if "bf_summary" in res else {})})
         elif args.cmd == "verify-log":
             from . import reclog
             res = {"recommendations": reclog.verify_chain(paths.rec_log), "checks": reclog.verify_chain(paths.checks_log)}

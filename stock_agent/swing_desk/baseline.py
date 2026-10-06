@@ -23,7 +23,7 @@ import pandas as pd
 from . import data as dl
 from . import reclog
 from .config import DeskPaths, code_hash, load_config
-from .scorer import score_row, summarize
+from .scorer import score_bf_row, score_row, summarize
 from .service import load_state, state_freshness
 
 PROMPTS = ("ANALYST.md", "OUTPUT_CONTRACT.md", "SENTIMENT_RUBRIC.md")
@@ -143,7 +143,9 @@ def score_log(paths: DeskPaths, *, now: datetime) -> dict:
     if manifest is None:
         raise ValueError("no verified snapshot to score against")
     frames = dl.load_frames(manifest)
-    rows = [score_row(r, frames.get(r.get("ticker"))) for r in reclog.read_rows(paths.rec_log)]
+    logged = reclog.read_rows(paths.rec_log)
+    rows = [score_row(r, frames.get(r.get("ticker"))) for r in logged if r.get("mode") != "bottomfish"]
+    bf_rows = [score_bf_row(r, frames.get(r.get("ticker"))) for r in logged if r.get("mode") == "bottomfish"]
     checks = reclog.read_rows(paths.checks_log)
     by_verdict = {}
     for c in checks:
@@ -153,6 +155,10 @@ def score_log(paths: DeskPaths, *, now: datetime) -> dict:
               "snapshot_sha256": dl.manifest_sha256(manifest), "chain": chain,
               "checks_chain": reclog.verify_chain(paths.checks_log), "user_checks_by_verdict": by_verdict,
               "rows": rows, "summary": summarize(rows, activity_floor=cfg["evaluation"]["activity_floor_desk_ideas_per_month"])}
+    if bf_rows or any(c.get("mode") == "bottomfish" for c in checks):
+        from .bf_arms import bf_summary
+        result["bf_rows"] = bf_rows
+        result["bf_summary"] = bf_summary(bf_rows, checks)
     paths.scores.mkdir(parents=True, exist_ok=True)
     reclog._atomic_write(paths.scores / f"{as_of}.json", json.dumps(result, ensure_ascii=False, indent=2, default=str))
     return result

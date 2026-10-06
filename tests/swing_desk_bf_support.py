@@ -33,7 +33,8 @@ PNJ_TAIL = [  # date, open, high, low, close, volume  (BF-doc §10)
 
 def bf_repo(tmp_path, universe=("AAA", "BBB", "VCB")) -> DeskPaths:
     repo = make_repo(tmp_path, list(universe))
-    (repo / "configs/swing_desk/bottomfish_v1.json").write_bytes((ROOT / "configs/swing_desk/bottomfish_v1.json").read_bytes())
+    for name in ("bottomfish_v1.json", "bottomfish_prospective_v1.json"):
+        (repo / "configs/swing_desk" / name).write_bytes((ROOT / "configs/swing_desk" / name).read_bytes())
     return DeskPaths(repo=repo, data_root=repo, desk=repo / "swing_desk")
 
 
