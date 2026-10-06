@@ -168,6 +168,27 @@ Host-specific delegation; the phases, files and freeze order above are identical
 - Any host: never show one analyst another's output; never let a verifier see the other verifier's
   ledger; never count analyst agreement as evidence or probability.
 
+## Long history (10-year store) and which data a verdict used
+
+- Freshness authority is unchanged: G0 / BF-G0 use the verified daily snapshot (650 calendar days,
+  about 440 sessions). Every short-window field (RSI, EMA, ATR, ADX, SMA5-50, returns, flows, floors,
+  beta) comes from the snapshot in both modes.
+- Long-window fields (swing: SMA200, high_250, locked MAE / MFE and breach stats; bottom-fish:
+  high_250 / drawdown_250 and the fall-episode stats incl. stab_state) come from the newest verified
+  `data/history/<UTC>_<id>/` store whose `as_of` equals the snapshot's and where the ticker is ok/partial
+  (per ticker; non-aborted runs preferred), only if the store equals the snapshot over the snapshot's
+  window. Otherwise the snapshot is used with a WARN note; a store/snapshot difference is
+  `history_mismatch` and is never stitched.
+- Tell the user the source: the check output line "Lịch sử dài ..." and the JSON `history` block
+  (`history_source` = `history_store` or `snapshot_650d`, `history_store_id`, `history_first_date`,
+  `history_rows`, store manifest sha256). The same keys are in state ticker JSON, the state manifest
+  (`history`), checks.jsonl and frozen recommendation rows. Report any WARN / `history_mismatch` verbatim.
+- `status` shows the `history_store` line; `refresh` reports it with per-ticker coverage. Ask before
+  `refresh --history`: it calls VCI (paced >= 3.1 s per symbol, about 2 minutes) for VN30 + VNINDEX + held
+  tickers into a new `data/history/` store, then verifies it; it never runs when a fetch is in progress.
+- `--history off` (before the command, e.g. `--history off check TCB`) restores the snapshot-only
+  behaviour; use it only when the user asks or to compare.
+
 ## Honest limits (say them when relevant)
 
 - Advisory filter, not validated alpha. Only S1 (RSI(2) < 5 and close > SMA50) has prior backtest

@@ -13,8 +13,8 @@ Rules, sources and limits: `docs/audits/2026-10-06-swing-desk-signal-research.md
 ## Commands (run from the repository root)
 
 ```text
-python -m stock_agent.swing_desk status                      # read-only freshness report
-python -m stock_agent.swing_desk refresh [--with-flows]      # reuse/fetch verified snapshot, build state/
+python -m stock_agent.swing_desk status                      # read-only freshness report (+ history_store line)
+python -m stock_agent.swing_desk refresh [--with-flows] [--history]  # reuse/fetch verified snapshot, build state/
 python -m stock_agent.swing_desk check HPG --price 27350 --amount 50000000 [--reason S1] [--emotion calm] [--ack]
 python -m stock_agent.swing_desk scan                        # gate table for all VN30 (needs fresh state)
 python -m stock_agent.swing_desk review [--show-nav]         # portfolio review of portfolio.txt
@@ -55,6 +55,42 @@ ticker and session. Without them those rules are UNVERIFIED, which counts as WAR
 - `refresh` fetches only through `paper_runner --refresh --check --output-dir swing_desk/snapshots`
   (no paper record) and collects flows only with `--with-flows`, outside 16:30-18:30 VN, through the
   existing collector (fails closed on its lock). No schedule or BAT change.
+
+## Long history (10-year store)
+
+The verified daily snapshot stays the freshness authority (G0 / BF-G0) and the source of every
+short-window field. Long-window fields come from the newest verified 10-year store under
+`data/history/` (`stock_agent.data.history_store`, `docs/HISTORY-STORE.md`) when it matches:
+
+| Mode | Snapshot (650 days, ~440 sessions) | History store (10 years), when consistent |
+|---|---|---|
+| swing | G0, RSI2/14, EMA, SMA5-50, ATR, ADX, BB, returns, liquidity, gate, sizing | SMA200, high_250, locked MAE p50/p80/p90, breach rate, day-2 return, MFE/MAE 5 |
+| bottom-fish | BF-G0, floors/locks, 60-session drawdown, beta, ATR, ret_10d, liquidity | high_250, drawdown_250, episode start/sessions/depth, panic_low, new episode low, stab_state |
+
+Selection, per ticker: store `as_of` = snapshot `as_of`, `verify` passes, ticker status ok/partial
+(quarantined rows stay out and are listed in `history_data_issues`), non-aborted runs first, then the
+newest. The store must equal the snapshot over the snapshot's sessions (exact VND prices and volume);
+otherwise the snapshot is used and the ticker is flagged `history_mismatch` (never stitched). A failed,
+missing or mismatched ticker falls back to the snapshot with a WARN note.
+
+Which source a verdict used: `check` prints "Lịch sử dài ...: history_store <id> ..." or
+"snapshot_650d ..." plus any WARN; the JSON `history` block, state `tickers/<SYM>.json`, the state
+`manifest.json` (`history`), `checks.jsonl` and frozen rows carry `history_source`,
+`history_store_id`, `history_first_date`, `history_rows` and `history_store_manifest_sha256`.
+
+```text
+python -m stock_agent.swing_desk status                      # includes the history_store line
+python -m stock_agent.swing_desk refresh                     # as before + history status and per-ticker coverage
+python -m stock_agent.swing_desk refresh --history           # + fetch VN30+VNINDEX+held (portfolio.txt) if stale, then verify
+python -m stock_agent.swing_desk --history off check TCB     # snapshot only (pre-history behaviour)
+```
+
+`refresh --history` runs `python -m stock_agent.data.history_store fetch --years 10 --universe vn30
+vnindex --symbols <held> --as-of <session> --out data/history` (paced >= 3.1 s per VCI call, stops
+on HTTP 429) and then `verify <new store>`. It skips the fetch when verified stores for the completed
+session already cover every symbol, and when a store directory without a manifest younger than an
+hour suggests a fetch is running. No schedule change. Protocol note:
+`configs/swing_desk/protocol_amendments.md`.
 
 ## Privacy and files
 
