@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from ..config import load_universe
 from ..data import foreign_flows as ff
 from ..data.exchange_calendar import calendar_coverage_warning
 from . import flow_orphans
+from .eod_status import safe_record_step
 
 
 def collection_symbols():
@@ -112,6 +114,9 @@ def main(argv=None):
         print(json.dumps(result, ensure_ascii=False), flush=True)
         return 2 if result['status'] in ('refused', 'failed') else 0
     diagnosis = {}
+    collecting = not (args.migrate_legacy or args.status)
+    started = ff.aware()
+    result = {}
     try:
         if args.migrate_legacy:
             result = ff.migrate_legacy(root=args.root)
@@ -135,12 +140,36 @@ def main(argv=None):
                 'incomplete_runs','calendar_warning','lock','orphan_runs','collector_plausibly_running',
                 'orphan_assessment')
         print(json.dumps({k:result[k] for k in keys if k in result}, ensure_ascii=False), flush=True)
-        return 0 if result['status'] in ('ready','research_only') else 2
+        code = 0 if result['status'] in ('ready','research_only') else 2
+        error = None
     except Exception as exc:
         print(json.dumps(dict(status='blocked', error=type(exc).__name__,
                               reason='See run artifacts; no fallback to unverified legacy data', **diagnosis),
                          ensure_ascii=False), flush=True)
-        return 2
+        code, error = 2, type(exc).__name__
+    if collecting:
+        _record_status('retry_stale' if args.retry_stale else 'collect', started, result, code, error)
+    return code
+
+
+def _record_status(mode, started, result, code, error):
+    """Step status for collection runs only; never changes the exit code."""
+    try:
+        session = result.get('expected_session') or str(ff.completed_session_date(started))
+        missing = result.get('missing_latest') or {}
+        safe_record_step(session, 'foreign_refresh', {
+            'mode': mode, 'started_at': started.isoformat(), 'finished_at': ff.aware().isoformat(),
+            'outcome': 'blocked' if error else result.get('status'), 'exit_code': code, 'error': error,
+            'manifest_path': result.get('manifest_path'),
+            'attempt_manifest_paths': result.get('attempt_manifest_paths'),
+            'attempts': result.get('attempts'), 'retry_exhausted': result.get('retry_exhausted'),
+            'retry_reason': result.get('retry_reason'),
+            'missing_latest_count': sum(len(v) for v in missing.values()) if isinstance(missing, dict) else None,
+            'gap_series': len(result.get('gaps') or {}), 'errors': len(result.get('errors') or []),
+            'incomplete_runs': result.get('incomplete_runs'),
+        })
+    except Exception as exc:
+        print(f'WARNING: eod_status not written for foreign_refresh: {type(exc).__name__}', file=sys.stderr, flush=True)
 
 
 if __name__ == '__main__':

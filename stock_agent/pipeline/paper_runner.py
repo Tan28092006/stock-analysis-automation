@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import re
+import sys
 import uuid
 
 import pandas as pd
@@ -19,6 +20,7 @@ from ..data.exchange_calendar import (
 )
 from ..data.reconciliation import _invalid, build_market_snapshot, verify_snapshot
 from ..features import mr_scan, momentum_scan
+from .eod_status import safe_record_step
 
 DEFAULT_OUTPUT = Path("data/paper")
 IDENTITY_KEYS = ("session", "input_snapshot", "rules_hash", "code_hash", "universe", "recommendations", "model")
@@ -261,6 +263,55 @@ def main(argv=None) -> int:
         print(json.dumps({"latest": {k: previous.get(k) for k in ("status", "session", "generated_at", "path")},
                           **_operational_notes(args.output_dir)}, ensure_ascii=False), flush=True)
         return 0
+    started = _now()
+    trace: dict = {}
+    code = _execute(args, trace)
+    if args.run:
+        _record_run_status(trace, code, started)
+    return code
+
+
+_SCORES_OK = {"ok", "ok_with_revisions"}
+
+
+def _record_run_status(trace: dict, code: int, started: datetime) -> None:
+    """Step status for --run; separates a recorded paper run from a blocked scoring step."""
+    try:
+        result = trace.get("result") or {}
+        scores = trace.get("scores")
+        record_status = result.get("status")
+        recorded = record_status in ("recorded", "already_recorded")
+        if recorded and scores is not None and scores.get("status") not in _SCORES_OK:
+            outcome = "recorded_scoring_blocked"
+        elif recorded and trace.get("error"):
+            outcome = "recorded_scoring_failed"
+        elif recorded:
+            outcome = record_status
+        elif trace.get("error"):
+            outcome = "failed"
+        elif record_status == "preview_only":
+            outcome = "preview_only_outside_window"
+        else:
+            outcome = "blocked"
+        session = result.get("session") or trace.get("session") or str(completed_session_date(started))
+        safe_record_step(session, "paper_runner", {
+            "mode": "refresh_run" if trace.get("refresh") else "run",
+            "started_at": started.astimezone(timezone.utc).isoformat(),
+            "finished_at": _now().astimezone(timezone.utc).isoformat(),
+            "outcome": outcome, "exit_code": code,
+            "paper_recorded": recorded, "paper_record_status": record_status,
+            "paper_record_path": result.get("path"),
+            "snapshot_status": trace.get("snapshot_status"),
+            "snapshot_manifest": result.get("snapshot_manifest") or trace.get("snapshot_manifest"),
+            "scoring_status": scores.get("status") if scores else None,
+            "scoring_errors": len(scores.get("errors") or []) if scores else None,
+            "error": trace.get("error"),
+        })
+    except Exception as exc:  # observability must never change the step's exit code
+        print(f"WARNING: eod_status not written for paper_runner: {type(exc).__name__}", file=sys.stderr, flush=True)
+
+
+def _execute(args, trace: dict) -> int:
     try:
         if sum((args.check, args.run, args.score)) > 1:
             raise ValueError("--check, --run and --score are mutually exclusive")
@@ -272,10 +323,12 @@ def main(argv=None) -> int:
                 raise ValueError("--refresh cannot reuse supplied source paths")
             session = completed_session_date()
             folder = args.output_dir / "snapshots" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+            trace.update(refresh=True, session=str(session))
             print(f"Fetching {len(symbols) + 1} symbols through {session}", flush=True)
             snapshot = build_market_snapshot(symbols + ["VNINDEX"], folder,
                                              start=session - timedelta(days=650), as_of=session)
             manifest = folder / "manifest.json"
+            trace.update(snapshot_status=snapshot["status"], snapshot_manifest=str(manifest))
             if snapshot["status"] != "verified":
                 raise ValueError(f"Snapshot blocked: {snapshot['failures']}; inspect {manifest}")
         prices_dir = prices_dir or (manifest.parent / "prices" if manifest else Path("data/raw/prices_hist"))
@@ -291,6 +344,7 @@ def main(argv=None) -> int:
         result = run_paper(prices_dir, symbols, output_dir=args.output_dir,
                            manifest_path=manifest, record=args.run)
         result = {**result, **_operational_notes(args.output_dir)}
+        trace["result"] = result
         _atomic_json(args.output_dir / "latest.json", result)
         print(json.dumps({k: result.get(k) for k in (
             "status", "session", "data_ready", "source_verified", "recording_window_open", "path", "issues",
@@ -300,6 +354,7 @@ def main(argv=None) -> int:
         if args.run:
             from .paper_scoring import score_paper_runs
             scores = score_paper_runs(args.output_dir, prices_dir, manifest_path=manifest)
+            trace["scores"] = scores
             _atomic_json(args.output_dir / "scores/latest.json", scores)
             print(json.dumps({k: scores[k] for k in (
                 "status", "as_of", "pending", "resolved", "errors", "volume_revision_rows", "volume_revision_runs")}))
@@ -308,6 +363,7 @@ def main(argv=None) -> int:
                 return 2
         return 3 if args.run and result["status"] == "preview_only" else 0
     except Exception as exc:
+        trace["error"] = str(exc)[:500]
         report = "scores/latest.json" if args.score else "latest.json"
         failure = {"status": "failed", "error": str(exc), "generated_at": _now().isoformat()}
         if not args.score:

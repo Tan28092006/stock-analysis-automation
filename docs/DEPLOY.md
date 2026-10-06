@@ -181,7 +181,15 @@ broker call, no model retrain:
 
 Exit code: the paper exit code wins if non-zero, otherwise the flow exit code. Exit 2 from
 the paper step can mean "scoring blocked" even though `paper.json` **was** recorded — read
-the log line `"status": "recorded"` rather than inferring one cause from the code.
+the step status file rather than inferring one cause from the code.
+
+Each step also writes `data/pipeline/eod_status/<session>.json` (atomic; override the folder
+with `VN30_EOD_STATUS_DIR`). `steps.foreign_refresh` holds mode, start/finish UTC, outcome
+(`ready`/`partial`/`blocked`), exit code and manifest paths; `steps.paper_runner` holds
+`outcome` (`recorded`, `already_recorded`, `recorded_scoring_blocked`,
+`recorded_scoring_failed`, `preview_only_outside_window`, `blocked`, `failed`),
+`paper_recorded`, `paper_record_path`, snapshot and scoring status. Exit codes are unchanged;
+a status-write failure only prints a warning.
 
 **Linux (cron)** — 17:05 ICT is 10:05 UTC. Untested mirror of the BAT (no git push):
 ```cron
@@ -203,9 +211,10 @@ record paper runs or change the schedule.
    for today's `expected_session`. A stale `.collect-lock` or a run dir without
    `manifest.json` keeps it `partial` every day until handled — follow the troubleshooting
    steps in [FOREIGN-FLOWS.md](FOREIGN-FLOWS.md).
-3. Open `data/paper/latest.json` — `status` should be `recorded` or `already_recorded`
-   with `session` = today. Exit 2 after a recorded run usually means scoring was blocked by
-   a provider revision; check `data/paper/scores/latest.json`.
+3. Open `data/pipeline/eod_status/<today>.json` — `steps.paper_runner.paper_recorded`
+   should be `true` and `steps.foreign_refresh.outcome` `ready`. `recorded_scoring_blocked`
+   means the session **is** recorded and only scoring stopped (usually a provider revision;
+   see `data/paper/scores/latest.json`). `data/paper/latest.json` shows the last scan.
 4. `python -m stock_agent.pipeline.paper_runner --status` (read-only) — prints
    `calendar_warning` (HOSE holiday table about to run out) and `missed_sessions`: trading
    sessions since the first record with no `runs/<session>/paper.json`. Entries under
