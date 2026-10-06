@@ -66,6 +66,16 @@ def fact_negative_items(news: dict | None, data_as_of: str, cfg: dict, *, window
     return out
 
 
+def in_fall_episode(fields: dict, cfg: dict) -> bool:
+    """A current fall episode exists: drawdown from the 60-session high <= -15%, or a floor close inside
+    the episode. Without it the ticker is not a bottom-fish candidate (spec §4 else-branch: route to swing)."""
+    dd = fields.get("drawdown_60_pct")
+    start, last_floor = fields.get("episode_start_date"), fields.get("last_floor_date")
+    if not fields.get("episode_sessions"):
+        return False
+    return (_ok(dd) and dd <= cfg["episode"]["min_drawdown_pct"]) or bool(last_floor and start and last_floor >= start)
+
+
 def classify_fall(fields: dict | None, market: dict, news: dict | None, *, data_as_of: str | None,
                   cfg: dict) -> dict:
     """T12 §4. UNCLASSIFIED is treated as type b by the gate (BLOCK for P1/P2)."""
@@ -97,6 +107,9 @@ def classify_fall(fields: dict | None, market: dict, news: dict | None, *, data_
     metrics = [f"idx_ret_5d {i5:.1f}%" if _ok(i5) else "idx_ret_5d n/a", f"idio_ret_10d {idio:.1f}%",
                f"beta_60 {fields['beta_60']:.2f}",
                f"regime {market.get('state')} breadth {breadth}"]
+    if not in_fall_episode(fields, cfg):
+        return out("NOT_A_BOTTOMFISH", "no fall episode (drawdown_60 > -15% and no floor close in the episode): "
+                                       "use swing mode", metrics)
     if is_market and idio > c["idio_market_max_pct"]:
         return out("a", "market-wide panic with small idiosyncratic part", metrics)
     if idio <= c["idio_fundamental_pct"]:

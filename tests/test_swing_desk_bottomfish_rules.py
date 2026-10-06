@@ -105,6 +105,14 @@ def test_unclassified_without_news_or_beta_and_not_a_bottomfish():
     assert calm["fall_type"] == "NOT_A_BOTTOMFISH"
 
 
+def test_stock_without_a_fall_episode_is_not_a_bottomfish_even_in_a_panic():
+    f = fields(drawdown_60_pct=-2.0, last_floor_date="2026-07-10", episode_start_date="2026-09-17", idio_ret_10d=8.0)
+    r = classify(f, n=news())
+    assert r["fall_type"] == "NOT_A_BOTTOMFISH" and "no fall episode" in r["reason"]
+    floor_in_episode = fields(drawdown_60_pct=-9.0, last_floor_date="2026-09-17", episode_start_date="2026-09-15")
+    assert classify(floor_in_episode, n=news())["fall_type"] == "a"
+
+
 def test_none_found_with_fewer_than_two_searched_sources_is_unclassified():
     r = classify(fields(idio_ret_10d=-10.0, idx_ret_5d=0.0), market=CALM,
                  n=news(cls="none_found", searched=["https://www.hsx.vn/a"]))

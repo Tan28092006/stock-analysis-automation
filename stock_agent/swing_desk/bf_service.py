@@ -14,7 +14,7 @@ from . import data as dl
 from .behaviour import behaviour_block, evaluate_behaviour
 from .bf_indicators import compute_bottomfish_fields, episode_id
 from .bottomfish import (CAVEAT, P3_NOTE, bf_plan, classify_fall, evaluate_bf_behaviour, evaluate_bf_gate,
-                         held_facts, _episode_buys)
+                         held_facts, in_fall_episode, _episode_buys)
 from .calendar_events import SELL_FROM, earliest_sell, horizon_warning, trade_session
 from .config import DeskPaths, code_hash, load_bf_config, load_config, load_universe_symbols
 from .gate import FAIL, PASS, verdict
@@ -178,7 +178,7 @@ def fall_type_auto(f: dict, market: dict, cfg: dict) -> str:
     idio = f.get("idio_ret_10d")
     is_market = (isinstance(f.get("idx_ret_5d"), float) and f["idx_ret_5d"] <= c["market_idx_ret_5d_pct"]) or \
         (market.get("state") == "PANIC_BEAR" and (market.get("breadth_pct") or 100) < c["market_breadth_max_pct"])
-    if idio is None or f.get("stab_state") == "NONE":
+    if idio is None or f.get("stab_state") == "NONE" or not in_fall_episode(f, cfg):
         return "NONE"
     if is_market and idio > c["idio_market_max_pct"]:
         return "MARKET"
