@@ -21,12 +21,63 @@ from .calendar_events import session_distance
 ACTIONS = {"BUY", "SELL", "THESIS", "CASH", "NAV"}
 GATES = {"PASS", "WARN", "BLOCK", "NONE"}
 EMOTIONS = {"calm", "confident", "fomo", "fear", "revenge", "hope", "hype", "bored", "other"}
-REASONS = {"s1", "s2", "news", "forum", "tip", "kol", "group", "other"}
+REASONS = {"s1", "s2", "news", "forum", "tip", "kol", "group", "other", "bottomfish"}
 SELL_REASONS = REASONS | {"target", "stop", "time", "sma5", "invalid", "rebalance"}
 FIELDS = ["date", "action", "ticker", "amount_vnd", "price", "qty", "reason", "gate", "emotion", "thesis_id", "note"]
 TICKER = re.compile(r"[A-Z0-9]{2,12}")
 BUY_COST, SELL_COST = 0.0015, 0.0025
 STRESS_ROUND_TRIP = 0.006
+# Bottom-fish note keys (T12 spec §9): BUY notes and THESIS notes, `key=value` separated by ';'.
+BF_NOTE_KEYS = {"bf_type", "profile", "episode", "attempt", "tranche", "why"}
+BF_THESIS_KEYS = {"invalid", "time_stop", "max_attempts", "target", "checklist"}
+EPISODE = re.compile(r"[A-Z0-9]{2,12}-\d{8}")
+
+
+def note_keys(note: str) -> dict:
+    """`k=v` tokens of a note (split on ';'); text without '=' is ignored, unknown keys kept."""
+    out = {}
+    for part in (note or "").split(";"):
+        key, sep, value = part.partition("=")
+        if sep and key.strip():
+            out[key.strip().lower()] = value.strip()
+    return out
+
+
+def _positive_int(text: str, key: str) -> int:
+    if not re.fullmatch(r"\d+", text) or int(text) < 1:
+        raise ValueError(f"note key {key}={text!r}: expected a positive whole number")
+    return int(text)
+
+
+def validate_bf_keys(keys: dict, thesis: bool) -> None:
+    """Raise ValueError for malformed bottom-fish keys (the line is then reported and skipped)."""
+    if "bf_type" in keys and keys["bf_type"] not in {"a", "b", "c"}:
+        raise ValueError(f"note key bf_type={keys['bf_type']!r}: expected a, b or c")
+    if "profile" in keys and keys["profile"].upper() not in {"P1", "P2", "P3"}:
+        raise ValueError(f"note key profile={keys['profile']!r}: expected P1, P2 or P3")
+    if "episode" in keys and not EPISODE.fullmatch(keys["episode"].upper()):
+        raise ValueError(f"note key episode={keys['episode']!r}: expected <TICKER>-<YYYYMMDD>")
+    if "attempt" in keys:
+        _positive_int(keys["attempt"], "attempt")
+    if "tranche" in keys:
+        k, sep, n = keys["tranche"].partition("/")
+        if not sep or _positive_int(k, "tranche") > _positive_int(n, "tranche"):
+            raise ValueError(f"note key tranche={keys['tranche']!r}: expected k/n with 1 <= k <= n")
+    if not thesis:
+        return
+    if "time_stop" in keys:
+        try:
+            date.fromisoformat(keys["time_stop"])
+        except ValueError:
+            raise ValueError(f"note key time_stop={keys['time_stop']!r}: expected YYYY-MM-DD") from None
+    if "max_attempts" in keys:
+        _positive_int(keys["max_attempts"], "max_attempts")
+    if "target" in keys:
+        _number(keys["target"], "note key target")
+    if "checklist" in keys and keys["checklist"].lower() != "done":
+        raise ValueError(f"note key checklist={keys['checklist']!r}: only 'done' is accepted")
+    if "invalid" in keys and not keys["invalid"]:
+        raise ValueError("note key invalid= is empty")
 
 
 @dataclass
@@ -49,6 +100,10 @@ class Event:
     @property
     def scalein(self) -> bool:
         return "plan=scalein" in self.note.replace(" ", "").lower()
+
+    @property
+    def keys(self) -> dict:
+        return note_keys(self.note)
 
 
 @dataclass
@@ -126,6 +181,8 @@ def _parse_line(no: int, raw: str, price_lookup) -> Event:
     ev = Event(line=no, date=str(day), action=action, ticker=ticker, amount=_number(amount, "amount_vnd"),
                price=_number(price, "price"), reason=_norm_reason(reason),
                gate=gate.upper(), emotion=emotion.lower(), thesis_id=thesis_id, note=note)
+    if (action == "BUY" and ev.reason == "bottomfish") or (action == "THESIS" and "bf_type=" in note.replace(" ", "")):
+        validate_bf_keys(note_keys(note), thesis=action == "THESIS")
     q = _number(qty, "qty")
     if q is not None:
         if q <= 0 or q != int(q):
