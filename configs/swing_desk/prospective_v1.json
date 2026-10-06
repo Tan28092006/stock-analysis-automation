@@ -1,0 +1,45 @@
+{
+  "protocol": "swing_desk_prospective_v1",
+  "registered": "2026-10-06",
+  "status": "registered_before_first_log_row",
+  "location_note": "Spec T10 placed this under configs/research/; T11 was told not to modify configs/research, so it lives here. Moving it is a coordinator/user decision; the content is the registration.",
+  "scope": "Prospective, advisory-only evaluation of the VN30 swing desk. Already inspected history is development data, never a holdout. A green result does not approve trading.",
+  "desk_config": "configs/swing_desk/desk_v1.json",
+  "arms": {
+    "desk": "D: repaired VeriHarness deliverable (4 analyst rollouts + ELIM/FALS investigations + adjudication + repair)",
+    "single": "D1: analyst rollout a1 (fixed in advance) before any verification; measures what VeriHarness adds",
+    "baseline": "B: S1 or S2 with structural gate PASS, lowest RSI(2) first, top 3",
+    "control": "C: 3 random tickers with structural gate PASS ignoring G11, seeded by target session date (YYYYMMDD)",
+    "user_check": "every pre-trade check (checks.jsonl), for H4 only"
+  },
+  "structural_gate": "G0-G8 + G11; G9 (portfolio) and G10 (events) excluded because they are identical for all arms",
+  "common_plan": {
+    "entry": "limit = close_t x 1.005, valid on the next session (analyst arms may use ATO or another limit, recorded per row)",
+    "stop": "close_t x 0.97 (user 3% stop)",
+    "target": "SMA20 when a setup exists, else 20-session high; rows with target <= entry are not generated",
+    "max_hold_sessions": 8
+  },
+  "freeze": "all rows appended to swing_desk/recommendations/recommendations.jsonl before 09:00 VN of the target session; baseline and control frozen by code before any analyst runs; hash chain + head sidecar; no edits or deletions",
+  "scoring": {
+    "fill": "limit fills if L <= limit at min(O, limit); ATO at O; otherwise no_fill (counted, not dropped)",
+    "lock": "no exits on target session i and i+1",
+    "day2": "session i+2 is close-only: stop touched during lock or C <= stop -> exit at C; C >= target -> exit at C",
+    "after_day2": "O <= stop -> O; L <= stop -> stop; O >= target -> O; H >= target -> target; stop first on the same bar",
+    "limit_down": "a stop exit on a session with close-to-close <= -6.5% is assumed unfilled and carried to the next open",
+    "time_exit": "close of session i + max_hold_sessions",
+    "costs": {"primary": "buy 0.15% + sell 0.25%", "stress": "0.6% round trip"},
+    "report": ["net %", "net % stress", "R", "MAE/MFE % and R", "stop/target/time flags", "holding sessions", "no-fill rate", "Brier on p_win_stated"],
+    "pending": "rows whose path is not complete in the newest verified snapshot stay pending"
+  },
+  "hypotheses": {
+    "H1": "mean net return per recommendation D > B, paired by session (primary)",
+    "H2": "Brier skill of p_win_stated > 0 against the arm's own base win rate",
+    "H3": "D > C",
+    "H1b": "D > D1 (does VeriHarness add value)",
+    "H4": "user trades tagged PASS have higher mean net than WARN/BLOCK/NONE; descriptive until >= 30 trades per group"
+  },
+  "minimum_sample": {"resolved_per_arm_D_and_B": 90, "sessions": 40, "regimes": "both RISK_ON and non-RISK_ON"},
+  "analysis": "weekly block bootstrap 95% CI for D - B; must be positive in both halves of the period and at 0.6% cost; report no-fill rate, monthly new ideas, zero-idea months; distinguish positive net profit from losing less than VNINDEX",
+  "activity_floor": {"desk_ideas_per_month": 4, "rule": "reported per month; never force ideas or loosen gates to meet it"},
+  "decision": "'desk beats rule-only' only if the CI > 0 and all stresses pass; otherwise 'not proven'. Any change to rules, prompts or model starts a new protocol version and resets counts."
+}
