@@ -432,3 +432,39 @@ def membership_as_of(data: dict, decision_time, *, index: str, execution_date=No
         if available_at <= decision and effective <= execution:
             members = (members - removed) | added
     return MembershipResult(ELIGIBLE, frozenset(members))
+
+
+# --- Label outcome contract -----------------------------------------------------
+LABEL_CLASSES = ("pending", "resolved", "not_entered")
+# research_ml.labels statuses -> contract class. exit_unfillable was entered but has
+# no fillable exit: its outcome is unknown (pending), never a loss or zero.
+LABEL_STATUS_CLASS = {"matured": "resolved", "pending": "pending", "exit_unfillable": "pending",
+                      "no_price_history": "not_entered", "signal_bar_missing": "not_entered",
+                      "entry_unfillable": "not_entered"}
+_LABEL_OUTCOMES = ("net_return_pct", "win")
+
+
+def validate_label_outcomes(labels: pd.DataFrame) -> pd.Series:
+    """Return each row's class; only resolved rows may carry an outcome.
+
+    A pending/not_entered row with a numeric outcome (coerced loss or zero) is
+    invalid; a resolved row needs a finite return, a win flag and label_available_at.
+    """
+    missing = [c for c in ("status", *_LABEL_OUTCOMES, "label_available_at") if c not in labels]
+    if missing:
+        raise ContractError(f"label rows: missing columns {missing}")
+    unknown = sorted(set(labels["status"]) - set(LABEL_STATUS_CLASS))
+    if unknown:
+        raise ContractError(f"unknown label status {unknown}")
+    classes = labels["status"].map(LABEL_STATUS_CLASS)
+    resolved = (classes == "resolved").to_numpy()
+    for col in _LABEL_OUTCOMES:
+        has = labels[col].notna().to_numpy()
+        for cls in ("pending", "not_entered"):
+            if (has & (classes == cls).to_numpy()).any():
+                raise ContractError(f"{cls} label carries a numeric outcome in {col}")
+    ret = pd.to_numeric(labels["net_return_pct"], errors="coerce").to_numpy(dtype=float)
+    complete = np.isfinite(ret) & labels["win"].notna().to_numpy() & labels["label_available_at"].notna().to_numpy()
+    if (resolved & ~complete).any():
+        raise ContractError("resolved label without finite outcome, win flag or label_available_at")
+    return classes.rename("label_class")

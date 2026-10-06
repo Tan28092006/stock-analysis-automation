@@ -3,10 +3,16 @@
 Additive only: existing research_ml contract behaviour (validate_source, asof_join,
 MissingState values used by R5 bundles) is unchanged.
 """
+import copy
+import json
+from pathlib import Path
+
+import numpy as np
 import pandas as pd
 import pytest
 
 from stock_agent.research_ml import contracts as C
+from stock_agent.research_ml.labels import CostConfig, build_labels
 
 TZ = "Asia/Ho_Chi_Minh"
 
@@ -171,9 +177,6 @@ def test_existing_feature_builder_output_satisfies_state_contract():
 
 # --- 4. membership contract ----------------------------------------------------------
 
-import copy
-import json
-from pathlib import Path
 
 VN30 = json.loads(Path("configs/research/vn30_membership_2022_2026.json").read_text(encoding="utf-8"))
 VN100_PATH = Path("configs/research/vn100_membership_2026_h1.json")
@@ -262,3 +265,67 @@ def test_membership_matches_r5_timeline_at_session_close(path, index):
         assert result.status == C.ELIGIBLE and result.members == tl.members(d, d), d
     beyond = (pd.Timestamp(tl.end) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
     assert C.membership_as_of(data, at(beyond), index=index).status == C.BLOCKED
+
+
+# --- 5. label statuses: pending / resolved / not_entered --------------------------------
+
+
+def label_bars(n=60):
+    rng = np.random.default_rng(0)
+    close = 100 * np.exp(np.cumsum(rng.normal(0, .01, n)))
+    return pd.DataFrame({"symbol": "AAA", "session_date": pd.bdate_range("2025-01-02", periods=n),
+                         "open": close * .999, "high": close * 1.01, "low": close * .99, "close": close,
+                         "volume": 1000.0})
+
+
+def test_research_ml_label_statuses_map_to_three_classes():
+    assert C.LABEL_STATUS_CLASS == {
+        "matured": "resolved", "pending": "pending", "exit_unfillable": "pending",
+        "no_price_history": "not_entered", "signal_bar_missing": "not_entered",
+        "entry_unfillable": "not_entered"}
+    assert set(C.LABEL_STATUS_CLASS.values()) == set(C.LABEL_CLASSES) == {"pending", "resolved", "not_entered"}
+
+
+def test_build_labels_output_satisfies_label_contract():
+    bars = label_bars()
+    bars.loc[40, "volume"] = 0
+    sig = pd.DataFrame({"symbol": ["AAA", "AAA", "AAA", "BBB", "AAA"],
+                        "signal_date": [bars.session_date[5], bars.session_date[24], bars.session_date[55],
+                                        bars.session_date[5], pd.Timestamp("2024-12-25")]})
+    lab = build_labels(bars, sig, protocol="mr_fixed15", cost=CostConfig())
+    classes = C.validate_label_outcomes(lab)
+    assert classes.tolist() == ["resolved", "pending", "pending", "not_entered", "not_entered"]
+
+
+def label_frame(**over):
+    row = dict(status="matured", net_return_pct=-1.2, win=False,
+               label_available_at=pd.Timestamp("2025-02-01 16:00", tz=TZ))
+    row.update(over)
+    return pd.DataFrame([row])
+
+
+@pytest.mark.parametrize("over, match", [
+    (dict(status="pending", win=None), "pending.*numeric outcome"),            # loss coerced on pending
+    (dict(status="pending", net_return_pct=0.0, win=None), "pending.*numeric outcome"),  # zero-fill
+    (dict(status="entry_unfillable", net_return_pct=None, win=False), "not_entered.*numeric outcome"),
+    (dict(net_return_pct=None, win=None), "resolved.*without"),
+    (dict(label_available_at=pd.NaT), "resolved.*without"),
+    (dict(status="lost"), "unknown label status"),
+])
+def test_label_outcome_violations_are_invalid(over, match):
+    with pytest.raises(C.ContractError, match=match):
+        C.validate_label_outcomes(label_frame(**over))
+
+
+def test_build_labels_data_end_pending_rows_keep_numeric_outcome_and_are_flagged():
+    """Finding: labels.py re-marks rows pending via data_end but keeps net_return_pct.
+
+    labels.py is not changed here (R5 does not pass data_end); the contract flags it.
+    """
+    bars = label_bars()
+    sig = pd.DataFrame({"symbol": ["AAA"], "signal_date": [bars.session_date[5]]})
+    lab = build_labels(bars, sig, protocol="mr_fixed15", cost=CostConfig(),
+                       data_end=pd.Timestamp("2025-01-10", tz=TZ))
+    assert lab.status.iloc[0] == "pending" and np.isfinite(lab.net_return_pct.iloc[0])
+    with pytest.raises(C.ContractError, match="pending.*numeric outcome"):
+        C.validate_label_outcomes(lab)
