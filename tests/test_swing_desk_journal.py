@@ -7,7 +7,7 @@ EXAMPLE = """\
 # date      |action|ticker|amount_vnd |price  |qty |reason |gate |emotion|thesis_id|note
 2026-10-07  |BUY   |HPG   |50000000   |27350  |    |S1     |PASS |calm   |T001     |rsi2 3.1
 2026-10-07  |THESIS|HPG   |           |       |    |       |     |       |T001     |S1 dip; stop 26530; target 28800
-2026-10-12  |SELL  |HPG   |           |28100  |1800|target |     |calm   |T001     |
+2026-10-12  |SELL  |HPG   |           |28100  |1828|target |     |calm   |T001     |
 2026-10-08  |BUY   |VIC   |80000000   |       |    |forum  |NONE |fomo   |         |group tip
 """
 
@@ -18,12 +18,12 @@ def test_example_parses_sorted_with_estimated_price():
     assert j.errors == []
     assert [e.action for e in j.events] == ["BUY", "THESIS", "BUY", "SELL"]
     hpg = j.events[0]
-    assert hpg.qty == 1800 and hpg.price == 27350 and not hpg.price_estimated
+    assert hpg.qty == 1828 and hpg.price == 27350  # odd lots: floor(50e6 / 27350) and not hpg.price_estimated
     vic = j.events[2]
     assert vic.price == 40000.0 and vic.price_estimated and vic.qty == 2000
     assert j.positions["VIC"]["qty"] == 2000 and "HPG" not in j.positions
     trade = j.closed[0]
-    assert trade["ticker"] == "HPG" and trade["qty"] == 1800
+    assert trade["ticker"] == "HPG" and trade["qty"] == 1828
     assert trade["gate"] == "PASS" and trade["emotion"] == "calm"
     assert trade["holding_sessions"] == 3
     gross = 28100 / 27350 - 1

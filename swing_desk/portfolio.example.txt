@@ -13,5 +13,5 @@
 2026-10-01  |NAV   |      |1000000000 |       |    |       |     |       |         |starting NAV
 2026-10-07  |BUY   |HPG   |50000000   |27350  |    |S1     |PASS |calm   |T001     |rsi2 3.1
 2026-10-07  |THESIS|HPG   |           |       |    |       |     |       |T001     |S1 dip; stop 26530; target 28800; invalid if VNI < EMA50
-2026-10-12  |SELL  |HPG   |           |28100  |1800|target |     |calm   |T001     |
+2026-10-12  |SELL  |HPG   |           |28100  |1828|target |     |calm   |T001     |
 2026-10-08  |BUY   |VIC   |80000000   |       |    |forum  |NONE |fomo   |         |group tip

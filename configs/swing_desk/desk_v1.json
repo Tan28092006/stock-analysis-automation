@@ -13,7 +13,8 @@
     "max_positions": 4,
     "max_weight_pct": 25.0,
     "max_exposure_pct": 60.0,
-    "lot_size": 100,
+    "lot_size": 1,
+    "lot_note": "User trades odd lots (lô lẻ, 1-99 shares, separate odd-lot board: continuous matching only, thinner book, wider spread). Sizing rounds to 1 share.",
     "buy_cost_pct": 0.15,
     "sell_cost_pct": 0.25,
     "stress_round_trip_cost_pct": 0.6

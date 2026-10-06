@@ -16,7 +16,7 @@ def test_effective_loss_is_stop_plus_gap_plus_cost():
 def test_suggested_size_keeps_effective_risk_within_budget_and_lots():
     from stock_agent.swing_desk.sizing import plan
     p = plan(27350, 1_000_000_000, CFG)
-    assert p["qty"] % 100 == 0 and p["qty"] > 0
+    assert isinstance(p["qty"], int) and p["qty"] > 0  # lot_size 1 (odd lots)
     assert p["qty"] * 27350 * 0.046 <= 1_000_000_000 * 0.01
     assert (p["qty"] + 100) * 27350 * 0.046 > 1_000_000_000 * 0.01 or p["capped_by"]
     assert p["stop_user"] == pytest.approx(27350 * 0.97)
@@ -39,8 +39,8 @@ def test_requested_amount_risk_arithmetic():
     from stock_agent.swing_desk.sizing import plan
     p = plan(27350, 1_000_000_000, CFG, amount=300_000_000)
     req = p["requested"]
-    assert req["qty"] == 10900          # floor(300e6 / 27350 / 100) * 100
-    value = 10900 * 27350
+    assert req["qty"] == 10968          # floor(300e6 / 27350), odd lots
+    value = 10968 * 27350
     assert req["value"] == pytest.approx(value)
     assert req["vnd_at_risk_nominal"] == pytest.approx(value * 0.03)
     assert req["vnd_at_risk_effective"] == pytest.approx(value * 0.046)

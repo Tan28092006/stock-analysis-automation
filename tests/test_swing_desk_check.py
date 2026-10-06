@@ -32,7 +32,7 @@ def test_clean_dip_is_pass_and_logged(tmp_path, monkeypatch):
     assert r["setups"] == ["S1"] and r["data_as_of"] == "2026-09-21"
     assert r["trade_session"] == "2026-09-22" and r["earliest_sell"] == "2026-09-24 13:00"
     p = r["plan"]
-    assert p["qty"] % 100 == 0 and p["vnd_at_risk_effective"] <= 10_000_000 + 1
+    assert p["qty"] > 0 and p["vnd_at_risk_effective"] <= 10_000_000 + 1
     rows = reclog.read_rows(paths.checks_log)
     assert rows[-1]["verdict"] == "PASS" and reclog.verify_chain(paths.checks_log)["ok"]
 

@@ -147,9 +147,9 @@ def _parse_line(no: int, raw: str, price_lookup) -> Event:
             raise ValueError(f"price missing and no snapshot close available for {ticker} {day}")
         ev.price, ev.price_estimated = float(close), True
     if action == "BUY" and ev.qty is None:
-        ev.qty = int(math.floor(ev.amount / ev.price / 100) * 100)
+        ev.qty = int(math.floor(ev.amount / ev.price))  # odd lots allowed (lô lẻ)
         if ev.qty <= 0:
-            raise ValueError("amount_vnd buys less than one lot (100 shares)")
+            raise ValueError("amount_vnd buys less than one share")
     if action in {"CASH", "NAV"} and ev.amount is None:
         raise ValueError(f"{action} needs amount_vnd")
     if action == "NAV" and ev.amount <= 0:
