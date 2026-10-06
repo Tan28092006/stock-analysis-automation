@@ -71,3 +71,33 @@ the user asks.
 session and never edited or deleted. Arms: `desk` (VeriHarness), `single` (one analyst, measures what
 VeriHarness adds), `baseline` (rule-only), `control` (random structural PASS). Activity floor: 4 desk
 ideas per month, reported, never forced. No conclusion before 90 resolved rows per arm and 40 sessions.
+
+## Bottom-fish mode (bắt đáy)
+
+Advisory filter with **no prospective evidence of edge**; firm-specific fundamental falls (type b) have
+literature evidence of continued drift. Rules: `docs/audits/2026-10-06-bottom-fishing-research.md`;
+thresholds: `configs/swing_desk/bottomfish_v1.json` (own `bf_params_hash`, `desk_v1.json` untouched);
+protocol: `configs/swing_desk/bottomfish_prospective_v1.json`; checklist: `prompts/BOTTOMFISH_CHECKLIST.md`.
+
+```text
+python -m stock_agent.swing_desk check HPG --mode bottomfish --profile P1 --price 25000 --amount 500000 [--why cheap] [--tranche 2]
+python -m stock_agent.swing_desk scan --mode bottomfish            # VN30 price-only table (no news/events/margin)
+python -m stock_agent.swing_desk bf-news HPG --session 2026-10-07 --class none_found --searched <HOSE/IR URL> --searched <URL> \
+    --margin "hose_ineligible=no|broker_cut=none|checked=2026-10-07|<URL>" [--item "date|FACT_PRIMARY|-2|type|<URL>|quote"]
+python -m stock_agent.swing_desk events PNJ --session 2026-10-07 --event 2026-10-21:egm_capital --pending-dilution --source <URL>
+python -m stock_agent.swing_desk events PNJ --session 2026-10-22 --resolved 2026-10-21:egm_capital --source <URL>
+python -m stock_agent.swing_desk refresh --held                    # VCI snapshot for held non-VN30 symbols (asks first)
+python -m stock_agent.swing_desk freeze --source bf_baseline       # bf_baseline + bf_knife + bf_random, before 09:00 VN
+```
+
+- Profiles: **P0 (default) = no bottom-fishing**; P1 short bounce after a panic (types a, c with half
+  size); P2 up to 3 tranches written in a `plan=scalein` THESIS before the first lot (type a); P3 special
+  situation (type b) only after the event is resolved, always labelled "no evidence of edge; measurement only".
+- Size: 1% NAV at the effective loss = stop + one extra limit-down (7%) + 0.6% costs (P1 19.6%, P2 32.6%,
+  P3 assumed 50% + 0.6%); type c x0.5 (P1), high index volatility x0.5. Uses the journal NAV when present.
+- Fail-closed: missing snapshot, news class (`bf-news`), event calendar (`events`), margin status or
+  journal is a BLOCK in this mode, never UNVERIFIED. BF-B2 anchoring and BF-B3 "cheap" are WARN.
+- Held symbols outside VN30 (e.g. from `refresh --held` into `snapshots/extra/`) are check/review only:
+  BF-G1 blocks any new bottom-fish entry, so the desk only reports HOLD/SELL/AVOID facts, never BUY.
+- A bottom-fish PASS needs a THESIS line with `bf_type=`, `profile=`, `invalid=`, `time_stop=`,
+  `max_attempts=` and `checklist=done` (BF-G12); `--ack` never replaces it.
