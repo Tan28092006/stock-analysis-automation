@@ -9,6 +9,7 @@ from pathlib import Path
 from ..config import load_universe
 from ..data import foreign_flows as ff
 from ..data.exchange_calendar import calendar_coverage_warning
+from . import flow_orphans
 
 
 def collection_symbols():
@@ -93,12 +94,30 @@ def main(argv=None):
     mode.add_argument('--migrate-legacy', action='store_true')
     mode.add_argument('--status', action='store_true')
     mode.add_argument('--retry-stale', action='store_true', help='Bounded retries for delayed valid EOD rows')
+    mode.add_argument('--quarantine-orphans', action='store_true',
+                      help='Move run dirs without manifest.json to quarantine/<UTC>/ (dry run unless --apply)')
+    p.add_argument('--apply', action='store_true', help='With --quarantine-orphans: actually move/remove stale lock')
+    p.add_argument('--stale-after-minutes', type=int, default=flow_orphans.DEFAULT_STALE_AFTER_SECONDS // 60,
+                   help='Lock/run activity younger than this means a collector may still be running')
     args = p.parse_args(argv)
+    if args.apply and not args.quarantine_orphans:
+        p.error('--apply is only valid with --quarantine-orphans')
+    stale_after = args.stale_after_minutes * 60
+    if args.quarantine_orphans:
+        try:
+            result = flow_orphans.quarantine_orphans(args.root, apply=args.apply, stale_after=stale_after)
+        except Exception as exc:
+            result = dict(status='failed', error=type(exc).__name__,
+                          reason='Quarantine interrupted; inspect quarantine/*/reason.json and the collector lock')
+        print(json.dumps(result, ensure_ascii=False), flush=True)
+        return 2 if result['status'] in ('refused', 'failed') else 0
+    diagnosis = {}
     try:
         if args.migrate_legacy:
             result = ff.migrate_legacy(root=args.root)
         elif args.status:
-            result = ff.health(args.symbols or collection_symbols(), root=args.root)
+            diagnosis = flow_orphans.diagnose(args.root, stale_after=stale_after)
+            result = dict(ff.health(args.symbols or collection_symbols(), root=args.root), **diagnosis)
         elif args.retry_stale:
             result = refresh_with_retries(args.symbols or collection_symbols(), root=args.root)
         else:
@@ -113,12 +132,14 @@ def main(argv=None):
         keys = ('status','expected_session','rows','normalized_rows','quarantined_rows','date_recovered_rows',
                 'missing_latest','gaps','manifest_path','rows_path','errors','quarantine_rows','quarantined_intraday_rows',
                 'requested_symbols','attempts','attempt_manifest_paths','retry_exhausted','retry_reason',
-                'incomplete_runs','calendar_warning')
+                'incomplete_runs','calendar_warning','lock','orphan_runs','collector_plausibly_running',
+                'orphan_assessment')
         print(json.dumps({k:result[k] for k in keys if k in result}, ensure_ascii=False), flush=True)
         return 0 if result['status'] in ('ready','research_only') else 2
     except Exception as exc:
         print(json.dumps(dict(status='blocked', error=type(exc).__name__,
-                              reason='See run artifacts; no fallback to unverified legacy data')), flush=True)
+                              reason='See run artifacts; no fallback to unverified legacy data', **diagnosis),
+                         ensure_ascii=False), flush=True)
         return 2
 
 

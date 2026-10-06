@@ -41,6 +41,8 @@ python -m stock_agent.pipeline.foreign_refresh --retry-stale
 python -m stock_agent.pipeline.foreign_refresh --status
 python -m stock_agent.pipeline.foreign_refresh --symbols ACB MBB MCH TCX
 python -m stock_agent.pipeline.foreign_refresh --migrate-legacy
+python -m stock_agent.pipeline.foreign_refresh --quarantine-orphans
+python -m stock_agent.pipeline.foreign_refresh --quarantine-orphans --apply
 ```
 
 Lệnh giới hạn mã là để chẩn đoán, không thay đổi danh sách của lịch tự động.
@@ -57,6 +59,7 @@ recommendations; dùng CLI collector riêng ở trên.
 Thư mục `data/foreign_flows_v2/` là runtime state, không commit lên Git:
 
 ```text
+quarantine/<UTC time + id>/reason.json + <run dir bị ngắt>/   (chỉ khi --apply)
 runs/<UTC time + id>/
   raw/foreign_<symbol>.json
   raw/proprietary_<symbol>.json
@@ -117,9 +120,28 @@ qua kiểm định tín hiệu riêng trước khi được dùng để ra quy�
   Retry collector; không sửa status thủ công thành ready.
 - `blocked`: không có dữ liệu hợp lệ, nguồn đổi schema, artifact bị sửa hoặc
   batch bị gián đoạn. Giữ raw/evidence; điều tra nguyên nhân trước khi dùng.
-- `.collect-lock` tồn tại: xác minh collector cũ đã dừng. Không xóa khóa của
-  tiến trình đang chạy. Chỉ dọn khóa orphan sau điều tra; thư mục run chưa commit
-  phải được giữ để kiểm tra, không giả làm một run thành công.
+- `.collect-lock` tồn tại hoặc `runs/<id>/` thiếu `manifest.json`: một run bị
+  ngắt (hard kill để lại khóa; Ctrl-C/exception để lại thư mục run chưa commit).
+  `health()` coi mọi run dir thiếu manifest là `incomplete_runs`, nên nếu để tại
+  chỗ thì **mọi ngày sau đều partial, exit 2**. Thủ tục có kiểm chứng:
+  1. `foreign_refresh --status` (chỉ đọc): xem `lock` (tuổi `age_seconds`,
+     `stale`), `orphan_runs` (tên, số file, dung lượng, `last_activity_age_seconds`),
+     `collector_plausibly_running` và `orphan_assessment`. Khóa không chứa PID nên
+     đây là heuristic theo tuổi (mặc định 120 phút, `--stale-after-minutes`).
+  2. Xác nhận không còn process python nào đang chạy collector (Task Manager hoặc
+     `Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Select CommandLine`).
+     Không xóa khóa của tiến trình đang chạy.
+  3. `foreign_refresh --quarantine-orphans` — dry run: in `would_move` và
+     `would_remove_stale_lock`, không đổi gì.
+  4. `foreign_refresh --quarantine-orphans --apply` — từ chối (exit 2) khi khóa
+     còn trẻ hơn ngưỡng hoặc run dir vừa có ghi gần đây. Nếu được phép: xóa khóa
+     stale (chỉ khi đủ tuổi), **giữ khóa trong lúc di chuyển** để collector khác
+     không chạy chen, rồi **di chuyển** (không xóa) từng run dir thiếu manifest
+     sang `data/foreign_flows_v2/quarantine/<UTC>/` kèm `reason.json` (lý do, tuổi
+     khóa đã gỡ, danh sách thư mục, số file/dung lượng).
+  5. Chạy lại `--status`: `incomplete_runs` rỗng. Thư mục trong `quarantine/` vẫn
+     giữ nguyên làm bằng chứng, không bao giờ được coi là run thành công, không
+     tính lại hash. Sau đó retry collector như bình thường.
 - Hash mismatch: kiểm tra file nguồn và manifest, không tính lại hash để che lỗi.
 - Dữ liệu quá cũ: mất mạng/máy ngủ/nguồn lỗi hoặc lịch chưa chạy. `--status`
   phải so với phiên EOD hiện tại, không chỉ nhìn status từ lần chạy trước.
