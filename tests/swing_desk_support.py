@@ -61,14 +61,21 @@ def write_snapshot(root: Path, frames: dict[str, pd.DataFrame], monkeypatch, *, 
     def fetch(symbol, start, end):
         raw = json.dumps(payload(symbol, frames[symbol])).encode()
         return rec.parse_vci_history(json.loads(raw), symbol, start, end), {
-            "source": "VCI", "fetched_at": datetime.combine(end, datetime.min.time(), timezone.utc).replace(hour=10).isoformat(),
+            "source": "VCI", "fetched_at": datetime.combine(end, datetime.min.time(), timezone.utc).replace(hour=9, minute=25).isoformat(),
             "raw_bytes": raw}
 
     out = Path(root) / name
     start = min(frames[s]["date"].iloc[0] for s in frames)
     manifest = rec.build_market_snapshot(list(frames), out, start, as_of, min_rows=30, fetcher=fetch)
     assert manifest["status"] == "verified", manifest["failures"]
-    return out / "manifest.json"
+    # build_market_snapshot stamps completed_at with the real clock; pin it to fixture time
+    # (manifest.json itself is not part of the hashed file set).
+    path = out / "manifest.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    stamp = datetime.combine(as_of, datetime.min.time(), timezone.utc).replace(hour=9, minute=30).isoformat()
+    data["fetched_at"] = data["completed_at"] = stamp
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return path
 
 
 def make_repo(tmp_path: Path, universe=UNIVERSE) -> Path:
@@ -86,6 +93,6 @@ def market_frames(universe=UNIVERSE, *, dip: str | None = "AAA", n: int = 300) -
     for i, sym in enumerate(universe):
         closes = uptrend(n, 20000.0 + 1000 * i, seed=11 + i)
         if sym == dip:
-            closes = with_dip(closes)
+            closes = with_dip(uptrend(n, 20000.0, drift=0.008, wiggle=0.002, seed=3), (-0.03,) * 4)
         frames[sym] = frame(closes, volume=3e6)
     return frames
