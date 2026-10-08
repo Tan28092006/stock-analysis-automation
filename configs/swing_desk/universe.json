@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "default": "vn100",
+  "primary_snapshot": "vn30",
+  "notes": [
+    "Active universe of the swing desk (swing + bottomfish modes). Select with the global CLI option `--universe vn30|vn100` (before the command); the default applies when it is omitted.",
+    "User request 2026-10-08: expand from VN30 to the current VN100. VN30 stays selectable and reproduces the previous behaviour.",
+    "primary_snapshot: the daily verified paper snapshot (17:05 job) covers configs/universe_vn30.json + VNINDEX. Market regime/breadth (G2, BF classification) and S2 (mr_scan) stay defined on it. Other universe symbols get daily data from desk-owned snapshots under <desk>/snapshots/universe/ (`refresh`).",
+    "Kept separate from desk_v1.json / bottomfish_v1.json and the prospective protocol files so their pinned hashes and params hashes do not change."
+  ],
+  "universes": {
+    "vn30": {
+      "symbols_file": "configs/universe_vn30.json",
+      "sector_map": null
+    },
+    "vn100": {
+      "symbols_file": "configs/universe_vn100.json",
+      "sector_map": "configs/swing_desk/sectors_vn100.json"
+    }
+  }
+}

@@ -10,6 +10,10 @@ T16 (history store): the golden runs with `--history off` (DeskPaths.history="of
 snapshot-only behaviour. The only addition in that mode is the `history` provenance block of a
 check, which `_off` asserts to be the snapshot/off provenance and then removes. History-on
 outputs have their own golden (tests/test_swing_desk_history_golden.py).
+
+T19 (universe switch, default VN100): the golden runs with `--universe vn30 --history off` and is unchanged;
+`test_vn30_golden_also_holds_in_a_repo_with_the_vn100_registry` replays it in a repo whose registry
+defaults to VN100 (non-VN30 names present), selecting vn30 explicitly.
 """
 from dataclasses import replace
 from datetime import datetime
@@ -50,12 +54,18 @@ def _text(text: str) -> str:
     return re.sub(r"snapshot sha [0-9a-f]{12}", "snapshot sha <sha>", text)
 
 
-def collect(tmp_path, monkeypatch) -> dict:
+def collect(tmp_path, monkeypatch, vn100_registry: bool = False) -> dict:
     from stock_agent.swing_desk import render, service
     from stock_agent.swing_desk.config import load_config
     out = {}
     paths, _ = setup_desk(tmp_path, monkeypatch)
-    paths = replace(paths, history="off")
+    if vn100_registry:
+        from tests.swing_desk_universe_support import VN100, registry, sector_map
+        (paths.repo / "configs/swing_desk/universe.json").write_text(json.dumps(registry("vn100")), encoding="utf-8")
+        (paths.repo / "configs/universe_vn100.json").write_text(json.dumps({"name": "VN100", "symbols": VN100}),
+                                                                 encoding="utf-8")
+        (paths.repo / "configs/swing_desk/sectors_vn100.json").write_text(json.dumps(sector_map()), encoding="utf-8")
+    paths = replace(paths, history="off", universe_name="vn30")   # T19: `--universe vn30 --history off`
     ready(paths)
     kw = dict(now=NOW_EOD, s2_override=[], record=False)
     cases = {
@@ -98,6 +108,14 @@ def test_swing_outputs_match_base_revision(tmp_path, monkeypatch):
         GOLDEN.parent.mkdir(parents=True, exist_ok=True)
         GOLDEN.write_text(json.dumps(got, ensure_ascii=False, indent=1, sort_keys=True) + "\n", encoding="utf-8")
         pytest.skip("golden written")
+    want = json.loads(GOLDEN.read_text(encoding="utf-8"))
+    assert set(got) == set(want)
+    for key in sorted(want):
+        assert got[key] == want[key], key
+
+
+def test_vn30_golden_also_holds_in_a_repo_with_the_vn100_registry(tmp_path, monkeypatch):
+    got = collect(tmp_path, monkeypatch, vn100_registry=True)
     want = json.loads(GOLDEN.read_text(encoding="utf-8"))
     assert set(got) == set(want)
     for key in sorted(want):

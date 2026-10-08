@@ -9,17 +9,18 @@ Never passes `--run` (no paper record), never edits schedules/BAT files, never w
 """
 from __future__ import annotations
 
-from datetime import datetime, time
+from datetime import datetime, time as dtime
 from pathlib import Path
 import subprocess
 import sys
+import time
 
 from ..data.exchange_calendar import VN_TIMEZONE, completed_session_date
 from ..data.reconciliation import verify_snapshot
 from . import data as dl
-from .config import DeskPaths, load_universe_symbols
+from .config import DeskPaths, load_primary_symbols, load_universe_symbols, universe_info
 
-FLOW_BLACKOUT = (time(16, 30), time(18, 30))   # scheduled 17:05 job holds .collect-lock
+FLOW_BLACKOUT = (dtime(16, 30), dtime(18, 30))   # scheduled 17:05 job holds .collect-lock
 
 
 def run_process(cmd: list[str], cwd: Path) -> int:
@@ -52,8 +53,15 @@ def held_symbols(paths: DeskPaths) -> list[str]:
 
 
 def history_fetch_command(paths: DeskPaths, as_of: str, held: list[str], python: str = sys.executable) -> list[str]:
-    cmd = [python, "-m", "stock_agent.data.history_store", "fetch", "--years", str(HISTORY_YEARS),
-           "--universe", "vn30", "vnindex"]
+    """VN30 (legacy): `--universe vn30 vnindex [--symbols held]`. An extended universe passes its own current
+    list explicitly (`--universe vnindex --symbols <universe + held>`): history_store's `vn100` set is the
+    union of the dated H1 research memberships, not the current VN100."""
+    cmd = [python, "-m", "stock_agent.data.history_store", "fetch", "--years", str(HISTORY_YEARS)]
+    universe = load_universe_symbols(paths)
+    if set(universe) != set(load_primary_symbols(paths)):
+        return cmd + ["--universe", "vnindex", "--symbols", *sorted(set(universe) | set(held)),
+                      "--as-of", as_of, "--out", str(paths.history_root)]
+    cmd += ["--universe", "vn30", "vnindex"]
     if held:
         cmd += ["--symbols", *held]
     return cmd + ["--as-of", as_of, "--out", str(paths.history_root)]
@@ -140,8 +148,9 @@ def history_report(paths: DeskPaths, now: datetime, snapshot_as_of: str | None, 
     fallbacks = sorted(t for t, c in (coverage or {}).items() if c.get("history_source") != "history_store")
     line["fallbacks"] = fallbacks
     if line["stale"] or not line["matches_snapshot_as_of"] or fallbacks:
+        label = universe_info(paths)["label"]
         line["hint"] = ("long windows fall back to the 650-day snapshot for " + (", ".join(fallbacks) or "all tickers")
-                        + "; run `refresh --history` to fetch VN30 + VNINDEX + held (paced VCI calls)")
+                        + f"; run `refresh --history` to fetch {label} + VNINDEX + held (paced VCI calls)")
     return line
 
 
@@ -150,14 +159,126 @@ def _flows_status(paths: DeskPaths, now: datetime) -> str:
     if not paths.flows_root.is_dir():
         return "UNVERIFIED"
     try:
-        return ff.health(load_universe_symbols(paths), root=paths.flows_root, now=now)["status"]
+        return ff.health(load_primary_symbols(paths), root=paths.flows_root, now=now)["status"]
     except Exception:
         return "UNVERIFIED"
 
 
+# ------------------------------------------------------------------ daily data for an extended universe (VN100)
+
+UNIVERSE_HISTORY_DAYS = 650        # same calendar window as the paper snapshot
+UNIVERSE_PACING_SECONDS = 3.1      # >= reconciliation's own pacing (19 req/min); never evade provider limits
+
+
+def universe_extra_symbols(paths: DeskPaths) -> list[str]:
+    """Active-universe symbols outside the paper VN30 snapshot basket (empty for VN30)."""
+    primary = set(load_primary_symbols(paths))
+    return sorted(s for s in load_universe_symbols(paths) if s not in primary)
+
+
+def _paced(fetch, cache: dict, pace: bool):
+    """Wrap a fetcher: >= UNIVERSE_PACING_SECONDS between real VCI calls, keep each successful result."""
+    state = {"calls": 0}
+
+    def call(symbol, start, end):
+        if pace and state["calls"]:
+            time.sleep(UNIVERSE_PACING_SECONDS)
+        state["calls"] += 1
+        result = fetch(symbol, start, end)
+        cache[symbol] = result
+        return result
+    return call
+
+
+def refresh_universe(paths: DeskPaths, *, now: datetime, primary_manifest: Path | None, fetcher=None,
+                     announce=None, fetch: bool = True) -> dict:
+    """Build/reuse an isolated verified daily snapshot for the active-universe names outside the paper snapshot.
+
+    Per ticker: reuse when its newest verified universe snapshot is fresh (completed session, re-verified, VNINDEX
+    equal to the paper snapshot's); otherwise fetch only the stale names + VNINDEX through
+    reconciliation.build_market_snapshot (650 calendar days, VCI, paced) into a NEW directory
+    <desk>/snapshots/universe/<UTC>/. build_market_snapshot blocks a whole snapshot when one symbol fails, so the
+    succeeded symbols are rebuilt (from the bytes already fetched, no second network call) into
+    <UTC>-subset/ and the failures stay UNVERIFIED. Never writes data/ and never changes schedules.
+    """
+    from datetime import timedelta, timezone
+    from ..data import reconciliation as rec
+    expected = completed_session_date(now)
+    others = universe_extra_symbols(paths)
+    report = {"expected_session": str(expected), "universe": universe_info(paths)["name"], "symbols": len(others),
+              "action": None, "snapshot": None, "failures": [], "fresh": None, "unverified": []}
+    if not others:
+        report.update(action="not_needed (the active universe equals the paper VN30 snapshot basket)")
+        return report
+    primary = primary_path = None
+    if primary_manifest is not None:
+        primary_path = Path(primary_manifest)
+        primary = verify_snapshot(primary_path)
+
+    def status() -> dict:
+        return dl.universe_ticker_freshness(paths, now, others, expected=str(expected), primary=primary,
+                                            primary_path=primary_path)
+
+    def finish(st: dict) -> dict:
+        bad = sorted(s for s, t in st.items() if not t["ok"])
+        n_primary = len(load_primary_symbols(paths))
+        report.update(fresh=n_primary + len(others) - len(bad) if primary is not None else len(others) - len(bad),
+                      unverified=bad, reasons={s: st[s]["reason"] for s in bad})
+        return report
+
+    st = status()
+    stale = [s for s in others if not st[s]["ok"]]
+    if not stale:
+        report.update(action="reused", snapshot=sorted({t["manifest"] for t in st.values()}))
+        return finish(st)
+    if not fetch:
+        report.update(action="not_requested (names outside VN30 without fresh daily data stay UNVERIFIED)")
+        return finish(st)
+    if primary is None:
+        report.update(action="skipped: no verified paper snapshot for the completed session to cross-check VNINDEX")
+        return finish(st)
+    request = stale + ["VNINDEX"]
+    stamp = now.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    out = paths.universe_snapshots / stamp
+    if announce:
+        announce(f"refresh: will fetch {len(request)} symbols ({', '.join(request)}) from VCI for {expected} into "
+                 f"{out} (paced >= {UNIVERSE_PACING_SECONDS}s; new directory; data/ and schedules untouched)")
+    cache: dict = {}
+    real = fetcher or rec.fetch_vci_history
+    start = expected - timedelta(days=UNIVERSE_HISTORY_DAYS)
+    manifest = rec.build_market_snapshot(request, out, start, expected, fetcher=_paced(real, cache, fetcher is None))
+    report.update(requested=request, failures=manifest["failures"], snapshot=str(out / "manifest.json"))
+    if manifest["status"] == "verified":
+        report["action"] = "fetched"
+        now = _not_before(now, manifest)
+        report["checked_at"] = now.isoformat()
+        return finish(status())
+    failed = {f["symbol"] for f in manifest["failures"]}
+    keep = [s for s in request if s not in failed and s in cache]
+    if "VNINDEX" in failed or keep == ["VNINDEX"] or not keep:
+        report["action"] = "blocked (no usable symbol, or VNINDEX failed)"
+        return finish(status())
+    sub = paths.universe_snapshots / f"{stamp}-subset"
+    m2 = rec.build_market_snapshot(keep, sub, start, expected, fetcher=lambda s, a, b: cache[s])
+    report.update(action="fetched_partial" if m2["status"] == "verified" else "blocked",
+                  snapshot=str(sub / "manifest.json"), blocked_snapshot=str(out / "manifest.json"))
+    if m2["status"] == "verified":
+        now = _not_before(now, m2)
+        report["checked_at"] = now.isoformat()
+    return finish(status())
+
+
+def _not_before(now: datetime, manifest: dict) -> datetime:
+    """The evaluation time after a fetch made in this refresh: no earlier than the new snapshot's completion
+    (the CLI fixes `now` before a multi-minute fetch). A backdated `--now` never moves forward otherwise."""
+    stamps = [datetime.fromisoformat(s) for s in (manifest.get("completed_at"), manifest.get("fetched_at")) if s]
+    return max([now, *stamps])
+
+
 def refresh(paths: DeskPaths, *, now: datetime, with_flows: bool = False, runner=run_process,
             python: str = sys.executable, build_state: bool = True, s2_override=None,
-            fetch_history: bool = False) -> dict:
+            fetch_history: bool = False, fetch_universe: bool = True, universe_fetcher=None,
+            announce=None) -> dict:
     expected = str(completed_session_date(now))
     report = {"expected_session": expected, "snapshot": None, "snapshot_action": None,
               "flows_action": None, "history_fetch": None, "state": None}
@@ -176,6 +297,15 @@ def refresh(paths: DeskPaths, *, now: datetime, with_flows: bool = False, runner
         manifest = dl.newest_verified_manifest(paths, as_of=expected)
         report["snapshot_action"] = "fetched" if manifest is not None else "failed"
     report["snapshot"] = str(manifest) if manifest else None
+    report["universe_fetch"] = refresh_universe(paths, now=now, primary_manifest=manifest, fetcher=universe_fetcher,
+                                                announce=announce, fetch=fetch_universe)
+    state_now = now
+    if report["universe_fetch"].get("checked_at"):
+        after = max(now, datetime.fromisoformat(report["universe_fetch"]["checked_at"]))
+        if str(completed_session_date(after)) == expected:      # never let a long fetch cross the 16:00 cutoff
+            state_now = after
+    if state_now != now:
+        report["state_built_at"] = state_now.isoformat()
 
     if fetch_history:
         report["history_fetch"] = fetch_history_store(paths, now=now, expected=expected, runner=runner,
@@ -201,10 +331,10 @@ def refresh(paths: DeskPaths, *, now: datetime, with_flows: bool = False, runner
             report["history"] = history_report(paths, now, None, None)
             return report
         from . import review, service
-        state = service.compute_state(paths, now, s2_override=s2_override)
+        state = service.compute_state(paths, state_now, s2_override=s2_override)
         extra = {}
         if paths.portfolio.is_file():
-            extra["portfolio_review.md"] = review.build_review(paths, now=now)["markdown"]
+            extra["portfolio_review.md"] = review.build_review(paths, now=state_now)["markdown"]
         report["state"] = str(service.write_state(paths, state, extra_files=extra))
         report["history"] = history_report(paths, now, state["manifest"]["as_of"],
                                            state["manifest"]["history"]["per_ticker"])
@@ -219,7 +349,7 @@ HELD_HISTORY_DAYS = 550   # about 370 sessions: 250-session high + 60-session be
 
 
 def held_outside_vn30(paths: DeskPaths) -> tuple[list[str], list[dict]]:
-    """Open journal positions whose symbol is not in the VN30 universe (read-only)."""
+    """Open journal positions whose symbol is not in the active universe (VN30 or VN100; read-only)."""
     from .journal import load_journal
     journal = load_journal(paths.portfolio)
     if journal is None:

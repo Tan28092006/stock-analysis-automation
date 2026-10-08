@@ -27,6 +27,10 @@ python -m stock_agent.data.history_store status --root data/history
 `--universe` takes `all` or any of `vn30` (current `configs/universe_vn30.json`),
 `vn30-history` (every symbol ever listed in the two VN30 membership configs),
 `vn100` (every symbol in `vn100_membership_2026_h1.json`) and `vnindex`. The
+`vn100` set is the union of the dated H1-2026 research memberships, **not** the
+current VN100 (`configs/universe_vn100.json`, HOSE July-2026 review, effective
+2026-08-03); pass current members explicitly with `--symbols`, as the swing
+desk's `refresh --history` does in VN100 mode. The
 union is deduplicated; the manifest records which set brought each symbol in.
 `--as-of` defaults to the completed session (16:00 Vietnam cutoff).
 
@@ -35,6 +39,30 @@ in practice about 6-10 min depending on response time.
 
 Exit codes: `fetch` 1 if any symbol failed (partial symbols are expected, e.g.
 VNINDEX); `verify` 1 on any mismatch; `status` 1 if stale or no store exists.
+
+## Stores on record (2026-10)
+
+| store_id | as_of | years | symbols | result |
+|---|---|---|---|---|
+| `20261006T161307Z_6ea2ce75` | 2026-10-06 | 10 | `all` + PNJ, TPB (107) | 90 ok, 13 partial, 4 failed (GEX, KDC, NVL, OCB: VCI timeouts) |
+| `20261006T163532Z_76f5be2b` | 2026-10-06 | 10 | retry | aborted run (back-to-back with the first; timeouts) |
+| `20261008T035457Z_9683ccc6` | 2026-10-07 | 5 | VNINDEX + TAL, VCK, VPX, GEX, KDC, NVL, OCB | 8 ok, 0 partial, 0 failed; `verify` passed |
+
+`9683ccc6` is the T19 backfill for current VN100 members that were missing from
+`6ea2ce75` (TAL, VCK, VPX: new in the July-2026 review) or failed there (GEX, KDC,
+NVL, OCB). Command: `fetch --years 5 --universe vnindex --symbols TAL VCK VPX GEX
+KDC NVL OCB --out data/history`, then `verify`. First rows: GEX, KDC, NVL, OCB and
+VNINDEX 2021-10-07 (the 5-year window start; 1,246 rows), TAL 2024-01-09 (673 rows),
+VPX 2025-12-11 (202 rows), VCK 2025-12-16 (199 rows); the last three start at their
+first VCI row, not at a verified listing date. Every other current VN100 member
+has 10 years (or its full VCI history if listed later: e.g. BAF 2021-12, GEE
+2022-03, DSE 2024-07, VPL 2025-05, TCX 2025-10) in `6ea2ce75`.
+
+The swing desk uses a store only when its `as_of` equals the daily snapshot's
+`as_of` (per ticker). Stores for an earlier session are kept for research and
+audit but give the desk no long windows for a later session; the desk falls
+back to the 650-day snapshot (WARN) until a store for that session exists
+(`refresh --history`, about 6 minutes for VN100 + VNINDEX + held).
 
 ## Layout and guarantees
 

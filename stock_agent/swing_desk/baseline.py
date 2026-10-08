@@ -22,7 +22,7 @@ import pandas as pd
 
 from . import data as dl
 from . import reclog
-from .config import DeskPaths, code_hash, load_config
+from .config import DeskPaths, code_hash, load_config, universe_fields
 from .history import provenance_fields
 from .scorer import score_bf_row, score_row, summarize
 from .service import load_state, state_freshness
@@ -101,7 +101,8 @@ def _meta(paths: DeskPaths, state: dict, cfg: dict, *, model_id: str, n_rollouts
           adjudication: dict | None) -> dict:
     return {"snapshot_manifest_sha256": state["manifest"]["snapshot_manifest_sha256"], "desk_code_hash": code_hash(),
             "params_hash": cfg["params_hash"], "prompt_hash": prompt_hash(paths), "model_id": model_id,
-            "n_rollouts": n_rollouts, "adjudication": adjudication, "protocol": "swing_desk_prospective_v1"}
+            "n_rollouts": n_rollouts, "adjudication": adjudication, "protocol": "swing_desk_prospective_v1",
+            **universe_fields(paths)}
 
 
 def _already(paths: DeskPaths, source: str, session: str) -> bool:
@@ -135,8 +136,9 @@ def freeze_analyst(paths: DeskPaths, rows: list[dict], *, source: str, now: date
         raise ValueError(f"{source} already frozen for {session}")
     for row in rows:
         t = state["tickers"].get(str(row.get("ticker", "")).upper())
-        if row.get("action") == "BUY" and (t is None or t["structural_gate"] == "BLOCK"):
-            raise ValueError(f"{row.get('ticker')}: not in VN30 state or structural gate BLOCK")
+        if row.get("action") == "BUY" and (t is None or t["structural_gate"] == "BLOCK" or not t.get("input_sha256")):
+            raise ValueError(f"{row.get('ticker')}: not in the {state['manifest'].get('universe_label') or 'VN30'} "
+                             "state with fresh daily data, or structural gate BLOCK")
         if row.get("snapshot_sha256") not in (None, state["manifest"]["snapshot_manifest_sha256"]):
             raise ValueError(f"{row.get('ticker')}: snapshot_sha256 does not match the desk state")
     return reclog.freeze(paths.rec_log, with_history(rows, state), source=source,

@@ -1,6 +1,8 @@
 """Vietnamese plain-text rendering for chat/terminal."""
 from __future__ import annotations
 
+import re
+
 RULE_LABEL = {
     "G0": "dữ liệu tươi", "G1": "thuộc VN30", "G2": "thị trường (VNINDEX vs EMA50)", "G3": "giá > SMA50",
     "G4": "không đuổi giá", "G5": "đuổi trong phiên", "G6": "stop so với nhiễu", "G7": "thanh khoản",
@@ -42,6 +44,15 @@ def history_line(h: dict | None) -> list[str]:
     return lines
 
 
+def _label(x: dict) -> str:
+    """Rule label; G1 names the active universe stated in its reason (the VN30 label is unchanged)."""
+    if x["id"] == "G1":
+        m = re.search(r"not in current (\S+) universe", x.get("reason") or "")
+        if m:
+            return f"thuộc {m.group(1)}"
+    return RULE_LABEL.get(x["id"], "")
+
+
 def render_check(r: dict) -> str:
     sha = (r.get("snapshot_manifest_sha256") or "")[:12]
     lines = [f"{r['ticker']} — {r['verdict']}   (dữ liệu EOD tới {r.get('data_as_of') or 'n/a'}, snapshot sha {sha or 'n/a'})",
@@ -52,7 +63,7 @@ def render_check(r: dict) -> str:
         for x in bad:
             tag = "BLOCK" if x["status"] == "FAIL" and x["severity"] == "hard" else (
                 "WARN" if x["status"] == "FAIL" else "UNVERIFIED")
-            lines.append(f"  - {x['id']} {RULE_LABEL.get(x['id'], '')} [{tag}]: {x['reason']}")
+            lines.append(f"  - {x['id']} {_label(x)} [{tag}]: {x['reason']}")
     else:
         lines.append("Luật không đạt: không có")
     setups = r.get("setups") or []

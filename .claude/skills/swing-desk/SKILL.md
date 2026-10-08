@@ -1,9 +1,9 @@
 ---
 name: swing-desk
-description: "VN30 swing desk for this repository (advisory only). Use for: (1) a pre-trade check when the user names a VN30 ticker they want to buy now (PASS/WARN/BLOCK, failed rule ids, earliest sell T+2 afternoon, 3% and -8% stops, lot-100 size, VND at risk); (2) the daily desk run that produces at most 3 swing ideas through a deterministic data step, 4 analyst rollouts with cited news sentiment and VeriHarness verification, then freezes them in the prospective log; (3) a review of the user's journal swing_desk/portfolio.txt by gate, emotion tag and activity; (4) a bottom-fish check after sharp falls. Never places or authorizes broker orders and never changes data schedules."
+description: "VN100 swing desk for this repository (advisory only; VN30 selectable with --universe vn30). Use for: (1) a pre-trade check when the user names a ticker in the active universe (default VN100) they want to buy now (PASS/WARN/BLOCK, failed rule ids, earliest sell T+2 afternoon, 3% and -8% stops, odd-lot size in shares, VND at risk); (2) the daily desk run that produces at most 3 swing ideas through a deterministic data step, 4 analyst rollouts with cited news sentiment and VeriHarness verification, then freezes them in the prospective log; (3) a review of the user's journal swing_desk/portfolio.txt by gate, emotion tag and activity; (4) a bottom-fish check after sharp falls. Never places or authorizes broker orders and never changes data schedules."
 ---
 
-# Swing desk (VN30, advisory)
+# Swing desk (VN100 by default, advisory)
 
 Authority: root `AGENTS.md`. Rules, rationale and sources:
 `docs/audits/2026-10-06-swing-desk-signal-research.md`; thresholds: `configs/swing_desk/desk_v1.json`;
@@ -18,10 +18,30 @@ prospective log measures; say so whenever ideas are reported.
 All commands run from the repository root: `python -m stock_agent.swing_desk <command>`. Add
 `--data-root <checkout>` when `data/` lives in another checkout (for example a git worktree).
 
+## Universe (default VN100; `--universe vn30` keeps the old desk)
+
+- Active universe = current VN100 (`configs/universe_vn100.json`: HOSE July-2026 review, effective
+  2026-08-03, source URL + sha256 in the file). Registry: `configs/swing_desk/universe.json`. Put
+  `--universe vn30` before the command (`--universe vn30 scan`) to reproduce the previous VN30 desk.
+- Daily data: the 17:05 paper snapshot covers VN30 + VNINDEX only. The other 70 names come from desk-owned
+  verified snapshots in `swing_desk/snapshots/universe/<UTC>/`; plain `refresh` builds/reuses them (paced VCI
+  calls, >= 3.1 s per symbol, about 4 minutes for 70 names; ask the user first; `--no-universe` skips).
+  G0 is per ticker: a name without fresh verified daily data is G0 UNVERIFIED (= WARN, never PASS); in
+  bottom-fish mode it is BF-G0 BLOCK. `status` lists `universe.unverified_daily`.
+- Unchanged definitions: market regime/breadth (G2), limit counts and S2 (VN30 MR scan) are computed on the
+  VN30 paper basket; S2 is NA for the other names (only S1 applies). G7 liquidity is unchanged, so many
+  VN100 names fail it (WARN); say so instead of loosening anything.
+- G9 concentration with VN100: desk_v1 bank/vingroup caps (banks include NAB and OCB) plus at most 2
+  positions per HOSE level-1 sector (`configs/swing_desk/sectors_vn100.json`, cited HOSE source); an
+  UNVERIFIED sector mapping makes G9 UNVERIFIED.
+- checks.jsonl rows, frozen recommendation rows and the state manifest carry `universe` and
+  `universe_source_sha` (amendment 2026-10-08 in `configs/swing_desk/protocol_amendments.md`).
+
 ## Mode 1: pre-trade check (default when the user names a ticker to buy now)
 
-1. `status --no-flows`. If `snapshot.ok` is false (stale or unverified), tell the user and ask before
-   running `refresh`; never refresh silently. Before 16:00 VN the data is the previous session's EOD.
+1. `status --no-flows`. If `snapshot.ok` is false (stale or unverified), or the ticker is listed in
+   `universe.unverified_daily`, tell the user and ask before running `refresh`; never refresh silently.
+   Before 16:00 VN the data is the previous session's EOD.
 2. `check <TICKER> --price <price the user sees> --amount <VND> [--reason <reason>] [--emotion <tag>]`.
    Omit `--price` or `--amount` if the user gave none; ask for the reason and emotion tag if missing.
 3. Report the output verbatim or nearly so: verdict, each failed/UNVERIFIED rule id with its reason,
@@ -55,13 +75,15 @@ User decisions (2026-10-06): the default recommendation is **P0 = no bottom-fish
 panic), P2 (up to 3 tranches, plan written before the first lot) and P3 (special situation, only after the event
 is resolved) are enabled when the user chooses them; P3 always says "no evidence of edge; measurement only".
 Risk per bottom-fish trade is 1% NAV at the effective loss (stop + one extra limit-down + costs). Held tickers
-outside VN30 can only get HOLD/SELL/AVOID facts, never BUY. BF-B2 (anchoring) and BF-B3 ("cheap now") are WARN.
+outside the active universe can only get HOLD/SELL/AVOID facts, never BUY. BF-B2 (anchoring) and BF-B3 ("cheap now") are WARN.
 Missing data, news class or event calendar is BLOCK.
 
-1. `status --no-flows`. If the ticker is outside VN30 and held, ask before `refresh --held` (it calls VCI for the
-   held non-VN30 symbols plus VNINDEX into `swing_desk/snapshots/extra/`; no `data/` write, no schedule change).
+1. `status --no-flows`. If the ticker is outside the active universe and held, ask before `refresh --held` (it calls
+   VCI for the held symbols outside the universe plus VNINDEX into `swing_desk/snapshots/extra/`; no `data/` write,
+   no schedule change).
 2. Classify the fall with sources you opened (never from memory). Search the company IR / HOSE disclosure page
-   and at least one reputable outlet for the last 20 sessions. Record what you found:
+   and at least one reputable outlet for the last 20 sessions. Source tiers, domains and search order:
+   `swing_desk/prompts/NEWS_SOURCES.md`. Record what you found:
    `bf-news <T> --session <S> --class fact_negative|none_found|opinion_only --item "date|evidence_type|impact|type|<URL>|<quote>" ...`
    and the margin/warning status (`--margin "hose_ineligible=no|broker_cut=<date|none>|checked=<date>|<URL>"`).
    `none_found` needs at least two `--searched <URL>` including one HOSE/HNX/SSC/VSD page or a company page whose domain (or a subdomain) is listed for that ticker in `configs/swing_desk/company_ir_domains.json`; add a missing domain there after checking it on the HOSE profile. Check the event
@@ -103,13 +125,15 @@ Decide after EOD (completed session = the session just closed, after 16:00 VN); 
 frozen before 09:00 VN of the next session. Let `S` = state session (`as_of`), `T` = trade session.
 
 **Phase 0 — data steward (deterministic; main session):**
-1. `status`; if the snapshot is not for the completed session, `refresh` (add `--with-flows` only if
-   the user allows it; the desk skips flows during 16:30-18:30 VN by itself). Stop if G0 fails.
+1. `status`; if the snapshot is not for the completed session or `universe.unverified_daily` is not empty,
+   `refresh` (VN100: also fetches the daily snapshot for the names outside VN30; add `--with-flows` only if
+   the user allows it; the desk skips flows during 16:30-18:30 VN by itself). Stop if G0 fails; names that
+   stay UNVERIFIED are listed in the scan and cannot be BUY ideas.
 2. `scan`; `review` if `swing_desk/portfolio.txt` exists.
 3. `freeze --source baseline` (freezes the rule-only baseline and random control for `T` **before any
    analyst runs**).
 4. Create `swing_desk/runs/<S>/`: `MISSION.md` (N=4, user goal, output contract), `spec/` (copies of
-   `swing_desk/prompts/ANALYST.md`, `OUTPUT_CONTRACT.md`, `SENTIMENT_RUBRIC.md`), `workspace/` (a
+   `swing_desk/prompts/ANALYST.md`, `OUTPUT_CONTRACT.md`, `SENTIMENT_RUBRIC.md`, `NEWS_SOURCES.md`), `workspace/` (a
    read-only copy of `swing_desk/state/<S>/`), `rollouts/a1..a4/`.
 
 **Phase 1 — 4 analyst rollouts:** same model, same prompt (`ANALYST.md` + contract + rubric), separate
@@ -184,8 +208,9 @@ Host-specific delegation; the phases, files and freeze order above are identical
   `history_rows`, store manifest sha256). The same keys are in state ticker JSON, the state manifest
   (`history`), checks.jsonl and frozen recommendation rows. Report any WARN / `history_mismatch` verbatim.
 - `status` shows the `history_store` line; `refresh` reports it with per-ticker coverage. Ask before
-  `refresh --history`: it calls VCI (paced >= 3.1 s per symbol, about 2 minutes) for VN30 + VNINDEX + held
-  tickers into a new `data/history/` store, then verifies it; it never runs when a fetch is in progress.
+  `refresh --history`: it calls VCI (paced >= 3.1 s per symbol; about 6 minutes for VN100, 2 minutes for VN30)
+  for the active universe + VNINDEX + held tickers into a new `data/history/` store, then verifies it; it never
+  runs when a fetch is in progress. Selection is per ticker among stores whose `as_of` equals the snapshot's.
 - `--history off` (before the command, e.g. `--history off check TCB`) restores the snapshot-only
   behaviour; use it only when the user asks or to compare.
 
@@ -195,6 +220,9 @@ Host-specific delegation; the phases, files and freeze order above are identical
   support, measured with a -8% stop, development data, survivorship-affected; the 3% stop is inside
   daily noise (about 1.1 x ATR) and about 1 in 5 entries breach -3% before they can be sold.
 - PASS means no red flag and a known setup, not a winning trade. The desk cannot stop a real order.
+- The VN100 list is the current membership (survivorship); the S1 backtest evidence is VN30-based, so VN100
+  names outside VN30 have no prior evidence of their own. Sizing is in shares (`lot_size` 1, odd lots on the
+  odd-lot board: thinner book, wider spread).
 - Prices are provider-adjusted and may differ from the board on ex-rights days; the holiday table ends
   2026-12-31; foreign-flow history is short (INSUFFICIENT_HISTORY below 20 sessions).
 - No claim that the desk or VeriHarness beats rule-only until the registered floor (>= 90 resolved rows
@@ -203,7 +231,7 @@ Host-specific delegation; the phases, files and freeze order above are identical
 
 ## Never
 
-- Recommend outside VN30, against a BLOCK, or with a stop that assumes selling before T+2 afternoon.
+- Recommend outside the active universe (default VN100), against a BLOCK, or with a stop that assumes selling before T+2 afternoon.
 - Invent news, dates or numbers; fill gaps with UNVERIFIED.
 - Edit or delete frozen rows, freeze after 09:00 VN, or cherry-pick which rollout is the single arm.
 - Place or suggest placing broker orders, change schedules, or refresh data without telling the user.

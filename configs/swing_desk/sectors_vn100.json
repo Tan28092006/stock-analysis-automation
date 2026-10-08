@@ -1,0 +1,463 @@
+{
+  "schema_version": 1,
+  "universe": "VN100",
+  "classification": "HOSE VNAllshare sector indices: HOSE's own level-1 sector classification (10 sector indices). This is HOSE's classification as published by the exchange, not ICB; no ICB source was opened.",
+  "source": "https://staticfile.hsx.vn/Uploads/UploadDocuments/2479382/15072026%20CBTT%20-%20Danh%20muc%20thanh%20phan%20HOSE-Index%20thang%207.2026.pdf",
+  "source_sha256": "441799b3afbc4f29f8b53ce6ef3b500b9121a4d032ca4cfeb1d4aa6e14407879",
+  "source_pages": [
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28
+  ],
+  "source_title": "HOSE: Danh mục cổ phiếu thành phần của Bộ chỉ số HOSE-Index kỳ tháng 7/2026 (CBTT 15/07/2026)",
+  "effective_from": "2026-08-03",
+  "sector_labels": {
+    "energy": "Năng lượng (VNENE)",
+    "materials": "Nguyên vật liệu (VNMAT)",
+    "industrials": "Công nghiệp (VNIND)",
+    "consumer_discretionary": "Hàng tiêu dùng (VNCOND)",
+    "consumer_staples": "Hàng tiêu dùng thiết yếu (VNCONS)",
+    "health_care": "Chăm sóc sức khỏe (VNHEAL)",
+    "financials": "Tài chính (VNFIN)",
+    "information_technology": "Công nghệ thông tin (VNIT)",
+    "utilities": "Dịch vụ tiện ích (VNUTI)",
+    "real_estate": "Bất động sản (VNREAL)"
+  },
+  "max_positions_per_sector": 2,
+  "max_positions_per_sector_note": "Design parameter (same as desk_v1 max_bank_positions), not fitted; applies in G9 only when the active universe names this sector map. Changing it does not change desk_v1 params_hash; record changes in protocol_amendments.md.",
+  "groups": {
+    "bank": [
+      "ACB",
+      "BID",
+      "CTG",
+      "EIB",
+      "HDB",
+      "LPB",
+      "MBB",
+      "MSB",
+      "NAB",
+      "OCB",
+      "SHB",
+      "SSB",
+      "STB",
+      "TCB",
+      "TPB",
+      "VCB",
+      "VIB",
+      "VPB"
+    ]
+  },
+  "groups_note": "bank = VN100 members whose company name in the same HOSE table (pages 4-5) begins 'Ngân hàng'; G9 uses the union with desk_v1 sectors.bank (adds NAB, OCB). Vingroup stays desk_v1 sectors.vingroup.",
+  "unverified_policy": "A symbol with status UNVERIFIED (or absent) makes the G9 sector cap UNVERIFIED (WARN); its sector is never guessed.",
+  "symbols": {
+    "ACB": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "ANV": {
+      "sector": "consumer_staples",
+      "status": "verified"
+    },
+    "BAF": {
+      "sector": "consumer_staples",
+      "status": "verified"
+    },
+    "BCM": {
+      "sector": "real_estate",
+      "status": "verified"
+    },
+    "BID": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "BMP": {
+      "sector": "industrials",
+      "status": "verified"
+    },
+    "BSI": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "BSR": {
+      "sector": "energy",
+      "status": "verified"
+    },
+    "BVH": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "BWE": {
+      "sector": "utilities",
+      "status": "verified"
+    },
+    "CII": {
+      "sector": "industrials",
+      "status": "verified"
+    },
+    "CMG": {
+      "sector": "information_technology",
+      "status": "verified"
+    },
+    "CTD": {
+      "sector": "industrials",
+      "status": "verified"
+    },
+    "CTG": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "CTR": {
+      "sector": "industrials",
+      "status": "verified"
+    },
+    "CTS": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "DBC": {
+      "sector": "consumer_staples",
+      "status": "verified"
+    },
+    "DCM": {
+      "sector": "materials",
+      "status": "verified"
+    },
+    "DGW": {
+      "sector": "information_technology",
+      "status": "verified"
+    },
+    "DIG": {
+      "sector": "industrials",
+      "status": "verified"
+    },
+    "DPM": {
+      "sector": "materials",
+      "status": "verified"
+    },
+    "DSE": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "DXG": {
+      "sector": "real_estate",
+      "status": "verified"
+    },
+    "EIB": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "EVF": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "FPT": {
+      "sector": "information_technology",
+      "status": "verified"
+    },
+    "FRT": {
+      "sector": "consumer_discretionary",
+      "status": "verified"
+    },
+    "FTS": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "GAS": {
+      "sector": "utilities",
+      "status": "verified"
+    },
+    "GEE": {
+      "sector": "industrials",
+      "status": "verified"
+    },
+    "GEX": {
+      "sector": "industrials",
+      "status": "verified"
+    },
+    "GMD": {
+      "sector": "industrials",
+      "status": "verified"
+    },
+    "GVR": {
+      "sector": "materials",
+      "status": "verified"
+    },
+    "HAG": {
+      "sector": "consumer_staples",
+      "status": "verified"
+    },
+    "HCM": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "HDB": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "HDG": {
+      "sector": "industrials",
+      "status": "verified"
+    },
+    "HHV": {
+      "sector": "industrials",
+      "status": "verified"
+    },
+    "HPG": {
+      "sector": "materials",
+      "status": "verified"
+    },
+    "HSG": {
+      "sector": "materials",
+      "status": "verified"
+    },
+    "HT1": {
+      "sector": "materials",
+      "status": "verified"
+    },
+    "KBC": {
+      "sector": "real_estate",
+      "status": "verified"
+    },
+    "KDC": {
+      "sector": "consumer_staples",
+      "status": "verified"
+    },
+    "KDH": {
+      "sector": "real_estate",
+      "status": "verified"
+    },
+    "KOS": {
+      "sector": "real_estate",
+      "status": "verified"
+    },
+    "LPB": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "MBB": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "MCH": {
+      "sector": "consumer_staples",
+      "status": "verified"
+    },
+    "MSB": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "MSN": {
+      "sector": "consumer_staples",
+      "status": "verified"
+    },
+    "MWG": {
+      "sector": "consumer_discretionary",
+      "status": "verified"
+    },
+    "NAB": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "NKG": {
+      "sector": "materials",
+      "status": "verified"
+    },
+    "NLG": {
+      "sector": "real_estate",
+      "status": "verified"
+    },
+    "NT2": {
+      "sector": "utilities",
+      "status": "verified"
+    },
+    "NVL": {
+      "sector": "real_estate",
+      "status": "verified"
+    },
+    "OCB": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "PAN": {
+      "sector": "consumer_staples",
+      "status": "verified"
+    },
+    "PC1": {
+      "sector": "industrials",
+      "status": "verified"
+    },
+    "PDR": {
+      "sector": "real_estate",
+      "status": "verified"
+    },
+    "PHR": {
+      "sector": "materials",
+      "status": "verified"
+    },
+    "PLX": {
+      "sector": "energy",
+      "status": "verified"
+    },
+    "PNJ": {
+      "sector": "consumer_discretionary",
+      "status": "verified"
+    },
+    "POW": {
+      "sector": "utilities",
+      "status": "verified"
+    },
+    "PVD": {
+      "sector": "energy",
+      "status": "verified"
+    },
+    "PVT": {
+      "sector": "energy",
+      "status": "verified"
+    },
+    "REE": {
+      "sector": "industrials",
+      "status": "verified"
+    },
+    "SAB": {
+      "sector": "consumer_staples",
+      "status": "verified"
+    },
+    "SBT": {
+      "sector": "consumer_staples",
+      "status": "verified"
+    },
+    "SHB": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "SIP": {
+      "sector": "real_estate",
+      "status": "verified"
+    },
+    "SJS": {
+      "sector": "real_estate",
+      "status": "verified"
+    },
+    "SSB": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "SSI": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "STB": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "TAL": {
+      "sector": "real_estate",
+      "status": "verified"
+    },
+    "TCB": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "TCH": {
+      "sector": "industrials",
+      "status": "verified"
+    },
+    "TCX": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "TPB": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "VCB": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "VCG": {
+      "sector": "industrials",
+      "status": "verified"
+    },
+    "VCI": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "VCK": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "VGC": {
+      "sector": "industrials",
+      "status": "verified"
+    },
+    "VHC": {
+      "sector": "consumer_staples",
+      "status": "verified"
+    },
+    "VHM": {
+      "sector": "real_estate",
+      "status": "verified"
+    },
+    "VIB": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "VIC": {
+      "sector": "real_estate",
+      "status": "verified"
+    },
+    "VIX": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "VJC": {
+      "sector": "industrials",
+      "status": "verified"
+    },
+    "VND": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "VNM": {
+      "sector": "consumer_staples",
+      "status": "verified"
+    },
+    "VPB": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "VPI": {
+      "sector": "real_estate",
+      "status": "verified"
+    },
+    "VPL": {
+      "sector": "consumer_discretionary",
+      "status": "verified"
+    },
+    "VPX": {
+      "sector": "financials",
+      "status": "verified"
+    },
+    "VRE": {
+      "sector": "real_estate",
+      "status": "verified"
+    },
+    "VSC": {
+      "sector": "industrials",
+      "status": "verified"
+    },
+    "VTP": {
+      "sector": "industrials",
+      "status": "verified"
+    }
+  }
+}
