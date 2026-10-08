@@ -1,4 +1,4 @@
-"""python -m stock_agent.swing_desk <command>  (advisory VN30 swing desk; never places orders)."""
+"""python -m stock_agent.swing_desk <command>  (advisory VN100/VN30 swing desk; never places orders)."""
 from __future__ import annotations
 
 import argparse
@@ -24,7 +24,8 @@ def _paths(args) -> DeskPaths:
     repo = Path(args.repo).resolve()
     data_root = Path(args.data_root or os.environ.get("SWING_DESK_DATA_ROOT") or repo).resolve()
     desk = Path(args.desk).resolve() if args.desk else repo / "swing_desk"
-    return DeskPaths(repo=repo, data_root=data_root, desk=desk, history=getattr(args, "history_mode", "on"))
+    return DeskPaths(repo=repo, data_root=data_root, desk=desk, history=getattr(args, "history_mode", "on"),
+                     universe_name=getattr(args, "universe", None))
 
 
 def _print(obj) -> None:
@@ -42,17 +43,23 @@ def build_parser() -> argparse.ArgumentParser:
                    help="on (default): long windows (SMA200, high_250, MAE/MFE, bottom-fish episode) from the "
                         "newest verified data/history store that matches the snapshot; off: snapshot only "
                         "(the pre-history behaviour). Put it before the command: --history off check TCB")
+    p.add_argument("--universe", choices=["vn30", "vn100"], default=None,
+                   help="active universe (default from configs/swing_desk/universe.json: vn100). vn30 reproduces the "
+                        "previous desk. Put it before the command: --universe vn30 scan")
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("status", help="read-only freshness report")
     s.add_argument("--no-flows", action="store_true", help="skip foreign-flow health (faster)")
     r = sub.add_parser("refresh", help="reuse/fetch verified snapshot, optional flows, build desk state")
     r.add_argument("--with-flows", action="store_true", help="collect foreign flows if stale (not 16:30-18:30 VN)")
     r.add_argument("--history", dest="fetch_history", action="store_true",
-                   help="also fetch a 10-year history store for VN30 + VNINDEX + held tickers when the newest "
-                        "store is stale (python -m stock_agent.data.history_store fetch, paced), then verify it")
+                   help="also fetch a 10-year history store for the active universe + VNINDEX + held tickers when "
+                        "the newest store is stale (python -m stock_agent.data.history_store fetch, paced), then verify it")
+    r.add_argument("--no-universe", dest="fetch_universe", action="store_false",
+                   help="VN100: skip the paced VCI daily fetch for the names outside the paper VN30 snapshot "
+                        "(those stay G0 UNVERIFIED); by default refresh builds/reuses swing_desk/snapshots/universe/")
     r.add_argument("--held", action="store_true",
-                   help="only: fetch an isolated VCI snapshot for journal-held symbols outside VN30 (+VNINDEX) "
-                        "into swing_desk/snapshots/extra/ (check/review only; never BUY)")
+                   help="only: fetch an isolated VCI snapshot for journal-held symbols outside the active universe "
+                        "(+VNINDEX) into swing_desk/snapshots/extra/ (check/review only; never BUY)")
     c = sub.add_parser("check", help="pre-trade check for one ticker")
     c.add_argument("ticker")
     c.add_argument("--price", type=float, help="live price you see now (VND)")
@@ -69,7 +76,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help="bottomfish profile (default from configs/swing_desk/bottomfish_v1.json: P0 = no bottom-fishing)")
     c.add_argument("--tranche", type=int, help="bottomfish P2: tranche number k of a pre-written plan=scalein")
     c.add_argument("--why", help="bottomfish: cheap, anchor, old_high, news, forum, group, tip, kol, other")
-    sc = sub.add_parser("scan", help="gate table for all VN30 from current desk state")
+    sc = sub.add_parser("scan", help="gate table for the whole active universe from current desk state")
     sc.add_argument("--mode", choices=["swing", "bottomfish"], default="swing")
     v = sub.add_parser("review", help="portfolio review of swing_desk/portfolio.txt")
     v.add_argument("--show-nav", action="store_true")
@@ -122,7 +129,8 @@ def main(argv=None) -> int:
             _print(refresh_held(paths, now=now, announce=print))
         elif args.cmd == "refresh":
             from .refresh import refresh
-            _print(refresh(paths, now=now, with_flows=args.with_flows, fetch_history=args.fetch_history))
+            _print(refresh(paths, now=now, with_flows=args.with_flows, fetch_history=args.fetch_history,
+                           fetch_universe=args.fetch_universe, announce=lambda m: print(m, file=sys.stderr)))
         elif args.cmd == "check" and args.mode == "bottomfish":
             result = service.check(paths, args.ticker, now=now, price=args.price, amount=args.amount,
                                    reason=args.reason, emotion=args.emotion, ack=args.ack, nav=args.nav,

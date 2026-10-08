@@ -13,7 +13,7 @@ from pathlib import Path
 from . import data as dl
 from .behaviour import review_flags
 from .calendar_events import earliest_sell, session_distance, trade_session
-from .config import DeskPaths, load_config, load_universe_symbols
+from .config import DeskPaths, load_config, load_primary_symbols, universe_info
 from .gate import evaluate_gate
 from .history import HistoryResolver
 from .indicators import compute_ticker, jsonable
@@ -96,17 +96,20 @@ def build_review(paths: DeskPaths, *, now: datetime, show_nav: bool = False) -> 
     cfg = load_config(paths.config)
     fresh = dl.freshness(paths, now)
     manifest = Path(fresh["manifest"]) if fresh.get("manifest") else None
-    frames = dl.load_frames(manifest) if manifest and fresh.get("as_of") else {}
+    frames = (dl.load_desk_frames(fresh) if fresh.get("ok") else dl.load_frames(manifest)) \
+        if manifest and fresh.get("as_of") else {}
     checks = reclog.read_rows(paths.checks_log)
     journal = load_journal(paths.portfolio, price_lookup=dl.close_lookup(frames) if frames else None, checks=checks)
     if journal is None:
         return {"markdown": "Chưa có swing_desk/portfolio.txt — xem swing_desk/portfolio.example.txt.\n", "empty": True}
-    universe = load_universe_symbols(paths)
+    uinfo = universe_info(paths)
+    universe, primary = uinfo["symbols"], load_primary_symbols(paths)
     nav = journal.nav()
     nav_known = nav is not None
     nav = nav or float(cfg["money"]["account_nav_default"])
     tday = trade_session(now)
-    market = dl.market_summary(manifest, frames, universe, cfg) if frames else {"state": "UNKNOWN"}
+    market = (dl.market_summary(manifest, dl.primary_frames(frames, primary), primary, cfg) if frames
+              else {"state": "UNKNOWN"})
     eff = effective_loss_pct(cfg) / 100
     stop_pct = cfg["stops"]["user_stop_pct"]
 
@@ -124,7 +127,7 @@ def build_review(paths: DeskPaths, *, now: datetime, show_nav: bool = False) -> 
             ind = compute_ticker(frames[t], long_df=long_df)
             row["history_source"] = hist["history_source"]
             g = evaluate_gate(ticker=t, ind=ind, market=market, freshness=fresh, universe=universe, cfg=cfg,
-                              trade_day=tday, plan=None, portfolio={}, events=None)
+                              trade_day=tday, plan=None, portfolio={}, events=None, universe_label=uinfo["label"])
             stop = p["avg_cost"] * (1 - stop_pct / 100)
             row.update(close=ind["close"], unrealized_pct=(ind["close"] / p["avg_cost"] - 1) * 100,
                        today_gate=structural_verdict(g["rules"]), stop=stop)
@@ -138,7 +141,7 @@ def build_review(paths: DeskPaths, *, now: datetime, show_nav: bool = False) -> 
             if p.get("reason") == "S1" and ind.get("sma5") and ind["close"] > ind["sma5"]:
                 row["actions"].append("S1: C > SMA5 -> bán phiên kế")
         else:
-            row["actions"].append("không có giá trong snapshot (ngoài VN30?)")
+            row["actions"].append(f"không có giá trong snapshot (ngoài {uinfo['label']} hoặc dữ liệu ngày chưa tươi?)")
         open_rows.append(row)
 
     exposure = sum(p["cost_value"] for p in journal.positions.values())

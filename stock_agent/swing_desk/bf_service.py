@@ -16,7 +16,8 @@ from .bf_indicators import compute_bottomfish_fields, episode_id
 from .bottomfish import (CAVEAT, P3_NOTE, bf_plan, classify_fall, evaluate_bf_behaviour, evaluate_bf_gate,
                          held_facts, in_fall_episode, _episode_buys)
 from .calendar_events import SELL_FROM, earliest_sell, horizon_warning, trade_session
-from .config import DeskPaths, code_hash, load_bf_config, load_config, load_universe_symbols
+from .config import (DeskPaths, code_hash, concentration, load_bf_config, load_config, load_primary_symbols,
+                     universe_fields, universe_info)
 from .gate import FAIL, PASS, verdict
 from .history import HistoryResolver, provenance_fields
 from .indicators import compute_ticker, jsonable
@@ -40,12 +41,18 @@ def _sector_mean(ticker: str, frames: dict, cfg: dict):
     return None
 
 
-def _recheck(failed: list[str], fall: dict, profile: str, behaviour: bool, tday) -> list[str]:
+def _groups_cfg(paths: DeskPaths, cfg: dict) -> dict:
+    """Peer groups for sector_mean_ret_10d: desk_v1 bank/vingroup, widened by the active sector map (VN100)."""
+    conc = concentration(paths, cfg)
+    return {"sectors": conc["groups"]} if conc else cfg
+
+
+def _recheck(failed: list[str], fall: dict, profile: str, behaviour: bool, tday, label: str = "VN30") -> list[str]:
     out = []
     if behaviour:
         out.append(f"cờ hành vi hard: chỉ kiểm lại từ {next_trading_day(tday)} 09:00 (ATO)")
     if "BF-G1" in failed:
-        out.append("ngoài VN30: không có lệnh bắt đáy mới (chỉ HOLD/SELL/AVOID cho vị thế đang giữ)")
+        out.append(f"ngoài {label}: không có lệnh bắt đáy mới (chỉ HOLD/SELL/AVOID cho vị thế đang giữ)")
     if {"BF-G3", "BF-G4"} & set(failed):
         out.append(">= 2 phiên không sàn, đáy sau cao hơn đáy trước, không có đáy mới của đợt giảm")
     if "BF-G5" in failed:
@@ -74,14 +81,24 @@ def check_bottomfish(paths: DeskPaths, ticker: str, *, now: datetime, price: flo
         raise ValueError(f"profile must be one of {sorted(bf['profiles'])}")
     tday = trade_session(now)
     fresh = dl.freshness(paths, now)
-    universe = load_universe_symbols(paths)
+    uinfo = universe_info(paths)
+    universe, primary = uinfo["symbols"], load_primary_symbols(paths)
     in_scope = ticker in universe or ticker in bf["scope"].get("extra_universe", [])
     checks = reclog.read_rows(paths.checks_log)
-    frames = dl.load_frames(Path(fresh["manifest"])) if fresh["ok"] else {}
-    market = dl.market_summary(Path(fresh["manifest"]), frames, universe, cfg) if fresh["ok"] else {}
+    frames = dl.load_desk_frames(fresh) if fresh["ok"] else {}
+    market = (dl.market_summary(Path(fresh["manifest"]), dl.primary_frames(frames, primary), primary, cfg)
+              if fresh["ok"] else {})
     extra, df, idx = {}, None, None
     data_as_of, snap_sha = fresh["as_of"], fresh["manifest_sha256"]
-    if ticker in universe:
+    tk = (fresh.get("tickers") or {}).get(ticker) if fresh["ok"] else None
+    if ticker in universe and tk is not None and tk["source"] != "primary":
+        # extended universe: the ticker's own verified universe snapshot (BF-G0 per ticker)
+        snap = {"ok": tk["ok"] and ticker in frames, "reason": tk["reason"], "source": "universe",
+                "manifest": tk["manifest"]}
+        snap_sha = tk["manifest_sha256"]
+        if snap["ok"]:
+            df, idx = frames[ticker], frames.get("VNINDEX")
+    elif ticker in universe:
         snap = {"ok": fresh["ok"] and ticker in frames, "reason": fresh["reason"], "source": "vn30"}
         if snap["ok"]:
             df, idx = frames[ticker], frames.get("VNINDEX")
@@ -99,7 +116,8 @@ def check_bottomfish(paths: DeskPaths, ticker: str, *, now: datetime, price: flo
     journal = load_journal(paths.portfolio, price_lookup=dl.close_lookup(all_frames), checks=checks)
     nav_v, nav_source, _, _ = _portfolio(journal, nav, cfg)
     long_df, hist = (HistoryResolver(paths, data_as_of).series(ticker, df) if df is not None else (None, None))
-    fields = (compute_bottomfish_fields(df, idx, cfg=bf, sector_mean_ret_10d=_sector_mean(ticker, frames, cfg),
+    groups_cfg = _groups_cfg(paths, cfg)
+    fields = (compute_bottomfish_fields(df, idx, cfg=bf, sector_mean_ret_10d=_sector_mean(ticker, frames, groups_cfg),
                                         symbol=ticker, long_df=long_df) if df is not None else None)
     ind = (compute_ticker(df, limit_proxy_pct=cfg["gate"]["limit_proxy_pct"],
                           excursion_lookback=cfg["excursion"]["lookback_entries"], long_df=long_df)
@@ -115,7 +133,7 @@ def check_bottomfish(paths: DeskPaths, ticker: str, *, now: datetime, price: flo
     rules = evaluate_bf_gate(ticker=ticker, profile=profile, fields=fields, market=market, fall=fall, snapshot=snap,
                              in_scope=in_scope, held=held, journal=journal, news=news, events=events, plan=plan,
                              price=price, tranche=tranche, trade_day=tday, data_as_of=data_as_of, cfg=bf,
-                             swing_effective_loss_pct=effective_loss_pct(cfg))
+                             swing_effective_loss_pct=effective_loss_pct(cfg), universe_label=uinfo["label"])
     structural_ok = all(r["status"] == PASS for r in rules if r["id"] in ("BF-G3", "BF-G4"))
     if ind is not None:
         swing_plan = plan or {"position_value": 0.0}
@@ -151,7 +169,7 @@ def check_bottomfish(paths: DeskPaths, ticker: str, *, now: datetime, price: flo
     out["unverified"] = [r["id"] for r in rules if r["status"] == "UNVERIFIED"]
     out["behaviour_block"] = behaviour_block(rules)
     out["recheck_from"] = f"{next_trading_day(tday)} 09:00 (ATO)" if out["behaviour_block"] else None
-    out["recheck_conditions"] = _recheck(out["failed"], fall, profile, out["behaviour_block"], tday)
+    out["recheck_conditions"] = _recheck(out["failed"], fall, profile, out["behaviour_block"], tday, uinfo["label"])
     g12 = next((r for r in rules if r["id"] == "BF-G12"), None)
     out["thesis_present"] = bool(g12 and g12["status"] == PASS)
     out["thesis_required"] = out["verdict"] != "PASS"
@@ -166,6 +184,9 @@ def check_bottomfish(paths: DeskPaths, ticker: str, *, now: datetime, price: flo
                                    "attempt_no", "bf_news_sha", "events_sha", "bf_params_hash")}
         p = out["plan"] or {}
         row.update(provenance_fields(out["history"]))
+        row.update(universe_fields(paths))
+        row.update(ticker_data_source=snap.get("source") if snap.get("ok") else "UNVERIFIED",
+                   ticker_snapshot_manifest_sha256=snap_sha if snap.get("ok") else None)
         row.update(source="user_check", bf_type=fall["fall_type"], qty_suggested=p.get("order_qty"),
                    entry_ref=p.get("entry_ref"), invalidation=p.get("invalidation"),
                    catastrophe_stop=p.get("catastrophe_stop"), time_stop_session=p.get("time_stop_session"),
@@ -197,20 +218,26 @@ def scan_rows(paths: DeskPaths, now: datetime) -> dict:
     fresh = dl.freshness(paths, now)
     if not fresh["ok"]:
         raise ValueError(f"BF-G0: {fresh['reason']}")
-    universe = load_universe_symbols(paths)
+    uinfo = universe_info(paths)
+    universe, primary = uinfo["symbols"], load_primary_symbols(paths)
     manifest = Path(fresh["manifest"])
-    frames = dl.load_frames(manifest)
-    market = dl.market_summary(manifest, frames, universe, cfg)
+    frames = dl.load_desk_frames(fresh)
+    market = dl.market_summary(manifest, dl.primary_frames(frames, primary), primary, cfg)
     tday = trade_session(now)
     from .service import _portfolio
     journal = load_journal(paths.portfolio, price_lookup=dl.close_lookup(frames))
     nav_v, nav_source, _, _ = _portfolio(journal, None, cfg)
     resolver = HistoryResolver(paths, fresh["as_of"])
-    rows, provs = [], {}
+    groups_cfg = _groups_cfg(paths, cfg)
+    rows, provs, unverified = [], {}, []
     for sym in universe:
+        if sym not in frames:   # extended universe without fresh verified daily data (BF-G0)
+            unverified.append(sym)
+            continue
         long_df, provs[sym] = resolver.series(sym, frames[sym])
         f = compute_bottomfish_fields(frames[sym], frames.get("VNINDEX"), cfg=bf,
-                                      sector_mean_ret_10d=_sector_mean(sym, frames, cfg), symbol=sym, long_df=long_df)
+                                      sector_mean_ret_10d=_sector_mean(sym, frames, groups_cfg), symbol=sym,
+                                      long_df=long_df)
         auto = fall_type_auto(f, market, bf)
         plan = bf_plan(f["close"], nav_v, profile="P1", cfg=bf,
                        fall_type="a", fields=f, trade_day=tday, lot=int(cfg["money"]["lot_size"]))
@@ -223,17 +250,22 @@ def scan_rows(paths: DeskPaths, now: datetime) -> dict:
                               "structural_verdict": verdict(structural),
                               "structural_failed": [r["id"] for r in structural if r["status"] == FAIL],
                               "plan_p1": plan, "history": provs[sym]}))
-    return {"as_of": fresh["as_of"], "trade_session": str(tday), "market": jsonable(market),
-            "snapshot_manifest_sha256": fresh["manifest_sha256"], "nav_source": nav_source,
-            "bf_params_hash": bf["bf_params_hash"], "frames": frames, "rows": rows,
-            "history": jsonable(resolver.summary(provs))}
+    out = {"as_of": fresh["as_of"], "trade_session": str(tday), "market": jsonable(market),
+           "snapshot_manifest_sha256": fresh["manifest_sha256"], "nav_source": nav_source,
+           "bf_params_hash": bf["bf_params_hash"], "frames": frames, "rows": rows,
+           "history": jsonable(resolver.summary(provs)), "universe_label": uinfo["label"],
+           **universe_fields(paths), "unverified": unverified}
+    if fresh.get("tickers"):
+        out["unverified_reasons"] = {s: fresh["tickers"][s]["reason"] for s in unverified}
+    return out
 
 
 def scan_table(scan: dict) -> str:
     from .service import history_lines
     fmt = lambda v, f: (f.format(v) if isinstance(v, (int, float)) and not (isinstance(v, float) and math.isnan(v)) else "n/a")  # noqa: E731
     mk = scan["market"]
-    lines = [f"# Bảng bắt đáy (VN30) — dữ liệu EOD tới {scan['as_of']} (snapshot sha {scan['snapshot_manifest_sha256'][:12]})", "",
+    label = scan.get("universe_label") or "VN30"
+    lines = [f"# Bảng bắt đáy ({label}) — dữ liệu EOD tới {scan['as_of']} (snapshot sha {scan['snapshot_manifest_sha256'][:12]})", "",
              f"Regime: {mk.get('regime')} | breadth {mk.get('breadth_pct')}% | phiên giao dịch kế: {scan['trade_session']}", "",
              "Chỉ giá: tin tức, lịch sự kiện và trạng thái margin KHÔNG có trong bảng này (BF-G2/G5/G6/G8 cần `check --mode bottomfish`).",
              "fall_type_auto là proxy giá (MARKET/IDIO/NONE), không phải phân loại (a)/(b)/(c). Structural = BF-G3/G4/G7.", "",
@@ -248,5 +280,7 @@ def scan_table(scan: dict) -> str:
                      f"{fmt(f.get('idio_ret_10d'), '{:.1f}')} | {fmt(f.get('drawdown_60_pct'), '{:.1f}')} | "
                      f"{fmt(f.get('panic_low'), '{:,.0f}')} | {'có' if f.get('capitulation_t') else ''} | "
                      f"{r['structural_verdict']}{' (' + ', '.join(r['structural_failed']) + ')' if r['structural_failed'] else ''} |")
+    for sym in scan.get("unverified") or []:
+        lines.append(f"| {sym} | - | - | - | - | n/a | n/a | n/a |  | UNVERIFIED (BF-G0: không có dữ liệu ngày tươi) |")
     lines += ["", CAVEAT]
     return "\n".join(lines) + "\n"

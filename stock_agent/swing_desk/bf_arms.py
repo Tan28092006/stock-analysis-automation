@@ -1,6 +1,7 @@
 """Bottom-fish prospective arms (configs/swing_desk/bottomfish_prospective_v1.json).
 
 Code arms, frozen before 09:00 VN of the trade session and before any analyst row:
+  (VN30 = the active universe since the 2026-10-08 amendment: VN100 by default; rows carry `universe`.)
   bf_baseline  MARKET-type VN30 tickers (price-only proxy) with BF-G3/G4/G7 PASS, P1 plan.
   bf_knife     same MARKET-type episodes with a floor close: entry at the open after the first
                floor close of the episode (counterfactual "catch the knife" control).
@@ -18,7 +19,7 @@ import statistics
 from ..data.exchange_calendar import next_trading_day
 from . import bf_facts, reclog
 from .bf_service import scan_rows
-from .config import DeskPaths, code_hash, load_bf_config, load_config
+from .config import DeskPaths, code_hash, load_bf_config, load_config, universe_fields
 from .history import provenance_fields
 
 CODE_ARMS = ("bf_baseline", "bf_knife", "bf_random")
@@ -40,7 +41,7 @@ def _meta(paths, state, bf, cfg, *, model_id, n_rollouts):
     return {"snapshot_manifest_sha256": state["manifest"]["snapshot_manifest_sha256"], "desk_code_hash": code_hash(),
             "params_hash": cfg["params_hash"], "bf_params_hash": bf["bf_params_hash"], "prompt_hash": prompt_hash(paths),
             "model_id": model_id, "n_rollouts": n_rollouts, "adjudication": None,
-            "protocol": "bottomfish_prospective_v1", "mode": "bottomfish"}
+            "protocol": "bottomfish_prospective_v1", "mode": "bottomfish", **universe_fields(paths)}
 
 
 def _row(r: dict, scan: dict, bf: dict, *, bf_type: str, entry: dict, invalidation, news: dict | None,
@@ -159,8 +160,11 @@ def freeze_bf_desk(paths: DeskPaths, rows: list[dict], *, now: datetime, model_i
     if any(r.get("source") == "bf_desk" and r.get("target_session") == session for r in reclog.read_rows(paths.rec_log)):
         raise ValueError(f"bf_desk already frozen for {session}")
     for row in rows:
-        if str(row.get("ticker", "")).upper() not in state["tickers"]:
-            raise ValueError(f"{row.get('ticker')}: bf_desk ideas must be VN30 tickers in the desk state")
+        t = state["tickers"].get(str(row.get("ticker", "")).upper())
+        if t is None or not t.get("input_sha256"):
+            label = state["manifest"].get("universe_label") or "VN30"
+            raise ValueError(f"{row.get('ticker')}: bf_desk ideas must be {label} tickers with fresh verified daily "
+                             "data in the desk state")
     from .baseline import with_history
     return reclog.freeze(paths.rec_log, with_history(rows, state), source="bf_desk",
                          target_session=date.fromisoformat(session),

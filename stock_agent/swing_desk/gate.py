@@ -60,7 +60,12 @@ def _result(rules, setups, out_of_scope=False, extra=None):
     return out
 
 
-def _g9(ticker: str, plan: dict, portfolio: dict, cfg: dict) -> dict:
+def _g9(ticker: str, plan: dict, portfolio: dict, cfg: dict, concentration: dict | None = None) -> dict:
+    """Risk budget, weight, positions, open risk, exposure and concentration.
+
+    `concentration` (config.concentration: VN100 sector map) widens the desk_v1 bank/vingroup groups and adds
+    a per-sector cap; None keeps the legacy desk_v1 groups only (VN30).
+    """
     m, g = cfg["money"], cfg["gate"]
     req = plan.get("requested")
     value = req["value"] if req else plan["position_value"]
@@ -86,14 +91,27 @@ def _g9(ticker: str, plan: dict, portfolio: dict, cfg: dict) -> dict:
         problems.append(f"open risk {open_risk / nav * 100:.2f}% NAV > {m['max_open_risk_pct']}%")
     if open_value + value > nav * m["max_exposure_pct"] / 100 + 1e-6:
         problems.append(f"exposure {(open_value + value) / nav * 100:.1f}% > {m['max_exposure_pct']}%")
+    groups = concentration["groups"] if concentration else cfg["sectors"]
     for group, limit in (("bank", g["max_bank_positions"]), ("vingroup", g["max_vingroup_positions"])):
-        members = set(cfg["sectors"][group])
+        members = set(groups[group])
         if ticker in members:
             count = len((holding | {ticker}) & members)
             if count > limit:
                 problems.append(f"{group} positions {count} > {limit}")
+    sector_note = None
+    if concentration:
+        sector_of, cap = concentration["sector_of"], concentration["max_per_sector"]
+        sector = sector_of.get(ticker)
+        if sector is None:
+            sector_note = f"sector of {ticker} UNVERIFIED in the sector map: per-sector cap not evaluated"
+        else:
+            count = 1 + sum(1 for t in holding if sector_of.get(t) == sector)
+            if count > cap:
+                problems.append(f"{sector} positions {count} > {cap}")
     if problems:
         return rule("G9", FAIL, "hard", "; ".join(problems))
+    if sector_note:
+        return rule("G9", UNVERIFIED, "hard", sector_note)
     return rule("G9", PASS, "hard", f"order {value / nav * 100:.1f}% NAV, open risk {open_risk / nav * 100:.2f}% NAV")
 
 
@@ -118,14 +136,23 @@ def _g10(ticker: str, trade_day: date, events, cfg: dict) -> dict:
 
 def evaluate_gate(*, ticker: str, ind: dict | None, market: dict, freshness: dict, universe: list[str],
                   cfg: dict, trade_day: date, plan: dict | None, price: float | None = None,
-                  s2: bool = False, portfolio: dict | None = None, events: dict | None = None) -> dict:
+                  s2: bool = False, portfolio: dict | None = None, events: dict | None = None,
+                  universe_label: str = "VN30", concentration: dict | None = None) -> dict:
+    """`freshness` is the primary (paper VN30) G0; with an extended universe its `tickers` map holds the
+    per-ticker daily-data status: a ticker without fresh verified data is G0 UNVERIFIED (WARN), never PASS."""
     g = cfg["gate"]
     ticker = ticker.upper()
     if not freshness.get("ok"):
         return _result([rule("G0", FAIL, "hard", freshness.get("reason") or "snapshot not fresh/verified")], [])
-    rules = [rule("G0", PASS, "hard", freshness.get("reason", ""))]
+    tk = (freshness.get("tickers") or {}).get(ticker)
+    if tk is not None and not tk.get("ok"):
+        rules = [rule("G0", UNVERIFIED, "hard", f"daily data UNVERIFIED for {ticker}: {tk.get('reason')}")]
+    elif tk is not None and tk.get("source") == "universe":
+        rules = [rule("G0", PASS, "hard", tk.get("reason", ""))]
+    else:
+        rules = [rule("G0", PASS, "hard", freshness.get("reason", ""))]
     if ticker not in universe:
-        rules.append(rule("G1", FAIL, "hard", f"OUT_OF_SCOPE: {ticker} not in current VN30 universe"))
+        rules.append(rule("G1", FAIL, "hard", f"OUT_OF_SCOPE: {ticker} not in current {universe_label} universe"))
         return _result(rules, [], out_of_scope=True)
     rules.append(rule("G1", PASS, "hard"))
     if ind is None:
@@ -210,7 +237,7 @@ def evaluate_gate(*, ticker: str, ind: dict | None, market: dict, freshness: dic
     else:
         rules.append(rule("G8", PASS, "soft", f"R:R {rr:.2f} (target {target:,.0f})"))
 
-    rules.append(_g9(ticker, plan, portfolio, cfg) if plan else rule("G9", UNVERIFIED, "hard", "no size plan"))
+    rules.append(_g9(ticker, plan, portfolio, cfg, concentration) if plan else rule("G9", UNVERIFIED, "hard", "no size plan"))
     rules.append(_g10(ticker, trade_day, events, cfg))
     rules.append(rule("G11", PASS, "soft", "+".join(setups)) if setups
                  else rule("G11", FAIL, "soft", "no S1/S2 setup: buying without a signal"))

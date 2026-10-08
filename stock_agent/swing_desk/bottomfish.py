@@ -247,7 +247,8 @@ REQUIRED_THESIS = ("bf_type", "profile", "invalid", "time_stop", "max_attempts")
 def evaluate_bf_gate(*, ticker: str, profile: str, fields: dict | None, market: dict, fall: dict,
                      snapshot: dict, in_scope: bool, held: bool, journal, news: dict | None, events: dict | None,
                      plan: dict | None, price: float | None, tranche: int | None, trade_day: date,
-                     data_as_of: str | None, cfg: dict, swing_effective_loss_pct: float = 4.6) -> list[dict]:
+                     data_as_of: str | None, cfg: dict, swing_effective_loss_pct: float = 4.6,
+                     universe_label: str = "VN30") -> list[dict]:
     ticker, profile = ticker.upper(), profile.upper()
     pcfg = cfg["profiles"][profile]
     as_of = data_as_of or str(trade_day)
@@ -259,10 +260,11 @@ def evaluate_bf_gate(*, ticker: str, profile: str, fields: dict | None, market: 
 
     # BF-G1 scope for new entries
     if in_scope:
-        rules.append(_rule("BF-G1", PASS, "hard", "VN30 / extra_universe"))
+        rules.append(_rule("BF-G1", PASS, "hard", f"{universe_label} / extra_universe"))
     else:
         note = "; held position: check/review only (HOLD/SELL/AVOID), never BUY" if held else ""
-        rules.append(_rule("BF-G1", FAIL, "hard", f"OUT_OF_SCOPE for new BF entries: {ticker} not in VN30 or extra_universe{note}"))
+        rules.append(_rule("BF-G1", FAIL, "hard", f"OUT_OF_SCOPE for new BF entries: {ticker} not in {universe_label} "
+                                                  f"or extra_universe{note}"))
 
     # BF-G2 fall type vs profile
     ft = fall.get("fall_type")
