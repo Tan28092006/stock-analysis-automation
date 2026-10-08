@@ -54,11 +54,21 @@ def _weight(item: dict, cfg: dict) -> float:
     return float(cfg["evidence_weights"].get(str(item.get("evidence_type", "")).upper(), 0.0))
 
 
+# News whose subject is the market, a sector or a corporate group (e.g. Vingroup contagion) or the
+# ticker's own price action is evidence of a market-wide / technical fall, not a firm-specific
+# fundamental shock: it never makes a fall type (b) and never fires BF-G6 (amendment 2026-10-08).
+MARKET_SCOPE_TYPES = frozenset({"market", "market_group", "market_macro", "market_flows", "market/flows",
+                                "group", "group_contagion", "group_price", "sector", "foreign_flow",
+                                "technical", "macro", "policy_macro"})
+
+
 def fact_negative_items(news: dict | None, data_as_of: str, cfg: dict, *, window: bool = True) -> list[dict]:
     c = cfg["classification"]
     out = []
     for it in (news or {}).get("items", []):
         if window and _age(it["date"], data_as_of) > c["news_lookback_sessions"]:
+            continue
+        if str(it.get("type", "")).strip().lower() in MARKET_SCOPE_TYPES and it.get("type") not in c["fact_negative_types"]:
             continue
         strong = _weight(it, cfg) >= c["fact_min_weight"] and int(it.get("impact", 0)) <= c["fact_max_impact"]
         if strong or it.get("type") in c["fact_negative_types"]:

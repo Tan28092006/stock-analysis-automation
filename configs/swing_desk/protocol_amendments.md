@@ -33,3 +33,14 @@ edited, so their pinned hashes (golden test) stay unchanged. Amendments are reco
   seabank.com.vn, techcombank.com, ...) could never satisfy the rule, and look-alike hosts (evilhsx.vn,
   hsx.vn.attacker.com) were accepted by the old suffix/substring test.
 - No threshold, profile or params hash changed; bf-news records written before this date are unaffected.
+
+## 2026-10-08 — market-scope news is not a firm-specific shock
+
+- `fact_negative_items` (fall classification and BF-G6) now skips items whose `type` is market, sector or
+  group scope or the ticker's own price action (`MARKET_SCOPE_TYPES` in `bottomfish.py`: market,
+  market_group, market_macro, market_flows, group, group_contagion, group_price, sector, foreign_flow,
+  technical, macro, policy_macro), unless the type is also in `fact_negative_types`.
+- Reason: the research taxonomy treats market/group contagion as evidence for type (a); before this change
+  a cited "Vingroup dragged the index" item classified VRE's fall as type (b) and blocked P1.
+- Firm-specific types (provision, dilution, legal, fraud, insider, earnings, margin_cut, ...) behave as before.
+  No threshold or params hash changed.
