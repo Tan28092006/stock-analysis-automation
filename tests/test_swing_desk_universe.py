@@ -509,3 +509,30 @@ def test_skill_docs_describe_the_active_universe_and_odd_lots():
     assert "20261008T035457Z_9683ccc6" in hist
     amend = (ROOT / "configs/swing_desk/protocol_amendments.md").read_text(encoding="utf-8")
     assert "universe_source_sha" in amend and "VN100" in amend
+
+
+def test_refresh_uses_the_fetch_completion_time_not_the_start_time(tmp_path, monkeypatch):
+    """Real run: the CLI fixes `now` before a ~4 minute fetch, so the new snapshot completes after it.
+    The names it fetched must still be fresh in the state built by the same refresh (no look-ahead:
+    the state is stamped no earlier than the data it uses)."""
+    from datetime import datetime, timedelta, timezone
+    from stock_agent.data import reconciliation as rec
+    from stock_agent.swing_desk import data as dl, refresh, service
+    paths, _, _, frames = vn100_desk(tmp_path, monkeypatch, extra=())
+    late = NOW_EOD.astimezone(timezone.utc) + timedelta(minutes=5)
+
+    class LateDT(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return late
+
+    monkeypatch.setattr(rec, "completed_session_date", lambda: date(2026, 9, 21))
+    monkeypatch.setattr(rec, "datetime", LateDT)
+    rep = refresh.refresh(paths, now=NOW_EOD, runner=lambda c, d: 0, s2_override=[],
+                          universe_fetcher=FakeFetcher(frames))
+    assert rep["universe_fetch"]["unverified"] == [] and rep["universe_fetch"]["fresh"] == len(VN100)
+    assert rep["state_built_at"] == late.isoformat()
+    state = service.load_state(paths)
+    assert all(state["tickers"][s]["input_sha256"] for s in VN100)
+    assert not dl.freshness(paths, NOW_EOD)["tickers"]["CCC"]["ok"]          # a backdated --now still refuses
+    assert service.state_freshness(paths, late)["ok"]

@@ -250,6 +250,8 @@ def refresh_universe(paths: DeskPaths, *, now: datetime, primary_manifest: Path 
     report.update(requested=request, failures=manifest["failures"], snapshot=str(out / "manifest.json"))
     if manifest["status"] == "verified":
         report["action"] = "fetched"
+        now = _not_before(now, manifest)
+        report["checked_at"] = now.isoformat()
         return finish(status())
     failed = {f["symbol"] for f in manifest["failures"]}
     keep = [s for s in request if s not in failed and s in cache]
@@ -260,7 +262,17 @@ def refresh_universe(paths: DeskPaths, *, now: datetime, primary_manifest: Path 
     m2 = rec.build_market_snapshot(keep, sub, start, expected, fetcher=lambda s, a, b: cache[s])
     report.update(action="fetched_partial" if m2["status"] == "verified" else "blocked",
                   snapshot=str(sub / "manifest.json"), blocked_snapshot=str(out / "manifest.json"))
+    if m2["status"] == "verified":
+        now = _not_before(now, m2)
+        report["checked_at"] = now.isoformat()
     return finish(status())
+
+
+def _not_before(now: datetime, manifest: dict) -> datetime:
+    """The evaluation time after a fetch made in this refresh: no earlier than the new snapshot's completion
+    (the CLI fixes `now` before a multi-minute fetch). A backdated `--now` never moves forward otherwise."""
+    stamps = [datetime.fromisoformat(s) for s in (manifest.get("completed_at"), manifest.get("fetched_at")) if s]
+    return max([now, *stamps])
 
 
 def refresh(paths: DeskPaths, *, now: datetime, with_flows: bool = False, runner=run_process,
@@ -287,6 +299,13 @@ def refresh(paths: DeskPaths, *, now: datetime, with_flows: bool = False, runner
     report["snapshot"] = str(manifest) if manifest else None
     report["universe_fetch"] = refresh_universe(paths, now=now, primary_manifest=manifest, fetcher=universe_fetcher,
                                                 announce=announce, fetch=fetch_universe)
+    state_now = now
+    if report["universe_fetch"].get("checked_at"):
+        after = max(now, datetime.fromisoformat(report["universe_fetch"]["checked_at"]))
+        if str(completed_session_date(after)) == expected:      # never let a long fetch cross the 16:00 cutoff
+            state_now = after
+    if state_now != now:
+        report["state_built_at"] = state_now.isoformat()
 
     if fetch_history:
         report["history_fetch"] = fetch_history_store(paths, now=now, expected=expected, runner=runner,
@@ -312,10 +331,10 @@ def refresh(paths: DeskPaths, *, now: datetime, with_flows: bool = False, runner
             report["history"] = history_report(paths, now, None, None)
             return report
         from . import review, service
-        state = service.compute_state(paths, now, s2_override=s2_override)
+        state = service.compute_state(paths, state_now, s2_override=s2_override)
         extra = {}
         if paths.portfolio.is_file():
-            extra["portfolio_review.md"] = review.build_review(paths, now=now)["markdown"]
+            extra["portfolio_review.md"] = review.build_review(paths, now=state_now)["markdown"]
         report["state"] = str(service.write_state(paths, state, extra_files=extra))
         report["history"] = history_report(paths, now, state["manifest"]["as_of"],
                                            state["manifest"]["history"]["per_ticker"])
