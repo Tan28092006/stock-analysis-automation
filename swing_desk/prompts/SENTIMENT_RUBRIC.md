@@ -10,7 +10,7 @@ news sentiment predicts VN large-cap returns is weak; sentiment is a veto, never
 | MACRO | policy rate, FX, credit, FDI, Fed | SBV, Tạp chí Thị trường Tài chính Tiền tệ, VnExpress/VnEconomy/Reuters |
 | POLICY | laws, decrees, circulars, tax, trade remedies | original text (vbpl, ministries), Ministry of Finance press |
 | SECTOR | bank credit/NIM, steel and oil prices, consumption | reputable press + broker reports (opinion) |
-| COMPANY_MAJOR | earnings, issuance/dividend, M&A, management, litigation, VN30 review | HOSE disclosures / company site; Vietstock/CafeF event calendars |
+| COMPANY_MAJOR | earnings, issuance/dividend, M&A, management, litigation, VN30 review | HOSE/HNX/VSDC/SSC disclosures, company IR site; CafeF, Vietstock, Tin Nhanh Chứng Khoán, VnEconomy, Báo Đầu Tư (tiers and tips: `NEWS_SOURCES.md`) |
 | COMPANY_MINOR | small contracts, insider trades, operations | disclosures, Vietstock/CafeF |
 | MARKET_FLOW | foreign/proprietary, margin, ETF, FTSE/MSCI | local flows v2 + press |
 | FORUM | F247, Zalo/Facebook groups | player opinion only, never evidence; use to detect hype (B6) |

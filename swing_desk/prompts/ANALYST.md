@@ -12,6 +12,7 @@ verifiers against the snapshot CSVs and the URLs you cite. Agreement between ana
 - `spec/`: the user goal, this file, `OUTPUT_CONTRACT.md`, `SENTIMENT_RUBRIC.md`.
 - The web, for news and event calendars only (macro, policy, sector, company events, insider
   registrations, ex-rights/dividend/AGM/earnings dates). Search independently; do not rely on memory.
+  Source tiers, domains and search order: `spec/NEWS_SOURCES.md` (copy of `swing_desk/prompts/NEWS_SOURCES.md`).
 
 ## Task
 

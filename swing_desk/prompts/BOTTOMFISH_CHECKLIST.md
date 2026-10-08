@@ -7,7 +7,7 @@ file này; lệnh bắt đáy chỉ PASS khi dòng `THESIS` có `bf_type=`, `pro
 Chỉ tư vấn; bắt đáy chưa có bằng chứng edge tiến cứu; loại (b) có bằng chứng trôi giảm.
 
 1. **Loại cú giảm**: (a) thị trường, (b) tin riêng, hay (c) không tin? Dán link nguồn **đã mở** (CBTT HOSE, website
-   DN, báo uy tín).
+   DN, báo uy tín — danh sách và thứ tự tìm: `swing_desk/prompts/NEWS_SOURCES.md`).
 2. **Tin đã "chạy hết" chưa?** Sự kiện kế tiếp là gì và ngày nào (ĐHĐCĐ, giá phát hành, GDKHQ, KQKD, kết luận điều
    tra)? Tôi có đang mua **trước** sự kiện đó không?
 3. **Điều gì chứng minh tôi sai?** Một mức đóng cửa cụ thể, một sự kiện cụ thể và một ngày cụ thể (time-stop).
