@@ -64,7 +64,7 @@ Missing data, news class or event calendar is BLOCK.
    and at least one reputable outlet for the last 20 sessions. Record what you found:
    `bf-news <T> --session <S> --class fact_negative|none_found|opinion_only --item "date|evidence_type|impact|type|<URL>|<quote>" ...`
    and the margin/warning status (`--margin "hose_ineligible=no|broker_cut=<date|none>|checked=<date>|<URL>"`).
-   `none_found` needs at least two `--searched <URL>` including one HOSE/HNX/SSC or company page. Check the event
+   `none_found` needs at least two `--searched <URL>` including one HOSE/HNX/SSC/VSD page or a company page whose domain (or a subdomain) is listed for that ticker in `configs/swing_desk/company_ir_domains.json`; add a missing domain there after checking it on the HOSE profile. Check the event
    calendar (EGM agenda, private placement, rights, ex-dates, earnings) and record it with
    `events <T> --session <S> ... --source <URL>`; mark a pending dilution vote with `--pending-dilution` and,
    once the result and terms are published, `events <T> --session <S> --resolved <date>:<type> --source <URL>`.

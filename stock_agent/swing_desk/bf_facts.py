@@ -110,9 +110,35 @@ def parse_margin(text: str) -> dict:
     return out
 
 
-def is_primary(url: str, ticker: str) -> bool:
-    host = urlparse(url).netloc.lower()
-    return host.endswith(PRIMARY_HOSTS) or ticker.lower() in host
+IR_DOMAINS = "configs/swing_desk/company_ir_domains.json"
+
+
+def load_ir_domains(paths: DeskPaths) -> dict:
+    """{TICKER: [domain, ...]} from the repo's company IR map; empty when the file is absent."""
+    try:
+        data = json.loads((paths.repo / IR_DOMAINS).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return {str(t).upper(): [str(d).lower().strip(".") for d in hosts]
+            for t, hosts in (data.get("domains") or {}).items()}
+
+
+def _on_domain(host: str, domain: str) -> bool:
+    return host == domain or host.endswith("." + domain)
+
+
+def is_primary(url: str, ticker: str, ir_domains: dict | None = None) -> bool:
+    """Exchange/regulator host, the ticker's mapped company domain, or (legacy) a host label
+    starting with the ticker. Domains match exactly or as a parent of a subdomain, never as a
+    substring, so look-alike hosts such as evilhsx.vn do not count."""
+    host = (urlparse(url).hostname or "").lower()
+    if not host:
+        return False
+    if any(_on_domain(host, d) for d in PRIMARY_HOSTS):
+        return True
+    if any(_on_domain(host, d) for d in (ir_domains or {}).get(ticker.upper(), [])):
+        return True
+    return any(label.startswith(ticker.lower()) for label in host.split("."))
 
 
 def load_bf_news(paths: DeskPaths) -> dict:
@@ -149,7 +175,8 @@ def mark_bf_news(paths: DeskPaths, ticker: str, session: str, *, news_class: str
     if news_class == "none_found":
         if len(searched) < 2:
             raise ValueError("class none_found needs >= 2 --searched URLs (sources actually opened)")
-        if not any(is_primary(u, ticker) for u in searched):
+        domains = load_ir_domains(paths)
+        if not any(is_primary(u, ticker, domains) for u in searched):
             raise ValueError("class none_found needs at least one primary source (HOSE/HNX/SSC disclosure page "
                              "or the company's own IR site) among --searched")
     if news_class == "fact_negative" and not items:

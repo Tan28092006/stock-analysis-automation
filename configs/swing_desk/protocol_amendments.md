@@ -22,3 +22,14 @@ edited, so their pinned hashes (golden test) stay unchanged. Amendments are reco
 - `--history off` restores the previous behaviour; the swing golden test runs in that mode.
 - Rows before this date have no `history_source`: treat them as `snapshot_650d`.
 - This is an engineering data-source change, not evidence of edge, and approves no trading.
+
+## 2026-10-08 — primary-source recognition for `bf-news`
+
+- `none_found` still needs >= 2 opened sources including one primary source. "Primary" now means an
+  exchange/regulator host (hsx.vn, hose.vn, hnx.vn, ssc.gov.vn, vsd.vn, vsdc.com.vn) or a company domain
+  listed for that ticker in `configs/swing_desk/company_ir_domains.json`, matched exactly or as a parent of a
+  subdomain. The old "ticker appears in the host" test is kept only as a host-label prefix fallback.
+- Fixes two defects: companies whose domain does not contain the ticker (vinhomes.vn, vincom.com.vn,
+  seabank.com.vn, techcombank.com, ...) could never satisfy the rule, and look-alike hosts (evilhsx.vn,
+  hsx.vn.attacker.com) were accepted by the old suffix/substring test.
+- No threshold, profile or params hash changed; bf-news records written before this date are unaffected.
