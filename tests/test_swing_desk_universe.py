@@ -493,3 +493,19 @@ def test_cli_universe_option(tmp_path, monkeypatch, capsys):
     code = cli.main(["--repo", str(paths.repo), "--now", NOW_EOD.isoformat(), "scan"])
     out = capsys.readouterr().out
     assert code == 0 and all(f"| {s} |" in out for s in VN100)
+
+
+# ------------------------------------------------------------------ docs
+
+def test_skill_docs_describe_the_active_universe_and_odd_lots():
+    for rel in (".claude/skills/swing-desk/SKILL.md", ".codex/skills/swing-desk/SKILL.md"):
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        assert "outside the active universe (default VN100)" in text, rel
+        assert "Recommend outside VN30" not in text and "lot-100" not in text and "lot 100" not in text, rel
+        assert "--universe vn30" in text and "NEWS_SOURCES.md" in text, rel
+    readme = (ROOT / "swing_desk/README.md").read_text(encoding="utf-8")
+    assert "--universe vn30" in readme and "snapshots/universe/" in readme
+    hist = (ROOT / "docs/HISTORY-STORE.md").read_text(encoding="utf-8")
+    assert "20261008T035457Z_9683ccc6" in hist
+    amend = (ROOT / "configs/swing_desk/protocol_amendments.md").read_text(encoding="utf-8")
+    assert "universe_source_sha" in amend and "VN100" in amend

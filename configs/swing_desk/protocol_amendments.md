@@ -44,3 +44,34 @@ edited, so their pinned hashes (golden test) stay unchanged. Amendments are reco
   a cited "Vingroup dragged the index" item classified VRE's fall as type (b) and blocked P1.
 - Firm-specific types (provision, dilution, legal, fraud, insider, earnings, margin_cut, ...) behave as before.
   No threshold or params hash changed.
+
+## 2026-10-08 - desk universe VN30 -> current VN100 (T19)
+
+- User request 2026-10-08 ("mở rộng ra cho VN100 ... VN30 ít quá"). Applies to both protocols
+  (`swing_desk_prospective_v1`, `bottomfish_prospective_v1`).
+- The active universe is set in `configs/swing_desk/universe.json` (default `vn100`; `--universe vn30` keeps the
+  previous desk). VN100 = `configs/universe_vn100.json`: HOSE CBTT 15/07/2026, HOSE-Index review July 2026,
+  effective 2026-08-03, VN100 table pages 4-5, source sha256
+  `441799b3afbc4f29f8b53ce6ef3b500b9121a4d032ca4cfeb1d4aa6e14407879`.
+- From this date, `checks.jsonl` rows, frozen recommendation rows (all arms, swing and bottom-fish) and the state
+  manifest carry `universe` (`vn30` / `vn100`) and `universe_source_sha` (LF-normalized sha256 of the universe
+  symbols file); checks rows also carry `ticker_data_source` and `ticker_snapshot_manifest_sha256`. Rows before
+  this date have no `universe`: treat them as `vn30`.
+- Where the registered protocols say "VN30" for the candidate pool (baseline, control, bf_baseline, bf_knife,
+  bf_random, analyst BUY scope) and `bottomfish_v1.json` `scope.new_entries = "vn30"`, read "the active universe
+  recorded in the row's `universe`". Evaluate and report results per `universe`; do not pool VN30-era and
+  VN100-era rows without saying so.
+- Unchanged definitions: market regime and breadth (G2, BF classification), limit counts and S2 (VN30 MR scan)
+  stay on the VN30 paper basket; S2 is NA for names outside VN30. Foreign-flow health stays VN30.
+- Daily data for the 70 names outside the paper snapshot comes from desk-owned verified snapshots
+  (`swing_desk/snapshots/universe/`, same VCI builder, 650 days). G0 is per ticker; a name without fresh verified
+  data is G0 UNVERIFIED (WARN) and cannot enter a code arm or an analyst BUY; BF-G0 stays BLOCK.
+- G9 adds `configs/swing_desk/sectors_vn100.json` with VN100: at most 2 positions per HOSE level-1 sector, and the
+  bank group adds NAB and OCB to `desk_v1` `sectors.bank`. Bottom-fish `sector_mean_ret_10d` uses the same
+  widened groups (more peer banks with daily data in VN100 mode).
+- `desk_v1.json`, `bottomfish_v1.json`, `prospective_v1.json`, `bottomfish_prospective_v1.json` and their hashes are
+  unchanged; G7 liquidity is unchanged (many VN100 names fail it). The swing golden runs with
+  `--universe vn30 --history off` and is unchanged.
+- The S1 backtest evidence is VN30-based and survivorship-affected; VN100 names outside VN30 have no prior
+  evidence of their own. This is a scope change, not evidence of edge, and approves no trading.
+

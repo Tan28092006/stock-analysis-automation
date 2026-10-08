@@ -1,7 +1,7 @@
-# Swing desk (VN30, advisory)
+# Swing desk (VN100 by default, advisory)
 
-A pre-trade discipline filter, trade journal review and prospective evaluation log for VN30 swing
-trades. **Advisory only:** it never places, routes or authorizes broker orders and never changes
+A pre-trade discipline filter, trade journal review and prospective evaluation log for swing trades
+in the active universe: the current VN100 by default, VN30 with `--universe vn30`. **Advisory only:** it never places, routes or authorizes broker orders and never changes
 data-collection schedules. PASS means "no structural or behavioural red flag and a known setup",
 not "will win". The edge of the LLM desk flow is an unproven hypothesis being measured
 (`configs/swing_desk/prospective_v1.json`).
@@ -14,9 +14,10 @@ Rules, sources and limits: `docs/audits/2026-10-06-swing-desk-signal-research.md
 
 ```text
 python -m stock_agent.swing_desk status                      # read-only freshness report (+ history_store line)
-python -m stock_agent.swing_desk refresh [--with-flows] [--history]  # reuse/fetch verified snapshot, build state/
+python -m stock_agent.swing_desk refresh [--with-flows] [--history] [--no-universe]  # reuse/fetch verified snapshots, build state/
 python -m stock_agent.swing_desk check HPG --price 27350 --amount 50000000 [--reason S1] [--emotion calm] [--ack]
-python -m stock_agent.swing_desk scan                        # gate table for all VN30 (needs fresh state)
+python -m stock_agent.swing_desk scan                        # gate table for the whole universe (needs fresh state)
+python -m stock_agent.swing_desk --universe vn30 scan        # the previous VN30 desk (option goes before the command)
 python -m stock_agent.swing_desk review [--show-nav]         # portfolio review of portfolio.txt
 python -m stock_agent.swing_desk events HPG --session 2026-10-07 [--event 2026-10-09:ex_dividend] --source <URL>
 python -m stock_agent.swing_desk freeze --source baseline     # baseline + control, before 09:00 VN
@@ -31,7 +32,7 @@ Use `--data-root <path>` (or `SWING_DESK_DATA_ROOT`) when `data/` lives in anoth
 ## What `check` prints
 
 Verdict, failed rule ids with reasons (G0-G11 gate, B1-B7 behaviour, COOL), earliest sell time
-(afternoon of T+2), the user 3% stop and the validated -8% stop, suggested quantity (lot 100) sized so
+(afternoon of T+2), the user 3% stop and the validated -8% stop, suggested quantity in shares (`lot_size` 1: odd lots) sized so
 the *effective* loss (3% + 1 pp gap allowance + 0.6% round-trip cost = 4.6%) is 1% of NAV, and VND at
 risk at both 3% and the effective loss, for the suggested size and for the `--amount` you typed.
 
@@ -43,11 +44,30 @@ two consecutive losses pause one extra session (B3P). A WARN asks for a written 
 G9 (risk budget) needs `portfolio.txt`; G10 (event calendar) needs `events` to be recorded for the
 ticker and session. Without them those rules are UNVERIFIED, which counts as WARN, never as PASS.
 
+## Universe (default VN100)
+
+- `configs/swing_desk/universe.json` names the default (`vn100`) and the symbol files:
+  `configs/universe_vn100.json` (HOSE July-2026 review, effective 2026-08-03; source URL and sha256 in the
+  file) and `configs/universe_vn30.json`. `--universe vn30` (before the command) reproduces the old desk.
+- G1 / BF-G1 test membership in the active universe; `scan` and `scan --mode bottomfish` list every member.
+- Market regime and breadth (G2), limit counts and S2 (VN30 MR scan) keep their VN30 definition on the
+  paper snapshot; S2 is NA for the other names. G7 liquidity is unchanged (many VN100 names fail it: WARN).
+- G9 with VN100 adds `configs/swing_desk/sectors_vn100.json` (HOSE level-1 sectors, cited): at most 2 positions
+  per sector, and the bank group includes NAB and OCB. An UNVERIFIED mapping makes G9 UNVERIFIED.
+- `checks.jsonl`, frozen rows and the state manifest carry `universe` and `universe_source_sha`.
+
 ## Data
 
 - Prices: newest **verified** VCI snapshot in `data/paper/snapshots/` or `swing_desk/snapshots/`
   (G0: re-verified hashes, `as_of` = completed session, 30 VN30 + VNINDEX). Before 16:00 VN the
   completed session is the previous one ("EOD data as of ...").
+- VN100 names outside VN30: desk-owned verified snapshots in `swing_desk/snapshots/universe/<UTC>/`, built by
+  plain `refresh` through `reconciliation.build_market_snapshot` (650 calendar days, VCI, paced >= 3.1 s, only
+  the stale names + VNINDEX; about 4 minutes for 70 names). A failed symbol no longer blocks the others: the
+  succeeded ones are rebuilt from the fetched bytes into `<UTC>-subset/`. G0 is per ticker (as_of = completed
+  session, re-verified, VNINDEX equal to the paper snapshot's); a name without fresh data is G0 UNVERIFIED
+  (WARN, never PASS; BF-G0 BLOCK in bottom-fish mode). `--no-universe` skips the fetch. `data/paper` is never
+  written.
 - Foreign/proprietary flows: `data/foreign_flows_v2` through `foreign_flows.health/load_flows`
   (read-only); annotations only, `INSUFFICIENT_HISTORY` below 20 sessions, never zero-filled.
 - `data/raw/prices_hist` is not used (status reports its staleness); legacy `data/raw/foreign` is
@@ -81,13 +101,14 @@ Which source a verdict used: `check` prints "Lịch sử dài ...: history_store
 ```text
 python -m stock_agent.swing_desk status                      # includes the history_store line
 python -m stock_agent.swing_desk refresh                     # as before + history status and per-ticker coverage
-python -m stock_agent.swing_desk refresh --history           # + fetch VN30+VNINDEX+held (portfolio.txt) if stale, then verify
+python -m stock_agent.swing_desk refresh --history           # + fetch universe+VNINDEX+held (portfolio.txt) if stale, then verify
 python -m stock_agent.swing_desk --history off check TCB     # snapshot only (pre-history behaviour)
 ```
 
 `refresh --history` runs `python -m stock_agent.data.history_store fetch --years 10 --universe vn30
-vnindex --symbols <held> --as-of <session> --out data/history` (paced >= 3.1 s per VCI call, stops
-on HTTP 429) and then `verify <new store>`. It skips the fetch when verified stores for the completed
+vnindex --symbols <held> --as-of <session> --out data/history` with `--universe vn30`, or `--universe vnindex
+--symbols <VN100 + held>` with VN100 (history_store's own `vn100` set is the H1 research union, not the current
+list), paced >= 3.1 s per VCI call, stops on HTTP 429, and then `verify <new store>`. It skips the fetch when verified stores for the completed
 session already cover every symbol, and when a store directory without a manifest younger than an
 hour suggests a fetch is running. No schedule change. Protocol note:
 `configs/swing_desk/protocol_amendments.md`.
@@ -117,12 +138,12 @@ protocol: `configs/swing_desk/bottomfish_prospective_v1.json`; checklist: `promp
 
 ```text
 python -m stock_agent.swing_desk check HPG --mode bottomfish --profile P1 --price 25000 --amount 500000 [--why cheap] [--tranche 2]
-python -m stock_agent.swing_desk scan --mode bottomfish            # VN30 price-only table (no news/events/margin)
+python -m stock_agent.swing_desk scan --mode bottomfish            # universe price-only table (no news/events/margin)
 python -m stock_agent.swing_desk bf-news HPG --session 2026-10-07 --class none_found --searched <HOSE/IR URL> --searched <URL> \
     --margin "hose_ineligible=no|broker_cut=none|checked=2026-10-07|<URL>" [--item "date|FACT_PRIMARY|-2|type|<URL>|quote"]
 python -m stock_agent.swing_desk events PNJ --session 2026-10-07 --event 2026-10-21:egm_capital --pending-dilution --source <URL>
 python -m stock_agent.swing_desk events PNJ --session 2026-10-22 --resolved 2026-10-21:egm_capital --source <URL>
-python -m stock_agent.swing_desk refresh --held                    # VCI snapshot for held non-VN30 symbols (asks first)
+python -m stock_agent.swing_desk refresh --held                    # VCI snapshot for held symbols outside the universe (asks first)
 python -m stock_agent.swing_desk freeze --source bf_baseline       # bf_baseline + bf_knife + bf_random, before 09:00 VN
 ```
 
@@ -133,7 +154,7 @@ python -m stock_agent.swing_desk freeze --source bf_baseline       # bf_baseline
   P3 assumed 50% + 0.6%); type c x0.5 (P1), high index volatility x0.5. Uses the journal NAV when present.
 - Fail-closed: missing snapshot, news class (`bf-news`), event calendar (`events`), margin status or
   journal is a BLOCK in this mode, never UNVERIFIED. BF-B2 anchoring and BF-B3 "cheap" are WARN.
-- Held symbols outside VN30 (e.g. from `refresh --held` into `snapshots/extra/`) are check/review only:
+- Held symbols outside the active universe (e.g. from `refresh --held` into `snapshots/extra/`) are check/review only:
   BF-G1 blocks any new bottom-fish entry, so the desk only reports HOLD/SELL/AVOID facts, never BUY.
 - A bottom-fish PASS needs a THESIS line with `bf_type=`, `profile=`, `invalid=`, `time_stop=`,
   `max_attempts=` and `checklist=done` (BF-G12); `--ack` never replaces it.
