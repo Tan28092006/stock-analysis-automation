@@ -21,7 +21,7 @@ Các phát hiện dưới đây là kiểm tra code, chưa phải ablation mới
 | Khối ngoại schema v2, raw vintages, availability, quarantine | `stock_agent/data/foreign_flows.py`; không hồi tố timestamp hoặc cho legacy đủ điều kiện |
 | Split theo ngày, purge exit/optional label-availability date | `stock_agent/features/temporal_validation.py`; hiện date granularity, availability field optional; R4 cần mandatory timestamp contract |
 | Bốn base: LightGBM, XGBoost, Ridge, CatBoost | `ensemble_model.py::train` hiện là voting/simple mean; tên/docstring stacking không chứng minh meta model đã được fit |
-| Preprocessing hiện tại: neutral-fill theo feature → clip quantile 1/99 fit train → estimator transforms | `_prepare_features` / `calibration.py::preprocess_features_robust`; không blanket zero-fill, không phải RobustScaler; tiếp tục audit HPO/calibration |
+| Preprocessing hiện tại: neutral-fill theo feature → clip quantile 1/99 fit train → estimator transforms | `_prepare_features` / `calibration.py::preprocess_features_robust`; không phải RobustScaler. **Đính chính 06/10:** fill có hiệu lực xảy ra trước ở ba điểm upstream (`indicators.py`, `feature_engineering_v2.py`, `feature_store.py::_safe_float`); MR `win_probability.py:285` là blanket `fillna(0)`; ensemble mặc định 0.0 ngoài 12 prefix — xem [preprocessing 06/10](../audits/2026-10-06-preprocessing-feature-engineering.md) C2–C3 |
 | Target mặc định `net_t2_win` / `net_t2_return_pct` | Không tự coi là target phù hợp MR15/momentum; cần label protocol riêng |
 | Ridge score đi qua sigmoid; missing base có fallback 0.5 | Không tự gọi là xác suất đã calibrate; thử calibration riêng và fail-closed khi thiếu component |
 | Release candidate với hash, `live_approved=false` | `model_release.py`; không bật ML/override hay thay production artifact |
@@ -288,7 +288,7 @@ chưa có metric mới. Khi triển khai, đăng ký trong registry trước new
 | ID | Câu hỏi / comparison freeze | Primary evidence | Rủi ro / điều kiện dừng |
 |---|---|---|---|
 | H-D01 | Canonical as-of vs legacy join | Future-mutation invariance, unit/date/cardinality coverage; paired downstream replay | Không dùng legacy leakage làm lợi nhuận baseline hợp lệ |
-| H-P01 | Missing-aware vs current feature-specific neutral-fill + train-bound 1/99 clipping | Fixed-fold calibration + net portfolio + missingness-only control | Provider outage shortcut, coverage shift; blanket-zero chỉ là control riêng nếu preregister, không baseline hiện tại |
+| H-P01 | Missing-aware vs current feature-specific neutral-fill + train-bound 1/99 clipping | Fixed-fold calibration + net portfolio + missingness-only control | Provider outage shortcut, coverage shift; blanket-zero chỉ là control riêng nếu preregister, không baseline hiện tại. **06/10:** baseline legacy phải freeze lại theo chuỗi fill thực tế (indicators → v2 → snapshot defaults → preprocess); research_ml `FoldTransform` impute trước winsor (`harness.py:110-116`), ngược recipe đề xuất |
 | H-P02 | Robust/Yeo–Johnson riêng vs current preprocess | Linear model fixed folds, leave-period diagnostics, transform hashes | Extra transforms có thể không hữu ích với tree; test chọn sau nhìn kết quả invalid |
 | H-F01 | Thêm F1 market-relative/breadth | Without/add-F1, exposure-matched control, regime slices | Market exposure giả dạng stock-selection alpha |
 | H-F02 | Thêm F2 liquidity/cost-aware | Net P&L/turnover/fill rejection, cost ×2 và delay +1 | OHLCV không chứng minh queue/auction fill |
@@ -334,8 +334,10 @@ Bootstrap paired **date blocks**, existing 20/40-session stress, family-adjusted
 inference/minimum days/trades giữ nguyên; stock rows không tăng độc lập thời gian.
 
 Monthly activity tách flat-to-long, add-on, distinct entry days, first-session
-construction và zero-new-entry months. **Numerical activity floor chưa được người
-dùng chốt**, phải chốt trước experiment acceptance; không tự đặt quota rồi ép
+construction và zero-new-entry months. **Activity floor đã được người dùng chốt
+04/10**: ≥4 flat-to-long entries và ≥3 distinct entry days mỗi tháng
+(`configs/research/ml_protocol_v1.json`); validator hiện chỉ kiểm floor đã freeze,
+chưa kiểm floor đã đạt (xem §13). Floor phải freeze trước experiment acceptance; không tự đặt quota rồi ép
 mua. Sparse-but-profitable chỉ ghi activity fail/inconclusive theo floor, không
 thay bằng average fills/half-year hoặc bỏ điều kiện lợi nhuận dương.
 
@@ -403,7 +405,9 @@ và accounting/risk/execution readiness là lớp bằng chứng khác.
 | R7 Full research regression | PLANNED | R5–R6 | Full gate/books/slices/VN100/events + accounting/causality, cost/delay/multiplicity/activity decisions |
 | R8 Prospective readiness | BLOCKED for trading approval | R7 + execution/data blockers | Separate authorization, frozen candidate, complete expected sessions, matured outcomes/actual execution evidence |
 
-Next bounded implementation: **R5 prerequisites** (activity floor from the user, sample floors) — R1–R4 landed 2026-10-04, see below. Original R1 note:
+Next bounded implementation (cập nhật 06/10): R5 đã chạy (monthly BLOCKED, weekly
+INCONCLUSIVE, shuffled control thắng model); không mở R6. Thứ tự việc tiếp theo,
+quyết định đang chờ và các gap còn mở sau audit 06/10: xem **§13**. Original R1 note:
 
 **R1** — thiết kế/test source contract và as-of
 dataset eligibility trước khi train hay mở rộng số model. Chốt activity floor
@@ -463,3 +467,83 @@ review này không xác minh toàn bộ original financial/statistical papers ch
 chúng. Mỗi experiment vẫn phải có nguồn phương pháp liên quan, preregistration,
 test/accounting/statistical evidence và limitations trước khi chấp nhận. Book
 mechanism được hỗ trợ không làm H-* đã chứng minh, không gỡ PIT/execution blockers.
+
+## 13. Trạng thái thật và kế hoạch triển khai sau audit 06/10
+
+Ngày: 06/10/2026, Firstmate run `2026-10-06-ml-roadmap`. Revision `4403fc7`
+(`codex/data-integrity-audit` đã fast-forward tới `origin/claude/youthful-hawking-hat1sk`
+@`7200137` — R1–R4 `stock_agent/research_ml/`, R5 v1/v2 — cộng fix Windows cho
+evidence bundle; ml test set 58 passed bằng `anaconda3/python.exe`). Mục này sắp
+thứ tự việc; trạng thái chính thức vẫn ở ledger §10. Không cấp trading/deploy approval.
+
+### 13.1 Input
+
+Bảy audit 06/10 viết ở `4b859cd`, mỗi file có mục cuối "Cập nhật sau merge
+research_ml (06/10, 4403fc7)" phân loại RESOLVED / STILL OPEN / SUPERSEDED / CHANGED:
+[R1](../audits/2026-10-06-r1-source-dataset-contracts.md),
+[R2](../audits/2026-10-06-r2-canonical-catalog.md),
+[R3 labels/cost](../audits/2026-10-06-r3-labels-cost-parity.md),
+[ML](../audits/2026-10-06-ml-system-verification.md),
+[preprocessing](../audits/2026-10-06-preprocessing-feature-engineering.md),
+[compute](../audits/2026-10-06-compute-acceleration.md),
+[EOD flow](../audits/2026-10-06-data-update-flow.md).
+Legacy code (parallel_engine, calibration, ensemble, win_probability, backtest,
+EOD) không đổi giữa `4b859cd` và `4403fc7`, nên mọi finding legacy vẫn STILL OPEN.
+
+### 13.2 Quyết định đã có / đang chờ
+
+| ID | Nội dung | Trạng thái |
+|---|---|---|
+| D1 | Lấy `research_ml` làm gốc R1–R4; R1 song song (`firstmate/r1-source-contracts`) không merge, chỉ port gap | **Đã quyết 06/10** (người dùng) |
+| D6 | Activity floor ≥4 entries & ≥3 ngày/tháng; sample floors ≥120 train / ≥40 test dates, ≥50 events/class | **Đã chốt 04/10** (`ml_protocol_v1.json`) |
+| D2 | Preregistration cho contract change | Thực tế đang theo protocol ML riêng; `research_gate_v1` chưa sửa — cần người dùng xác nhận |
+| D3 | Price-vintage: R5 dùng "provider-adjusted as retrieved" nhưng không có mode có version | Chờ: đề xuất mode có version mang `claims_blocked` |
+| D4 | Khôi phục writer cho `prices_hist`/dashboard cache/`forward_test` (đứng từ 21/09) | Chờ; đụng lịch chạy |
+| D5 | Đổi logic portfolio backtest (forced-close, stop/target muộn, T+3 cash) | Người dùng **có ý định**; chờ kết quả VeriHarness backtest rồi duyệt thiết kế |
+| D8 | Hướng R5 tiếp theo: dừng ML trên universe này vs v3 exposure-matched control | Chờ (R5 weekly: control thắng model) |
+
+### 13.3 Gói việc STILL OPEN, theo thứ tự
+
+| WP | Nội dung bounded | Phụ thuộc | Gate |
+|---|---|---|---|
+| WP1 | **DONE 06/10** (`0f299f4`..`46a1300`, merged ff, 127 tests): legacy quarantine, `MissingState.INVALID` + `validate_feature_states`, foreign-flow timing/net checks, `membership_as_of` VN30/VN100 với coverage BLOCKED, `validate_label_outcomes`. Còn mở: chưa wire vào R5 runner/`build_foreign_feature`; bug `labels.py:78` (pending giữ `net_return_pct` khi có `data_end`); xác nhận `exit_unfillable`→pending | D1 | Wire-in đổi runtime → quyết định riêng |
+| WP2 | R2: foreign-flow vintages + `ingest_issue`/legacy inventory trong `research_ml/catalog.py`, migrate manifest read-only + parity `load_flows`; pagination proof, `revision_event`, `catalog_meta`, incremental verify `read_prices`; hòa giải catalog-boundary vs manifest-authority | WP1 | Test catalog; không đổi collector/lịch |
+| WP3 | R3: Broker-parity RED test cho `research_ml/labels.py` (cost nhân, limit gate, exit trì hoãn, T+3); hash price-vintage/cost/calendar trên label row | Preregistration (D2) trước khi sửa semantics | Không xem kết quả mới trước đăng ký |
+| WP4 | Legacy labels/backtest: `cost_config` chết, T+2 vs T+3, clamp fill, `COST=0.60`, forced-close, `label_available_date=exit_date`, pending bị drop; mâu thuẫn docstring `mr_exit.py:7` | D5 + VeriHarness backtest | Task riêng có approval; đổi label → research gate |
+| WP5 | Preprocessing: winsor trước impute, F0 trên session skeleton, chuẩn hóa `f2_adv_value_20`, persist transform thật | WP3 | Ablation H-P* chỉ khi có lane mà signal thắng control |
+| WP6 | R4 hardening: embargo, row-ID hash/purge reasons/class counts trong `splits.json`, persist OOF, `component_matrix` fail khi trùng, validator từ chối placeholder và kiểm activity floor **đạt**; ledger ngày test đã xem qua v1/v2/v3 | Không | Test harness/evidence |
+| WP7 | Legacy ML: wire contract v2 vào `model_release`/`ml_models`; ensemble release bypass, evaluate serve threshold, holdout re-cut, calibration; giữ ML override off | WP6 | Không đổi live behavior khi chưa approval |
+| WP8 | Compute: profile `mr_signal_bank` (O(T²)), `asof_join`, catalog verify; ghi device/threads vào `environment.json`; GPU chỉ theo tiêu chí audit compute | Không | Profiler không đổi hành vi |
+| WP9 | EOD (blocker R8): sửa DEPLOY/RENDER docs, thủ tục quarantine run dir/lock, báo missed session, guard lịch 2027, manifest snapshot atomic + retention, lock/silent swallow ở writer legacy | (docs, guard lịch) không; phần runtime cần xác nhận | Test foreign/paper/reconciliation |
+| WP10 | R7 NAV replay (Broker T+3, cost ×2, delay, activity) cho lane nào còn được giữ | D8 | Research gate đầy đủ |
+
+### 13.4 Việc đang chạy ngoài ledger
+
+- VeriHarness (scratchpad): challenge backtest thực tế, T+2, nghiên cứu thời điểm
+  thoát lệnh, giải mâu thuẫn `mr_exit.py:7`, khuyến nghị thiết kế portfolio backtest → input cho D5/WP4.
+- Swing desk (T10): nghiên cứu bộ lọc trước khi vào lệnh (PASS/WARN/BLOCK), tín hiệu
+  DB, sentiment, quy trình 4 agent; chỉ là công cụ tư vấn, không đặt lệnh, phải log
+  đề xuất prospective để kiểm chứng. Thiết kế tại `docs/audits/2026-10-06-swing-desk-signal-research.md` khi xong.
+
+### 13.5 Môi trường
+
+- Test: `C:\Users\acer\anaconda3\python.exe -m pytest ...` (msys `python` không có
+  pytest; `py` 3.13 thiếu lightgbm/optuna). Không chạy full suite song song (paging file).
+- Ổ D: còn ~5 GB (từng về 0 trong phiên 06/10); dọn worktree đã merge trước khi tạo thêm.
+
+### 13.6 Cập nhật 07/10/2026 (cuối phiên Firstmate)
+
+Đã merge local vào `codex/data-integrity-audit` (chưa push), HEAD `72b93de`:
+R1 port (`46a1300`), refactor `mr_exit` single path (`cb4601e`), swing desk + Codex skill
+(`740b26d`, lô lẻ `08dc727`), kho lịch sử 10 năm (`9c13d17`, store `data/history/20261006T161307Z_6ea2ce75`,
+103/107 mã), WP9 EOD hardening (`aa0463f`), bottomfish mode + NAV journal (`a45da17`),
+hash độc lập line-ending (`6f7e324`), desk dùng kho 10 năm (`72b93de`).
+Kiểm tra pipeline độc lập: [2026-10-07-pipeline-check](../audits/2026-10-07-pipeline-check.md) — PASS có điều kiện.
+
+Còn mở (bounded, chưa làm):
+- F1: `review` chưa dùng dữ liệu `refresh --held` cho mã ngoài VN30 (PNJ/TPB hiện n/a).
+- F2: các dòng frozen 2026-10-07 mang `desk_code_hash` lai (working tree trộn CRLF/LF trước fix `6f7e324`);
+  ghi vào `configs/swing_desk/protocol_amendments.md`, không sửa dòng đã đóng băng.
+- O1: `history_store status` nêu store aborted làm headline; O2: README/SKILL còn ghi "lot 100".
+- D4 (khôi phục writer `prices_hist`/dashboard), quyết định nới cửa sổ indicator để dùng 10 năm (cần protocol version mới),
+  dùng kho 10 năm cho research_ml/R5 (preregistration), danh sách VN30 lịch sử trước 2022 (survivorship).
