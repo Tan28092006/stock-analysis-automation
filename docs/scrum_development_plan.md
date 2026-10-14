@@ -1,5 +1,7 @@
 # Scrum Development Plan - VN30 T+2 Stock Agent
 
+> Historical T+2 backlog and measurements; not the current MR/momentum acceptance protocol. For the data/preprocessing/ensemble work requested on 2026-10-04, use [the current roadmap](plans/2026-10-04-data-ml-research-plan.md) and root `AGENTS.md`. In particular, old UI priorities and fixed 90-day purge guidance are not instructions for the new backend-first, label-interval-purged research design.
+
 ## 1. Product Goal
 
 Phát triển VN30 T+2 Stock Agent thành nền tảng nghiên cứu và gợi ý giao dịch T+2 có kiểm chứng, auditable, technical-only, không dùng news/RSS/sentiment trong quyết định. Hệ thống phải ưu tiên dữ liệu OHLCV đáng tin cậy, backtest tái lập được, risk guard rõ ràng, và dashboard đủ minh bạch để người dùng hiểu vì sao một mã được BUY_SETUP, WATCH hoặc REJECT.

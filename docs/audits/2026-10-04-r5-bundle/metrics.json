@@ -1,0 +1,816 @@
+{
+  "momentum": {
+    "decision_months": 47,
+    "fold_problems": [
+      "fold0:insufficient_train_dates,insufficient_test_dates",
+      "fold1:insufficient_train_dates,insufficient_test_dates",
+      "fold2:insufficient_train_dates,insufficient_test_dates",
+      "fold3:insufficient_train_dates,insufficient_test_dates"
+    ],
+    "label_status": {
+      "matured": 1410,
+      "pending": 60
+    },
+    "m0": {
+      "excess_vs_universe_pct": -0.14523730740248286,
+      "mean_net_return_pct": 0.16780632747218005,
+      "months": 47,
+      "note": "per-lot diagnostic, not portfolio NAV",
+      "universe_equal_mean_net_pct": 0.3130436348746629
+    },
+    "matured_rows": 1410,
+    "problems": [
+      "monthly_independent_dates:47<160"
+    ],
+    "trials": {
+      "baseline_all_features": {
+        "features": [
+          "f0_ret_1",
+          "f0_ret_5",
+          "f0_mom_126_21",
+          "f0_high_prox_120",
+          "f0_vol_20",
+          "f0_drawdown_60",
+          "f0_volume_anomaly_20",
+          "f2_adv_value_20"
+        ],
+        "status": "no_conclusive_folds"
+      },
+      "drop_f0_momentum": {
+        "features": [
+          "f0_ret_1",
+          "f0_ret_5",
+          "f0_vol_20",
+          "f0_drawdown_60",
+          "f0_volume_anomaly_20",
+          "f2_adv_value_20"
+        ],
+        "status": "no_conclusive_folds"
+      },
+      "drop_f0_reversal": {
+        "features": [
+          "f0_mom_126_21",
+          "f0_high_prox_120",
+          "f0_vol_20",
+          "f0_drawdown_60",
+          "f0_volume_anomaly_20",
+          "f2_adv_value_20"
+        ],
+        "status": "no_conclusive_folds"
+      },
+      "drop_f0_risk": {
+        "features": [
+          "f0_ret_1",
+          "f0_ret_5",
+          "f0_mom_126_21",
+          "f0_high_prox_120",
+          "f0_volume_anomaly_20",
+          "f2_adv_value_20"
+        ],
+        "status": "no_conclusive_folds"
+      },
+      "drop_f0_volume": {
+        "features": [
+          "f0_ret_1",
+          "f0_ret_5",
+          "f0_mom_126_21",
+          "f0_high_prox_120",
+          "f0_vol_20",
+          "f0_drawdown_60",
+          "f2_adv_value_20"
+        ],
+        "status": "no_conclusive_folds"
+      },
+      "drop_f2_liquidity": {
+        "features": [
+          "f0_ret_1",
+          "f0_ret_5",
+          "f0_mom_126_21",
+          "f0_high_prox_120",
+          "f0_vol_20",
+          "f0_drawdown_60",
+          "f0_volume_anomaly_20"
+        ],
+        "status": "no_conclusive_folds"
+      }
+    }
+  },
+  "mr": {
+    "candidates": 37,
+    "dates": 30,
+    "label_status": {
+      "matured": 37
+    },
+    "m0": {
+      "events": 37,
+      "mean_net_return_pct": 1.4938480512004395,
+      "months": 17,
+      "months_below_activity_floor": 15,
+      "win_rate": 0.5135135135135135
+    },
+    "matured": 37,
+    "problems": [
+      "insufficient_event_dates:30"
+    ],
+    "trials": {
+      "baseline_all_features": {
+        "features": [
+          "f0_ret_1",
+          "f0_ret_5",
+          "f0_mom_126_21",
+          "f0_high_prox_120",
+          "f0_vol_20",
+          "f0_drawdown_60",
+          "f0_volume_anomaly_20",
+          "f2_adv_value_20"
+        ],
+        "floor_problems": [
+          "fold0:insufficient_train_dates,insufficient_test_dates",
+          "fold0:train_class0_events_4<50",
+          "fold0:train_class1_events_3<50",
+          "fold0:test_class0_events_4<50",
+          "fold0:test_class1_events_2<50",
+          "fold1:insufficient_train_dates,insufficient_test_dates",
+          "fold1:train_class0_events_8<50",
+          "fold1:train_class1_events_6<50",
+          "fold1:test_class1_events_4<50",
+          "fold1:test_class0_events_3<50",
+          "fold2:insufficient_train_dates,insufficient_test_dates",
+          "fold2:train_class0_events_11<50",
+          "fold2:train_class1_events_9<50",
+          "fold2:test_class1_events_3<50",
+          "fold2:test_class0_events_3<50",
+          "fold3:insufficient_train_dates,insufficient_test_dates",
+          "fold3:train_class0_events_14<50",
+          "fold3:train_class1_events_12<50",
+          "fold3:test_class1_events_6<50",
+          "fold3:test_class0_events_4<50"
+        ],
+        "folds": [
+          {
+            "class_counts": {
+              "test": {
+                "False": 4,
+                "True": 2
+              },
+              "train": {
+                "False": 4,
+                "True": 3
+              }
+            },
+            "index": 0,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 5
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 3,
+                "True": 4
+              },
+              "train": {
+                "False": 8,
+                "True": 6
+              }
+            },
+            "index": 1,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 0,
+            "test_dates": 6,
+            "train_dates": 12
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 3,
+                "True": 3
+              },
+              "train": {
+                "False": 11,
+                "True": 9
+              }
+            },
+            "index": 2,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 17
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 4,
+                "True": 6
+              },
+              "train": {
+                "False": 14,
+                "True": 12
+              }
+            },
+            "index": 3,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 23
+          }
+        ],
+        "status": "no_conclusive_folds"
+      },
+      "drop_f0_momentum": {
+        "features": [
+          "f0_ret_1",
+          "f0_ret_5",
+          "f0_vol_20",
+          "f0_drawdown_60",
+          "f0_volume_anomaly_20",
+          "f2_adv_value_20"
+        ],
+        "floor_problems": [
+          "fold0:insufficient_train_dates,insufficient_test_dates",
+          "fold0:train_class0_events_4<50",
+          "fold0:train_class1_events_3<50",
+          "fold0:test_class0_events_4<50",
+          "fold0:test_class1_events_2<50",
+          "fold1:insufficient_train_dates,insufficient_test_dates",
+          "fold1:train_class0_events_8<50",
+          "fold1:train_class1_events_6<50",
+          "fold1:test_class1_events_4<50",
+          "fold1:test_class0_events_3<50",
+          "fold2:insufficient_train_dates,insufficient_test_dates",
+          "fold2:train_class0_events_11<50",
+          "fold2:train_class1_events_9<50",
+          "fold2:test_class1_events_3<50",
+          "fold2:test_class0_events_3<50",
+          "fold3:insufficient_train_dates,insufficient_test_dates",
+          "fold3:train_class0_events_14<50",
+          "fold3:train_class1_events_12<50",
+          "fold3:test_class1_events_6<50",
+          "fold3:test_class0_events_4<50"
+        ],
+        "folds": [
+          {
+            "class_counts": {
+              "test": {
+                "False": 4,
+                "True": 2
+              },
+              "train": {
+                "False": 4,
+                "True": 3
+              }
+            },
+            "index": 0,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 5
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 3,
+                "True": 4
+              },
+              "train": {
+                "False": 8,
+                "True": 6
+              }
+            },
+            "index": 1,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 0,
+            "test_dates": 6,
+            "train_dates": 12
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 3,
+                "True": 3
+              },
+              "train": {
+                "False": 11,
+                "True": 9
+              }
+            },
+            "index": 2,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 17
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 4,
+                "True": 6
+              },
+              "train": {
+                "False": 14,
+                "True": 12
+              }
+            },
+            "index": 3,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 23
+          }
+        ],
+        "status": "no_conclusive_folds"
+      },
+      "drop_f0_reversal": {
+        "features": [
+          "f0_mom_126_21",
+          "f0_high_prox_120",
+          "f0_vol_20",
+          "f0_drawdown_60",
+          "f0_volume_anomaly_20",
+          "f2_adv_value_20"
+        ],
+        "floor_problems": [
+          "fold0:insufficient_train_dates,insufficient_test_dates",
+          "fold0:train_class0_events_4<50",
+          "fold0:train_class1_events_3<50",
+          "fold0:test_class0_events_4<50",
+          "fold0:test_class1_events_2<50",
+          "fold1:insufficient_train_dates,insufficient_test_dates",
+          "fold1:train_class0_events_8<50",
+          "fold1:train_class1_events_6<50",
+          "fold1:test_class1_events_4<50",
+          "fold1:test_class0_events_3<50",
+          "fold2:insufficient_train_dates,insufficient_test_dates",
+          "fold2:train_class0_events_11<50",
+          "fold2:train_class1_events_9<50",
+          "fold2:test_class1_events_3<50",
+          "fold2:test_class0_events_3<50",
+          "fold3:insufficient_train_dates,insufficient_test_dates",
+          "fold3:train_class0_events_14<50",
+          "fold3:train_class1_events_12<50",
+          "fold3:test_class1_events_6<50",
+          "fold3:test_class0_events_4<50"
+        ],
+        "folds": [
+          {
+            "class_counts": {
+              "test": {
+                "False": 4,
+                "True": 2
+              },
+              "train": {
+                "False": 4,
+                "True": 3
+              }
+            },
+            "index": 0,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 5
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 3,
+                "True": 4
+              },
+              "train": {
+                "False": 8,
+                "True": 6
+              }
+            },
+            "index": 1,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 0,
+            "test_dates": 6,
+            "train_dates": 12
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 3,
+                "True": 3
+              },
+              "train": {
+                "False": 11,
+                "True": 9
+              }
+            },
+            "index": 2,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 17
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 4,
+                "True": 6
+              },
+              "train": {
+                "False": 14,
+                "True": 12
+              }
+            },
+            "index": 3,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 23
+          }
+        ],
+        "status": "no_conclusive_folds"
+      },
+      "drop_f0_risk": {
+        "features": [
+          "f0_ret_1",
+          "f0_ret_5",
+          "f0_mom_126_21",
+          "f0_high_prox_120",
+          "f0_volume_anomaly_20",
+          "f2_adv_value_20"
+        ],
+        "floor_problems": [
+          "fold0:insufficient_train_dates,insufficient_test_dates",
+          "fold0:train_class0_events_4<50",
+          "fold0:train_class1_events_3<50",
+          "fold0:test_class0_events_4<50",
+          "fold0:test_class1_events_2<50",
+          "fold1:insufficient_train_dates,insufficient_test_dates",
+          "fold1:train_class0_events_8<50",
+          "fold1:train_class1_events_6<50",
+          "fold1:test_class1_events_4<50",
+          "fold1:test_class0_events_3<50",
+          "fold2:insufficient_train_dates,insufficient_test_dates",
+          "fold2:train_class0_events_11<50",
+          "fold2:train_class1_events_9<50",
+          "fold2:test_class1_events_3<50",
+          "fold2:test_class0_events_3<50",
+          "fold3:insufficient_train_dates,insufficient_test_dates",
+          "fold3:train_class0_events_14<50",
+          "fold3:train_class1_events_12<50",
+          "fold3:test_class1_events_6<50",
+          "fold3:test_class0_events_4<50"
+        ],
+        "folds": [
+          {
+            "class_counts": {
+              "test": {
+                "False": 4,
+                "True": 2
+              },
+              "train": {
+                "False": 4,
+                "True": 3
+              }
+            },
+            "index": 0,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 5
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 3,
+                "True": 4
+              },
+              "train": {
+                "False": 8,
+                "True": 6
+              }
+            },
+            "index": 1,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 0,
+            "test_dates": 6,
+            "train_dates": 12
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 3,
+                "True": 3
+              },
+              "train": {
+                "False": 11,
+                "True": 9
+              }
+            },
+            "index": 2,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 17
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 4,
+                "True": 6
+              },
+              "train": {
+                "False": 14,
+                "True": 12
+              }
+            },
+            "index": 3,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 23
+          }
+        ],
+        "status": "no_conclusive_folds"
+      },
+      "drop_f0_volume": {
+        "features": [
+          "f0_ret_1",
+          "f0_ret_5",
+          "f0_mom_126_21",
+          "f0_high_prox_120",
+          "f0_vol_20",
+          "f0_drawdown_60",
+          "f2_adv_value_20"
+        ],
+        "floor_problems": [
+          "fold0:insufficient_train_dates,insufficient_test_dates",
+          "fold0:train_class0_events_4<50",
+          "fold0:train_class1_events_3<50",
+          "fold0:test_class0_events_4<50",
+          "fold0:test_class1_events_2<50",
+          "fold1:insufficient_train_dates,insufficient_test_dates",
+          "fold1:train_class0_events_8<50",
+          "fold1:train_class1_events_6<50",
+          "fold1:test_class1_events_4<50",
+          "fold1:test_class0_events_3<50",
+          "fold2:insufficient_train_dates,insufficient_test_dates",
+          "fold2:train_class0_events_11<50",
+          "fold2:train_class1_events_9<50",
+          "fold2:test_class1_events_3<50",
+          "fold2:test_class0_events_3<50",
+          "fold3:insufficient_train_dates,insufficient_test_dates",
+          "fold3:train_class0_events_14<50",
+          "fold3:train_class1_events_12<50",
+          "fold3:test_class1_events_6<50",
+          "fold3:test_class0_events_4<50"
+        ],
+        "folds": [
+          {
+            "class_counts": {
+              "test": {
+                "False": 4,
+                "True": 2
+              },
+              "train": {
+                "False": 4,
+                "True": 3
+              }
+            },
+            "index": 0,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 5
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 3,
+                "True": 4
+              },
+              "train": {
+                "False": 8,
+                "True": 6
+              }
+            },
+            "index": 1,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 0,
+            "test_dates": 6,
+            "train_dates": 12
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 3,
+                "True": 3
+              },
+              "train": {
+                "False": 11,
+                "True": 9
+              }
+            },
+            "index": 2,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 17
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 4,
+                "True": 6
+              },
+              "train": {
+                "False": 14,
+                "True": 12
+              }
+            },
+            "index": 3,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 23
+          }
+        ],
+        "status": "no_conclusive_folds"
+      },
+      "drop_f2_liquidity": {
+        "features": [
+          "f0_ret_1",
+          "f0_ret_5",
+          "f0_mom_126_21",
+          "f0_high_prox_120",
+          "f0_vol_20",
+          "f0_drawdown_60",
+          "f0_volume_anomaly_20"
+        ],
+        "floor_problems": [
+          "fold0:insufficient_train_dates,insufficient_test_dates",
+          "fold0:train_class0_events_4<50",
+          "fold0:train_class1_events_3<50",
+          "fold0:test_class0_events_4<50",
+          "fold0:test_class1_events_2<50",
+          "fold1:insufficient_train_dates,insufficient_test_dates",
+          "fold1:train_class0_events_8<50",
+          "fold1:train_class1_events_6<50",
+          "fold1:test_class1_events_4<50",
+          "fold1:test_class0_events_3<50",
+          "fold2:insufficient_train_dates,insufficient_test_dates",
+          "fold2:train_class0_events_11<50",
+          "fold2:train_class1_events_9<50",
+          "fold2:test_class1_events_3<50",
+          "fold2:test_class0_events_3<50",
+          "fold3:insufficient_train_dates,insufficient_test_dates",
+          "fold3:train_class0_events_14<50",
+          "fold3:train_class1_events_12<50",
+          "fold3:test_class1_events_6<50",
+          "fold3:test_class0_events_4<50"
+        ],
+        "folds": [
+          {
+            "class_counts": {
+              "test": {
+                "False": 4,
+                "True": 2
+              },
+              "train": {
+                "False": 4,
+                "True": 3
+              }
+            },
+            "index": 0,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 5
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 3,
+                "True": 4
+              },
+              "train": {
+                "False": 8,
+                "True": 6
+              }
+            },
+            "index": 1,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 0,
+            "test_dates": 6,
+            "train_dates": 12
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 3,
+                "True": 3
+              },
+              "train": {
+                "False": 11,
+                "True": 9
+              }
+            },
+            "index": 2,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 17
+          },
+          {
+            "class_counts": {
+              "test": {
+                "False": 4,
+                "True": 6
+              },
+              "train": {
+                "False": 14,
+                "True": 12
+              }
+            },
+            "index": 3,
+            "problems": [
+              "insufficient_train_dates",
+              "insufficient_test_dates"
+            ],
+            "purged_rows": 1,
+            "test_dates": 6,
+            "train_dates": 23
+          }
+        ],
+        "status": "no_conclusive_folds"
+      }
+    }
+  },
+  "sample_support": {
+    "dates": 30,
+    "events_per_class": 37
+  }
+}

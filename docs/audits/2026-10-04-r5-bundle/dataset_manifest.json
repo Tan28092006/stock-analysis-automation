@@ -1,0 +1,18 @@
+{
+  "momentum": {
+    "decision_months": 47,
+    "label_status": {
+      "matured": 1410,
+      "pending": 60
+    },
+    "matured_rows": 1410
+  },
+  "mr": {
+    "candidates": 37,
+    "dates": 30,
+    "label_status": {
+      "matured": 37
+    },
+    "matured": 37
+  }
+}

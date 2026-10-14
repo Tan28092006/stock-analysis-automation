@@ -1,0 +1,3010 @@
+{
+ "bf_AAA": {
+  "json": {
+   "ack_refused": false,
+   "acknowledged": false,
+   "amount": null,
+   "attempt_no": 1,
+   "behaviour_block": false,
+   "bf_news_sha": null,
+   "bf_params_hash": "b3bfcf9260faed7f",
+   "caveat": "Chỉ tư vấn; bắt đáy chưa có bằng chứng edge tiến cứu; loại (b) có bằng chứng trôi giảm.",
+   "checked_at": "2026-09-21T10:00:00+00:00",
+   "checklist_path": "swing_desk/prompts/BOTTOMFISH_CHECKLIST.md",
+   "data_as_of": "2026-09-21",
+   "default_note": "Khuyến nghị mặc định: P0 — không bắt đáy.",
+   "earliest_sell": "2026-09-24 13:00",
+   "edge_note": null,
+   "emotion": null,
+   "eod_note": "EOD data as of 2026-09-21",
+   "episode_id": "AAA-20260917",
+   "events_sha": "7d40cad74cd72ca8a6f57a054697824eda6b26d547fcb4131558b73086d658c5",
+   "expected_session": "2026-09-21",
+   "failed": [
+    "BF-G2",
+    "BF-G4",
+    "BF-G6",
+    "BF-G8",
+    "BF-G12"
+   ],
+   "fall": {
+    "evidence": [],
+    "fall_type": "UNCLASSIFIED",
+    "news_sha": null,
+    "reason": "news not checked (no bf-news record)"
+   },
+   "fields": {
+    "avg_value_20_bn": 6987.3905595,
+    "beta_60": -0.09680291378967198,
+    "beta_obs": 60,
+    "capitulation_t": false,
+    "close": 2201110.36,
+    "close_pos_in_range": 0.4999999999999894,
+    "date": "2026-09-21",
+    "dist_sma50_atr": 2.4058539120783085,
+    "drawdown_250_pct": -11.911163104264178,
+    "drawdown_60_pct": -11.911163104264178,
+    "episode_depth_pct": -8.732699939897637,
+    "episode_sessions": 3,
+    "episode_start_date": "2026-09-17",
+    "f_net_1d_pct_vol": null,
+    "f_net_turn_positive": null,
+    "f_sell_streak": null,
+    "floor_price_next": 2047100.0,
+    "floor_price_today": 2110400.0,
+    "floor_streak": 0,
+    "floor_t": false,
+    "floors_in_last_10": 0,
+    "floors_in_last_5": 0,
+    "flow_status": "UNVERIFIED",
+    "high_250": 2498739.27,
+    "high_60": 2498739.27,
+    "higher_low_t": false,
+    "idio_ret_10d": -6.5692806122153735,
+    "idio_share": 0.9669360550488459,
+    "idx_ret_10d": 2.3205252498104123,
+    "idx_ret_5d": 0.9589521139566681,
+    "index_atr_ratio": 0.9821001224022439,
+    "index_status": "OK",
+    "last_floor_date": null,
+    "locked_floor_streak": 0,
+    "locked_floor_t": false,
+    "locked_floor_t1": false,
+    "low": 2190104.81,
+    "new_episode_low_2": true,
+    "panic_low": 2190104.81,
+    "prev_low": 2257840.01,
+    "ret_10d": -6.793914217919528,
+    "ret_1d": -3.000000079323606,
+    "sector_rel_ret_10d": null,
+    "sessions_since_floor": null,
+    "stab_state": "NONE",
+    "vol_ratio_20_prior": 1.0
+   },
+   "held": null,
+   "history": {
+    "history_data_issues": [],
+    "history_first_date": "2024-04-23",
+    "history_mismatch": false,
+    "history_mode": "on",
+    "history_notes": [],
+    "history_rows": 600,
+    "history_source": "history_store",
+    "history_store_aborted": null,
+    "history_store_as_of": "2026-09-21",
+    "history_store_id": "20260921T100000Z_fx1"
+   },
+   "horizon_warning": null,
+   "in_scope": true,
+   "journal_errors": [],
+   "market": {
+    "breadth_pct": 33.3,
+    "date": "2026-09-21",
+    "index_atr_pct": 1.0025205159754829,
+    "index_close": 2131.93,
+    "index_ema50": 2057.76,
+    "index_ret_1d": -0.2507848724319195,
+    "index_ret_5d": 0.9589521139566681,
+    "limit_down_count": 0,
+    "limit_up_count": 0,
+    "regime": "GRIND",
+    "state": "GRIND"
+   },
+   "mode": "bottomfish",
+   "nav_source": "journal",
+   "news_class": null,
+   "params_hash": "4319bf8f482887ab",
+   "plan": {
+    "capped_by": null,
+    "catastrophe_stop": 1936977.1168,
+    "earliest_sell": "2026-09-24 13:00",
+    "effective_loss_pct": 19.6,
+    "entry_limit": 2212115.91,
+    "entry_ref": 2201110.36,
+    "invalidation": 2190104.81,
+    "invalidation_rule": "close_below_panic_low",
+    "label": "Hồi ngắn sau hoảng loạn",
+    "max_tranches": 1,
+    "multipliers": {},
+    "nav": 1000000000.0,
+    "order_qty": 23,
+    "position_value": 50625538.279999994,
+    "profile": "P1",
+    "qty": 23,
+    "risk_multiplier": 1.0,
+    "risk_pct_nav": 1.0,
+    "risk_vnd": 10000000.0,
+    "scenarios": {
+     "effective_loss_vnd": 9922605.50288,
+     "three_more_floors_pct": 19.56429999999999,
+     "three_more_floors_vnd": 10208285.415394034
+    },
+    "time_stop_session": "2026-10-06",
+    "time_stop_sessions": 10,
+    "tranche": null,
+    "tranche_qty": null,
+    "value_max": 51020408.1632653,
+    "vnd_at_risk_effective": 9922605.50288,
+    "weight_pct": 5.0625538279999995
+   },
+   "price": null,
+   "profile": "P1",
+   "profile_label": "Hồi ngắn sau hoảng loạn",
+   "reason": null,
+   "recheck_conditions": [
+    ">= 2 phiên không sàn, đáy sau cao hơn đáy trước, không có đáy mới của đợt giảm",
+    "loại (b): chỉ hồ sơ P3 (<= 1% NAV, 'no evidence of edge; measurement only'), >= 10 phiên sau tin FACT cuối",
+    "ghi trạng thái margin/cảnh báo đã kiểm (bf-news --margin ...)",
+    "viết dòng THESIS (bf_type=, profile=, invalid=, time_stop=, max_attempts=, checklist=done)"
+   ],
+   "recheck_from": null,
+   "rules": [
+    {
+     "id": "BF-G0",
+     "kind": "gate",
+     "reason": "verified snapshot as_of 2026-09-21",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G1",
+     "kind": "gate",
+     "reason": "VN30 / extra_universe",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G2",
+     "kind": "gate",
+     "reason": "UNVERIFIED -> fail-closed: fall UNCLASSIFIED (news not checked (no bf-news record)), treated as b",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "BF-G3",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G4",
+     "kind": "gate",
+     "reason": "not stabilised: stab_state NONE, sessions_since_floor None, low 2190104.81 vs prev 2257840.01, panic_low 2190104.81",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "BF-G5",
+     "kind": "gate",
+     "reason": "no blocking event to 2026-10-06",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G6",
+     "kind": "gate",
+     "reason": "UNVERIFIED -> fail-closed: news not checked (no bf-news record)",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "BF-G7",
+     "kind": "gate",
+     "reason": "avg value 6987 bn",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G8",
+     "kind": "gate",
+     "reason": "UNVERIFIED -> fail-closed: margin / warning status not checked",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "BF-G9",
+     "kind": "gate",
+     "reason": "no context adjustment",
+     "severity": "info",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G10",
+     "kind": "gate",
+     "reason": "order 5.1% NAV, open risk 0.99% NAV",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G11",
+     "kind": "gate",
+     "reason": "attempt 1 in episode AAA-20260917",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G12",
+     "kind": "gate",
+     "reason": "no THESIS for AAA dated >= 2026-09-21 (bf_type=, profile=, invalid=, time_stop=, max_attempts=, checklist=done)",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "B1",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B2",
+     "kind": "behaviour",
+     "reason": "no --price given",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B6",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "COOL",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3P",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B5",
+     "kind": "behaviour",
+     "reason": "fewer than 3 prior entries",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B7",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B1",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B2",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B3",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B8",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B4",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B5",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B6",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B7",
+     "kind": "behaviour",
+     "reason": "no previous winning BF trade",
+     "severity": "soft",
+     "status": "NA"
+    }
+   ],
+   "setups": [],
+   "snapshot": {
+    "ok": true,
+    "reason": "verified snapshot as_of 2026-09-21",
+    "source": "vn30"
+   },
+   "thesis_present": false,
+   "thesis_required": true,
+   "ticker": "AAA",
+   "trade_session": "2026-09-22",
+   "tranche": null,
+   "unverified": [],
+   "verdict": "BLOCK",
+   "why": null
+  },
+  "text": "AAA — BLOCK  (mode bắt đáy, hồ sơ P1 Hồi ngắn sau hoảng loạn; dữ liệu EOD tới 2026-09-21; snapshot vn30 sha <sha>)\nPhiên giao dịch: 2026-09-22. EOD data as of 2026-09-21\nKhuyến nghị mặc định: P0 — không bắt đáy.\nLoại cú giảm: UNCLASSIFIED (xử lý như b) — news not checked (no bf-news record)\nLuật không đạt:\n  - BF-G2 loại cú giảm vs hồ sơ [BLOCK]: UNVERIFIED -> fail-closed: fall UNCLASSIFIED (news not checked (no bf-news record)), treated as b\n  - BF-G4 ổn định sau sàn [BLOCK]: not stabilised: stab_state NONE, sessions_since_floor None, low 2190104.81 vs prev 2257840.01, panic_low 2190104.81\n  - BF-G6 tin FACT tiêu cực [BLOCK]: UNVERIFIED -> fail-closed: news not checked (no bf-news record)\n  - BF-G8 margin / cảnh báo [BLOCK]: UNVERIFIED -> fail-closed: margin / warning status not checked\n  - BF-G12 THESIS viết trước [BLOCK]: no THESIS for AAA dated >= 2026-09-21 (bf_type=, profile=, invalid=, time_stop=, max_attempts=, checklist=done)\nCờ hành vi: không có\nNếu vẫn mua: bán được sớm nhất chiều 2026-09-24 13:00 (T+2); không thoát được trước thời điểm này.\nKế hoạch P1: giá tham chiếu 2.201.110; rủi ro 1,0% NAV = 10.000.000 VND ở lỗ hiệu dụng 19,6% (stop + 1 phiên sàn + phí)\n  Size gợi ý: 23 cp; lệnh này 23 cp ≈ 50.625.538 VND; VND rủi ro hiệu dụng 9.922.606\n  Vô hiệu: đóng cửa < 2.190.105; thảm họa: 1.936.977; time-stop: 2026-10-06 (10 phiên); LO tối đa 2.212.116\n  Kịch bản thêm 3 phiên sàn khi đang khóa: -19,6% vị thế ≈ 10.208.285 VND (gồm phí); ở lỗ hiệu dụng: 9.922.606 VND\nNAV dùng để tính: journal\nLịch sử dài (SMA200, đỉnh 250, MAE/MFE, đợt giảm): history_store 20260921T100000Z_fx1 (sha <sha>), từ 2024-04-23, 600 phiên\nKiểm lại sớm nhất khi: >= 2 phiên không sàn, đáy sau cao hơn đáy trước, không có đáy mới của đợt giảm; loại (b): chỉ hồ sơ P3 (<= 1% NAV, 'no evidence of edge; measurement only'), >= 10 phiên sau tin FACT cuối; ghi trạng thái margin/cảnh báo đã kiểm (bf-news --margin ...); viết dòng THESIS (bf_type=, profile=, invalid=, time_stop=, max_attempts=, checklist=done).\nChecklist (swing_desk/prompts/BOTTOMFISH_CHECKLIST.md): 10 câu — trả lời bằng chữ trong dòng THESIS trước lệnh.\nChỉ tư vấn; bắt đáy chưa có bằng chứng edge tiến cứu; loại (b) có bằng chứng trôi giảm."
+ },
+ "bf_BBB": {
+  "json": {
+   "ack_refused": false,
+   "acknowledged": false,
+   "amount": null,
+   "attempt_no": 1,
+   "behaviour_block": false,
+   "bf_news_sha": null,
+   "bf_params_hash": "b3bfcf9260faed7f",
+   "caveat": "Chỉ tư vấn; bắt đáy chưa có bằng chứng edge tiến cứu; loại (b) có bằng chứng trôi giảm.",
+   "checked_at": "2026-09-21T10:00:00+00:00",
+   "checklist_path": "swing_desk/prompts/BOTTOMFISH_CHECKLIST.md",
+   "data_as_of": "2026-09-21",
+   "default_note": "Khuyến nghị mặc định: P0 — không bắt đáy.",
+   "earliest_sell": "2026-09-24 13:00",
+   "edge_note": null,
+   "emotion": null,
+   "eod_note": "EOD data as of 2026-09-21",
+   "episode_id": null,
+   "events_sha": "7d40cad74cd72ca8a6f57a054697824eda6b26d547fcb4131558b73086d658c5",
+   "expected_session": "2026-09-21",
+   "failed": [
+    "BF-G2",
+    "BF-G4",
+    "BF-G5",
+    "BF-G6",
+    "BF-G8",
+    "BF-G12"
+   ],
+   "fall": {
+    "evidence": [],
+    "fall_type": "UNCLASSIFIED",
+    "news_sha": null,
+    "reason": "news not checked (no bf-news record)"
+   },
+   "fields": {
+    "avg_value_20_bn": 162.3845265,
+    "beta_60": -0.3159190842468069,
+    "beta_obs": 60,
+    "capitulation_t": false,
+    "close": 54058.44,
+    "close_pos_in_range": 0.5,
+    "date": "2026-09-21",
+    "dist_sma50_atr": 0.6558077622280041,
+    "drawdown_250_pct": -1.2884547435772165,
+    "drawdown_60_pct": -1.2884547435772165,
+    "episode_depth_pct": 0.0,
+    "episode_sessions": 0,
+    "episode_start_date": null,
+    "f_net_1d_pct_vol": null,
+    "f_net_turn_positive": null,
+    "f_sell_streak": null,
+    "floor_price_next": 50300.0,
+    "floor_price_today": 50600.0,
+    "floor_streak": 0,
+    "floor_t": false,
+    "floors_in_last_10": 0,
+    "floors_in_last_5": 0,
+    "flow_status": "UNVERIFIED",
+    "high_250": 54764.05,
+    "high_60": 54764.05,
+    "higher_low_t": false,
+    "idio_ret_10d": 1.2088196887229796,
+    "idio_share": null,
+    "idx_ret_10d": 2.3205252498104123,
+    "idx_ret_5d": 0.9589521139566681,
+    "index_atr_ratio": 0.9821001224022439,
+    "index_status": "OK",
+    "last_floor_date": null,
+    "locked_floor_streak": 0,
+    "locked_floor_t": false,
+    "locked_floor_t1": false,
+    "low": 53788.15,
+    "new_episode_low_2": false,
+    "panic_low": null,
+    "prev_low": 54056.59,
+    "ret_10d": 0.4757214768312812,
+    "ret_1d": -0.49661097064803705,
+    "sector_rel_ret_10d": null,
+    "sessions_since_floor": null,
+    "stab_state": "NONE",
+    "vol_ratio_20_prior": 1.0
+   },
+   "held": null,
+   "history": {
+    "history_data_issues": [],
+    "history_first_date": "2024-04-23",
+    "history_mismatch": false,
+    "history_mode": "on",
+    "history_notes": [],
+    "history_rows": 600,
+    "history_source": "history_store",
+    "history_store_aborted": null,
+    "history_store_as_of": "2026-09-21",
+    "history_store_id": "20260921T100000Z_fx1"
+   },
+   "horizon_warning": null,
+   "in_scope": true,
+   "journal_errors": [],
+   "market": {
+    "breadth_pct": 33.3,
+    "date": "2026-09-21",
+    "index_atr_pct": 1.0025205159754829,
+    "index_close": 2131.93,
+    "index_ema50": 2057.76,
+    "index_ret_1d": -0.2507848724319195,
+    "index_ret_5d": 0.9589521139566681,
+    "limit_down_count": 0,
+    "limit_up_count": 0,
+    "regime": "GRIND",
+    "state": "GRIND"
+   },
+   "mode": "bottomfish",
+   "nav_source": "journal",
+   "news_class": null,
+   "params_hash": "4319bf8f482887ab",
+   "plan": {
+    "capped_by": null,
+    "catastrophe_stop": 47571.427200000006,
+    "earliest_sell": "2026-09-24 13:00",
+    "effective_loss_pct": 19.6,
+    "entry_limit": 54328.73,
+    "entry_ref": 54058.44,
+    "invalidation": null,
+    "invalidation_rule": "close_below_panic_low",
+    "label": "Hồi ngắn sau hoảng loạn",
+    "max_tranches": 1,
+    "multipliers": {},
+    "nav": 1000000000.0,
+    "order_qty": 943,
+    "position_value": 50977108.92,
+    "profile": "P1",
+    "qty": 943,
+    "risk_multiplier": 1.0,
+    "risk_pct_nav": 1.0,
+    "risk_vnd": 10000000.0,
+    "scenarios": {
+     "effective_loss_vnd": 9991513.348320002,
+     "three_more_floors_pct": 19.56429999999999,
+     "three_more_floors_vnd": 10279177.173955554
+    },
+    "time_stop_session": "2026-10-06",
+    "time_stop_sessions": 10,
+    "tranche": null,
+    "tranche_qty": null,
+    "value_max": 51020408.1632653,
+    "vnd_at_risk_effective": 9991513.348320002,
+    "weight_pct": 5.097710892
+   },
+   "price": null,
+   "profile": "P1",
+   "profile_label": "Hồi ngắn sau hoảng loạn",
+   "reason": null,
+   "recheck_conditions": [
+    ">= 2 phiên không sàn, đáy sau cao hơn đáy trước, không có đáy mới của đợt giảm",
+    "sau khi kết quả sự kiện + điều khoản phát hành được ghi (events --resolved) và ngoài cửa sổ 10 phiên",
+    "loại (b): chỉ hồ sơ P3 (<= 1% NAV, 'no evidence of edge; measurement only'), >= 10 phiên sau tin FACT cuối",
+    "ghi trạng thái margin/cảnh báo đã kiểm (bf-news --margin ...)",
+    "viết dòng THESIS (bf_type=, profile=, invalid=, time_stop=, max_attempts=, checklist=done)"
+   ],
+   "recheck_from": null,
+   "rules": [
+    {
+     "id": "BF-G0",
+     "kind": "gate",
+     "reason": "verified snapshot as_of 2026-09-21",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G1",
+     "kind": "gate",
+     "reason": "VN30 / extra_universe",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G2",
+     "kind": "gate",
+     "reason": "UNVERIFIED -> fail-closed: fall UNCLASSIFIED (news not checked (no bf-news record)), treated as b",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "BF-G3",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G4",
+     "kind": "gate",
+     "reason": "not stabilised: stab_state NONE, sessions_since_floor None, low 53788.15 vs prev 54056.59, panic_low None",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "BF-G5",
+     "kind": "gate",
+     "reason": "UNVERIFIED -> fail-closed: event calendar not checked for BBB / 2026-09-22",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "BF-G6",
+     "kind": "gate",
+     "reason": "UNVERIFIED -> fail-closed: news not checked (no bf-news record)",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "BF-G7",
+     "kind": "gate",
+     "reason": "avg value 162 bn",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G8",
+     "kind": "gate",
+     "reason": "UNVERIFIED -> fail-closed: margin / warning status not checked",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "BF-G9",
+     "kind": "gate",
+     "reason": "no context adjustment",
+     "severity": "info",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G10",
+     "kind": "gate",
+     "reason": "order 5.1% NAV, open risk 1.00% NAV",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G11",
+     "kind": "gate",
+     "reason": "attempt 1 in episode None",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G12",
+     "kind": "gate",
+     "reason": "no THESIS for BBB dated >= 2026-09-21 (bf_type=, profile=, invalid=, time_stop=, max_attempts=, checklist=done)",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "B1",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B2",
+     "kind": "behaviour",
+     "reason": "no --price given",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B6",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "COOL",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3P",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B5",
+     "kind": "behaviour",
+     "reason": "fewer than 3 prior entries",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B7",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B1",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B2",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B3",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B8",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B4",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B5",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B6",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B7",
+     "kind": "behaviour",
+     "reason": "no previous winning BF trade",
+     "severity": "soft",
+     "status": "NA"
+    }
+   ],
+   "setups": [],
+   "snapshot": {
+    "ok": true,
+    "reason": "verified snapshot as_of 2026-09-21",
+    "source": "vn30"
+   },
+   "thesis_present": false,
+   "thesis_required": true,
+   "ticker": "BBB",
+   "trade_session": "2026-09-22",
+   "tranche": null,
+   "unverified": [],
+   "verdict": "BLOCK",
+   "why": null
+  },
+  "text": "BBB — BLOCK  (mode bắt đáy, hồ sơ P1 Hồi ngắn sau hoảng loạn; dữ liệu EOD tới 2026-09-21; snapshot vn30 sha <sha>)\nPhiên giao dịch: 2026-09-22. EOD data as of 2026-09-21\nKhuyến nghị mặc định: P0 — không bắt đáy.\nLoại cú giảm: UNCLASSIFIED (xử lý như b) — news not checked (no bf-news record)\nLuật không đạt:\n  - BF-G2 loại cú giảm vs hồ sơ [BLOCK]: UNVERIFIED -> fail-closed: fall UNCLASSIFIED (news not checked (no bf-news record)), treated as b\n  - BF-G4 ổn định sau sàn [BLOCK]: not stabilised: stab_state NONE, sessions_since_floor None, low 53788.15 vs prev 54056.59, panic_low None\n  - BF-G5 sự kiện / pha loãng [BLOCK]: UNVERIFIED -> fail-closed: event calendar not checked for BBB / 2026-09-22\n  - BF-G6 tin FACT tiêu cực [BLOCK]: UNVERIFIED -> fail-closed: news not checked (no bf-news record)\n  - BF-G8 margin / cảnh báo [BLOCK]: UNVERIFIED -> fail-closed: margin / warning status not checked\n  - BF-G12 THESIS viết trước [BLOCK]: no THESIS for BBB dated >= 2026-09-21 (bf_type=, profile=, invalid=, time_stop=, max_attempts=, checklist=done)\nCờ hành vi: không có\nNếu vẫn mua: bán được sớm nhất chiều 2026-09-24 13:00 (T+2); không thoát được trước thời điểm này.\nKế hoạch P1: giá tham chiếu 54.058; rủi ro 1,0% NAV = 10.000.000 VND ở lỗ hiệu dụng 19,6% (stop + 1 phiên sàn + phí)\n  Size gợi ý: 943 cp; lệnh này 943 cp ≈ 50.977.109 VND; VND rủi ro hiệu dụng 9.991.513\n  Vô hiệu: close_below_panic_low; thảm họa: 47.571; time-stop: 2026-10-06 (10 phiên); LO tối đa 54.329\n  Kịch bản thêm 3 phiên sàn khi đang khóa: -19,6% vị thế ≈ 10.279.177 VND (gồm phí); ở lỗ hiệu dụng: 9.991.513 VND\nNAV dùng để tính: journal\nLịch sử dài (SMA200, đỉnh 250, MAE/MFE, đợt giảm): history_store 20260921T100000Z_fx1 (sha <sha>), từ 2024-04-23, 600 phiên\nKiểm lại sớm nhất khi: >= 2 phiên không sàn, đáy sau cao hơn đáy trước, không có đáy mới của đợt giảm; sau khi kết quả sự kiện + điều khoản phát hành được ghi (events --resolved) và ngoài cửa sổ 10 phiên; loại (b): chỉ hồ sơ P3 (<= 1% NAV, 'no evidence of edge; measurement only'), >= 10 phiên sau tin FACT cuối; ghi trạng thái margin/cảnh báo đã kiểm (bf-news --margin ...); viết dòng THESIS (bf_type=, profile=, invalid=, time_stop=, max_attempts=, checklist=done).\nChecklist (swing_desk/prompts/BOTTOMFISH_CHECKLIST.md): 10 câu — trả lời bằng chữ trong dòng THESIS trước lệnh.\nChỉ tư vấn; bắt đáy chưa có bằng chứng edge tiến cứu; loại (b) có bằng chứng trôi giảm."
+ },
+ "bf_VCB": {
+  "json": {
+   "ack_refused": false,
+   "acknowledged": false,
+   "amount": null,
+   "attempt_no": 1,
+   "behaviour_block": false,
+   "bf_news_sha": null,
+   "bf_params_hash": "b3bfcf9260faed7f",
+   "caveat": "Chỉ tư vấn; bắt đáy chưa có bằng chứng edge tiến cứu; loại (b) có bằng chứng trôi giảm.",
+   "checked_at": "2026-09-21T10:00:00+00:00",
+   "checklist_path": "swing_desk/prompts/BOTTOMFISH_CHECKLIST.md",
+   "data_as_of": "2026-09-21",
+   "default_note": "Khuyến nghị mặc định: P0 — không bắt đáy.",
+   "earliest_sell": "2026-09-24 13:00",
+   "edge_note": null,
+   "emotion": null,
+   "eod_note": "EOD data as of 2026-09-21",
+   "episode_id": null,
+   "events_sha": "7d40cad74cd72ca8a6f57a054697824eda6b26d547fcb4131558b73086d658c5",
+   "expected_session": "2026-09-21",
+   "failed": [
+    "BF-G2",
+    "BF-G4",
+    "BF-G5",
+    "BF-G6",
+    "BF-G8",
+    "BF-G12"
+   ],
+   "fall": {
+    "evidence": [],
+    "fall_type": "UNCLASSIFIED",
+    "news_sha": null,
+    "reason": "news not checked (no bf-news record)"
+   },
+   "fields": {
+    "avg_value_20_bn": 173.2238535,
+    "beta_60": 0.005531769015710854,
+    "beta_obs": 60,
+    "capitulation_t": false,
+    "close": 59202.21,
+    "close_pos_in_range": 0.5,
+    "date": "2026-09-21",
+    "dist_sma50_atr": 5.498245744385613,
+    "drawdown_250_pct": null,
+    "drawdown_60_pct": -0.6448112430967989,
+    "episode_depth_pct": 0.0,
+    "episode_sessions": 0,
+    "episode_start_date": null,
+    "f_net_1d_pct_vol": null,
+    "f_net_turn_positive": null,
+    "f_sell_streak": null,
+    "floor_price_next": 55100.0,
+    "floor_price_today": 55200.0,
+    "floor_streak": 0,
+    "floor_t": false,
+    "floors_in_last_10": 0,
+    "floors_in_last_5": 0,
+    "flow_status": "UNVERIFIED",
+    "high_250": null,
+    "high_60": 59586.43,
+    "higher_low_t": false,
+    "idio_ret_10d": 3.0718756623783916,
+    "idio_share": 0.9958386362989626,
+    "idx_ret_10d": 2.3205252498104123,
+    "idx_ret_5d": 0.9589521139566681,
+    "index_atr_ratio": 0.9821001224022439,
+    "index_status": "OK",
+    "last_floor_date": null,
+    "locked_floor_streak": 0,
+    "locked_floor_t": false,
+    "locked_floor_t1": false,
+    "low": 58906.2,
+    "new_episode_low_2": false,
+    "panic_low": null,
+    "prev_low": 58993.53,
+    "ret_10d": 3.0847122720554676,
+    "ret_1d": -0.14803513173727856,
+    "sector_rel_ret_10d": 0.0,
+    "sessions_since_floor": null,
+    "stab_state": "NONE",
+    "vol_ratio_20_prior": 1.0
+   },
+   "held": null,
+   "history": {
+    "history_data_issues": [],
+    "history_first_date": "2026-02-09",
+    "history_mismatch": true,
+    "history_mismatch_detail": {
+     "first_diff": {
+      "date": "2026-02-09",
+      "field": "open",
+      "snapshot": 44419.91,
+      "store": 43531.51
+     },
+     "sessions_extra_count": 0,
+     "sessions_extra_in_store": [],
+     "sessions_missing_count": 0,
+     "sessions_missing_in_store": [],
+     "snapshot_sessions": 150,
+     "value_diffs": 600,
+     "window": [
+      "2026-02-09",
+      "2026-09-21"
+     ]
+    },
+    "history_mode": "on",
+    "history_notes": [
+     {
+      "level": "WARN",
+      "text": "history_mismatch: store 20260921T100000Z_fx1 differs from the snapshot over the snapshot window (600 value diffs, 0 sessions missing, 0 extra; e.g. a re-adjustment between fetch times). Not stitched: long windows use the 650-day snapshot"
+     }
+    ],
+    "history_rows": 150,
+    "history_source": "snapshot_650d",
+    "history_store_aborted": null,
+    "history_store_as_of": "2026-09-21",
+    "history_store_id": "20260921T100000Z_fx1"
+   },
+   "horizon_warning": null,
+   "in_scope": true,
+   "journal_errors": [],
+   "market": {
+    "breadth_pct": 33.3,
+    "date": "2026-09-21",
+    "index_atr_pct": 1.0025205159754829,
+    "index_close": 2131.93,
+    "index_ema50": 2057.76,
+    "index_ret_1d": -0.2507848724319195,
+    "index_ret_5d": 0.9589521139566681,
+    "limit_down_count": 0,
+    "limit_up_count": 0,
+    "regime": "GRIND",
+    "state": "GRIND"
+   },
+   "mode": "bottomfish",
+   "nav_source": "journal",
+   "news_class": null,
+   "params_hash": "4319bf8f482887ab",
+   "plan": {
+    "capped_by": null,
+    "catastrophe_stop": 52097.9448,
+    "earliest_sell": "2026-09-24 13:00",
+    "effective_loss_pct": 19.6,
+    "entry_limit": 59498.22,
+    "entry_ref": 59202.21,
+    "invalidation": null,
+    "invalidation_rule": "close_below_panic_low",
+    "label": "Hồi ngắn sau hoảng loạn",
+    "max_tranches": 1,
+    "multipliers": {},
+    "nav": 1000000000.0,
+    "order_qty": 861,
+    "position_value": 50973102.81,
+    "profile": "P1",
+    "qty": 861,
+    "risk_multiplier": 1.0,
+    "risk_pct_nav": 1.0,
+    "risk_vnd": 10000000.0,
+    "scenarios": {
+     "effective_loss_vnd": 9990728.15076,
+     "three_more_floors_pct": 19.56429999999999,
+     "three_more_floors_vnd": 10278369.369916826
+    },
+    "time_stop_session": "2026-10-06",
+    "time_stop_sessions": 10,
+    "tranche": null,
+    "tranche_qty": null,
+    "value_max": 51020408.1632653,
+    "vnd_at_risk_effective": 9990728.15076,
+    "weight_pct": 5.097310281
+   },
+   "price": null,
+   "profile": "P1",
+   "profile_label": "Hồi ngắn sau hoảng loạn",
+   "reason": null,
+   "recheck_conditions": [
+    ">= 2 phiên không sàn, đáy sau cao hơn đáy trước, không có đáy mới của đợt giảm",
+    "sau khi kết quả sự kiện + điều khoản phát hành được ghi (events --resolved) và ngoài cửa sổ 10 phiên",
+    "loại (b): chỉ hồ sơ P3 (<= 1% NAV, 'no evidence of edge; measurement only'), >= 10 phiên sau tin FACT cuối",
+    "ghi trạng thái margin/cảnh báo đã kiểm (bf-news --margin ...)",
+    "viết dòng THESIS (bf_type=, profile=, invalid=, time_stop=, max_attempts=, checklist=done)"
+   ],
+   "recheck_from": null,
+   "rules": [
+    {
+     "id": "BF-G0",
+     "kind": "gate",
+     "reason": "verified snapshot as_of 2026-09-21",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G1",
+     "kind": "gate",
+     "reason": "VN30 / extra_universe",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G2",
+     "kind": "gate",
+     "reason": "UNVERIFIED -> fail-closed: fall UNCLASSIFIED (news not checked (no bf-news record)), treated as b",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "BF-G3",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G4",
+     "kind": "gate",
+     "reason": "not stabilised: stab_state NONE, sessions_since_floor None, low 58906.2 vs prev 58993.53, panic_low None",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "BF-G5",
+     "kind": "gate",
+     "reason": "UNVERIFIED -> fail-closed: event calendar not checked for VCB / 2026-09-22",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "BF-G6",
+     "kind": "gate",
+     "reason": "UNVERIFIED -> fail-closed: news not checked (no bf-news record)",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "BF-G7",
+     "kind": "gate",
+     "reason": "avg value 173 bn",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G8",
+     "kind": "gate",
+     "reason": "UNVERIFIED -> fail-closed: margin / warning status not checked",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "BF-G9",
+     "kind": "gate",
+     "reason": "no context adjustment",
+     "severity": "info",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G10",
+     "kind": "gate",
+     "reason": "order 5.1% NAV, open risk 1.00% NAV",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G11",
+     "kind": "gate",
+     "reason": "attempt 1 in episode None",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-G12",
+     "kind": "gate",
+     "reason": "no THESIS for VCB dated >= 2026-09-21 (bf_type=, profile=, invalid=, time_stop=, max_attempts=, checklist=done)",
+     "severity": "hard",
+     "status": "FAIL"
+    },
+    {
+     "id": "B1",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B2",
+     "kind": "behaviour",
+     "reason": "no --price given",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B6",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "COOL",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3P",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B5",
+     "kind": "behaviour",
+     "reason": "fewer than 3 prior entries",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B7",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B1",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B2",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B3",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B8",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B4",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B5",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B6",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "BF-B7",
+     "kind": "behaviour",
+     "reason": "no previous winning BF trade",
+     "severity": "soft",
+     "status": "NA"
+    }
+   ],
+   "setups": [],
+   "snapshot": {
+    "ok": true,
+    "reason": "verified snapshot as_of 2026-09-21",
+    "source": "vn30"
+   },
+   "thesis_present": false,
+   "thesis_required": true,
+   "ticker": "VCB",
+   "trade_session": "2026-09-22",
+   "tranche": null,
+   "unverified": [],
+   "verdict": "BLOCK",
+   "why": null
+  },
+  "text": "VCB — BLOCK  (mode bắt đáy, hồ sơ P1 Hồi ngắn sau hoảng loạn; dữ liệu EOD tới 2026-09-21; snapshot vn30 sha <sha>)\nPhiên giao dịch: 2026-09-22. EOD data as of 2026-09-21\nKhuyến nghị mặc định: P0 — không bắt đáy.\nLoại cú giảm: UNCLASSIFIED (xử lý như b) — news not checked (no bf-news record)\nLuật không đạt:\n  - BF-G2 loại cú giảm vs hồ sơ [BLOCK]: UNVERIFIED -> fail-closed: fall UNCLASSIFIED (news not checked (no bf-news record)), treated as b\n  - BF-G4 ổn định sau sàn [BLOCK]: not stabilised: stab_state NONE, sessions_since_floor None, low 58906.2 vs prev 58993.53, panic_low None\n  - BF-G5 sự kiện / pha loãng [BLOCK]: UNVERIFIED -> fail-closed: event calendar not checked for VCB / 2026-09-22\n  - BF-G6 tin FACT tiêu cực [BLOCK]: UNVERIFIED -> fail-closed: news not checked (no bf-news record)\n  - BF-G8 margin / cảnh báo [BLOCK]: UNVERIFIED -> fail-closed: margin / warning status not checked\n  - BF-G12 THESIS viết trước [BLOCK]: no THESIS for VCB dated >= 2026-09-21 (bf_type=, profile=, invalid=, time_stop=, max_attempts=, checklist=done)\nCờ hành vi: không có\nNếu vẫn mua: bán được sớm nhất chiều 2026-09-24 13:00 (T+2); không thoát được trước thời điểm này.\nKế hoạch P1: giá tham chiếu 59.202; rủi ro 1,0% NAV = 10.000.000 VND ở lỗ hiệu dụng 19,6% (stop + 1 phiên sàn + phí)\n  Size gợi ý: 861 cp; lệnh này 861 cp ≈ 50.973.103 VND; VND rủi ro hiệu dụng 9.990.728\n  Vô hiệu: close_below_panic_low; thảm họa: 52.098; time-stop: 2026-10-06 (10 phiên); LO tối đa 59.498\n  Kịch bản thêm 3 phiên sàn khi đang khóa: -19,6% vị thế ≈ 10.278.369 VND (gồm phí); ở lỗ hiệu dụng: 9.990.728 VND\nNAV dùng để tính: journal\nLịch sử dài (SMA200, đỉnh 250, MAE/MFE, đợt giảm): snapshot_650d (150 phiên từ 2026-02-09)\n  WARN: history_mismatch: store 20260921T100000Z_fx1 differs from the snapshot over the snapshot window (600 value diffs, 0 sessions missing, 0 extra; e.g. a re-adjustment between fetch times). Not stitched: long windows use the 650-day snapshot\nKiểm lại sớm nhất khi: >= 2 phiên không sàn, đáy sau cao hơn đáy trước, không có đáy mới của đợt giảm; sau khi kết quả sự kiện + điều khoản phát hành được ghi (events --resolved) và ngoài cửa sổ 10 phiên; loại (b): chỉ hồ sơ P3 (<= 1% NAV, 'no evidence of edge; measurement only'), >= 10 phiên sau tin FACT cuối; ghi trạng thái margin/cảnh báo đã kiểm (bf-news --margin ...); viết dòng THESIS (bf_type=, profile=, invalid=, time_stop=, max_attempts=, checklist=done).\nChecklist (swing_desk/prompts/BOTTOMFISH_CHECKLIST.md): 10 câu — trả lời bằng chữ trong dòng THESIS trước lệnh.\nChỉ tư vấn; bắt đáy chưa có bằng chứng edge tiến cứu; loại (b) có bằng chứng trôi giảm."
+ },
+ "bf_scan_rows": [
+  {
+   "episode_id": "AAA-20260917",
+   "fall_type_auto": "NONE",
+   "fields": {
+    "avg_value_20_bn": 6987.3905595,
+    "beta_60": -0.09680291378967198,
+    "beta_obs": 60,
+    "capitulation_t": false,
+    "close": 2201110.36,
+    "close_pos_in_range": 0.4999999999999894,
+    "date": "2026-09-21",
+    "dist_sma50_atr": 2.4058539120783085,
+    "drawdown_250_pct": -11.911163104264178,
+    "drawdown_60_pct": -11.911163104264178,
+    "episode_depth_pct": -8.732699939897637,
+    "episode_sessions": 3,
+    "episode_start_date": "2026-09-17",
+    "f_net_1d_pct_vol": null,
+    "f_net_turn_positive": null,
+    "f_sell_streak": null,
+    "floor_price_next": 2047100.0,
+    "floor_price_today": 2110400.0,
+    "floor_streak": 0,
+    "floor_t": false,
+    "floors_in_last_10": 0,
+    "floors_in_last_5": 0,
+    "flow_status": "UNVERIFIED",
+    "high_250": 2498739.27,
+    "high_60": 2498739.27,
+    "higher_low_t": false,
+    "idio_ret_10d": -6.5692806122153735,
+    "idio_share": 0.9669360550488459,
+    "idx_ret_10d": 2.3205252498104123,
+    "idx_ret_5d": 0.9589521139566681,
+    "index_atr_ratio": 0.9821001224022439,
+    "index_status": "OK",
+    "last_floor_date": null,
+    "locked_floor_streak": 0,
+    "locked_floor_t": false,
+    "locked_floor_t1": false,
+    "low": 2190104.81,
+    "new_episode_low_2": true,
+    "panic_low": 2190104.81,
+    "prev_low": 2257840.01,
+    "ret_10d": -6.793914217919528,
+    "ret_1d": -3.000000079323606,
+    "sector_rel_ret_10d": null,
+    "sessions_since_floor": null,
+    "stab_state": "NONE",
+    "vol_ratio_20_prior": 1.0
+   },
+   "history": {
+    "history_data_issues": [],
+    "history_first_date": "2024-04-23",
+    "history_mismatch": false,
+    "history_mode": "on",
+    "history_notes": [],
+    "history_rows": 600,
+    "history_source": "history_store",
+    "history_store_aborted": null,
+    "history_store_as_of": "2026-09-21",
+    "history_store_id": "20260921T100000Z_fx1"
+   },
+   "plan_p1": {
+    "capped_by": null,
+    "catastrophe_stop": 1936977.1168,
+    "earliest_sell": "2026-09-24 13:00",
+    "effective_loss_pct": 19.6,
+    "entry_limit": 2212115.91,
+    "entry_ref": 2201110.36,
+    "invalidation": 2190104.81,
+    "invalidation_rule": "close_below_panic_low",
+    "label": "Hồi ngắn sau hoảng loạn",
+    "max_tranches": 1,
+    "multipliers": {},
+    "nav": 1000000000.0,
+    "order_qty": 23,
+    "position_value": 50625538.279999994,
+    "profile": "P1",
+    "qty": 23,
+    "risk_multiplier": 1.0,
+    "risk_pct_nav": 1.0,
+    "risk_vnd": 10000000.0,
+    "scenarios": {
+     "effective_loss_vnd": 9922605.50288,
+     "three_more_floors_pct": 19.56429999999999,
+     "three_more_floors_vnd": 10208285.415394034
+    },
+    "time_stop_session": "2026-10-06",
+    "time_stop_sessions": 10,
+    "tranche": null,
+    "tranche_qty": null,
+    "value_max": 51020408.1632653,
+    "vnd_at_risk_effective": 9922605.50288,
+    "weight_pct": 5.0625538279999995
+   },
+   "structural_failed": [
+    "BF-G4"
+   ],
+   "structural_verdict": "BLOCK",
+   "ticker": "AAA"
+  },
+  {
+   "episode_id": null,
+   "fall_type_auto": "NONE",
+   "fields": {
+    "avg_value_20_bn": 162.3845265,
+    "beta_60": -0.3159190842468069,
+    "beta_obs": 60,
+    "capitulation_t": false,
+    "close": 54058.44,
+    "close_pos_in_range": 0.5,
+    "date": "2026-09-21",
+    "dist_sma50_atr": 0.6558077622280041,
+    "drawdown_250_pct": -1.2884547435772165,
+    "drawdown_60_pct": -1.2884547435772165,
+    "episode_depth_pct": 0.0,
+    "episode_sessions": 0,
+    "episode_start_date": null,
+    "f_net_1d_pct_vol": null,
+    "f_net_turn_positive": null,
+    "f_sell_streak": null,
+    "floor_price_next": 50300.0,
+    "floor_price_today": 50600.0,
+    "floor_streak": 0,
+    "floor_t": false,
+    "floors_in_last_10": 0,
+    "floors_in_last_5": 0,
+    "flow_status": "UNVERIFIED",
+    "high_250": 54764.05,
+    "high_60": 54764.05,
+    "higher_low_t": false,
+    "idio_ret_10d": 1.2088196887229796,
+    "idio_share": null,
+    "idx_ret_10d": 2.3205252498104123,
+    "idx_ret_5d": 0.9589521139566681,
+    "index_atr_ratio": 0.9821001224022439,
+    "index_status": "OK",
+    "last_floor_date": null,
+    "locked_floor_streak": 0,
+    "locked_floor_t": false,
+    "locked_floor_t1": false,
+    "low": 53788.15,
+    "new_episode_low_2": false,
+    "panic_low": null,
+    "prev_low": 54056.59,
+    "ret_10d": 0.4757214768312812,
+    "ret_1d": -0.49661097064803705,
+    "sector_rel_ret_10d": null,
+    "sessions_since_floor": null,
+    "stab_state": "NONE",
+    "vol_ratio_20_prior": 1.0
+   },
+   "history": {
+    "history_data_issues": [],
+    "history_first_date": "2024-04-23",
+    "history_mismatch": false,
+    "history_mode": "on",
+    "history_notes": [],
+    "history_rows": 600,
+    "history_source": "history_store",
+    "history_store_aborted": null,
+    "history_store_as_of": "2026-09-21",
+    "history_store_id": "20260921T100000Z_fx1"
+   },
+   "plan_p1": {
+    "capped_by": null,
+    "catastrophe_stop": 47571.427200000006,
+    "earliest_sell": "2026-09-24 13:00",
+    "effective_loss_pct": 19.6,
+    "entry_limit": 54328.73,
+    "entry_ref": 54058.44,
+    "invalidation": null,
+    "invalidation_rule": "close_below_panic_low",
+    "label": "Hồi ngắn sau hoảng loạn",
+    "max_tranches": 1,
+    "multipliers": {},
+    "nav": 1000000000.0,
+    "order_qty": 943,
+    "position_value": 50977108.92,
+    "profile": "P1",
+    "qty": 943,
+    "risk_multiplier": 1.0,
+    "risk_pct_nav": 1.0,
+    "risk_vnd": 10000000.0,
+    "scenarios": {
+     "effective_loss_vnd": 9991513.348320002,
+     "three_more_floors_pct": 19.56429999999999,
+     "three_more_floors_vnd": 10279177.173955554
+    },
+    "time_stop_session": "2026-10-06",
+    "time_stop_sessions": 10,
+    "tranche": null,
+    "tranche_qty": null,
+    "value_max": 51020408.1632653,
+    "vnd_at_risk_effective": 9991513.348320002,
+    "weight_pct": 5.097710892
+   },
+   "structural_failed": [
+    "BF-G4"
+   ],
+   "structural_verdict": "BLOCK",
+   "ticker": "BBB"
+  },
+  {
+   "episode_id": null,
+   "fall_type_auto": "NONE",
+   "fields": {
+    "avg_value_20_bn": 173.2238535,
+    "beta_60": 0.005531769015710854,
+    "beta_obs": 60,
+    "capitulation_t": false,
+    "close": 59202.21,
+    "close_pos_in_range": 0.5,
+    "date": "2026-09-21",
+    "dist_sma50_atr": 5.498245744385613,
+    "drawdown_250_pct": null,
+    "drawdown_60_pct": -0.6448112430967989,
+    "episode_depth_pct": 0.0,
+    "episode_sessions": 0,
+    "episode_start_date": null,
+    "f_net_1d_pct_vol": null,
+    "f_net_turn_positive": null,
+    "f_sell_streak": null,
+    "floor_price_next": 55100.0,
+    "floor_price_today": 55200.0,
+    "floor_streak": 0,
+    "floor_t": false,
+    "floors_in_last_10": 0,
+    "floors_in_last_5": 0,
+    "flow_status": "UNVERIFIED",
+    "high_250": null,
+    "high_60": 59586.43,
+    "higher_low_t": false,
+    "idio_ret_10d": 3.0718756623783916,
+    "idio_share": 0.9958386362989626,
+    "idx_ret_10d": 2.3205252498104123,
+    "idx_ret_5d": 0.9589521139566681,
+    "index_atr_ratio": 0.9821001224022439,
+    "index_status": "OK",
+    "last_floor_date": null,
+    "locked_floor_streak": 0,
+    "locked_floor_t": false,
+    "locked_floor_t1": false,
+    "low": 58906.2,
+    "new_episode_low_2": false,
+    "panic_low": null,
+    "prev_low": 58993.53,
+    "ret_10d": 3.0847122720554676,
+    "ret_1d": -0.14803513173727856,
+    "sector_rel_ret_10d": 0.0,
+    "sessions_since_floor": null,
+    "stab_state": "NONE",
+    "vol_ratio_20_prior": 1.0
+   },
+   "history": {
+    "history_data_issues": [],
+    "history_first_date": "2026-02-09",
+    "history_mismatch": true,
+    "history_mismatch_detail": {
+     "first_diff": {
+      "date": "2026-02-09",
+      "field": "open",
+      "snapshot": 44419.91,
+      "store": 43531.51
+     },
+     "sessions_extra_count": 0,
+     "sessions_extra_in_store": [],
+     "sessions_missing_count": 0,
+     "sessions_missing_in_store": [],
+     "snapshot_sessions": 150,
+     "value_diffs": 600,
+     "window": [
+      "2026-02-09",
+      "2026-09-21"
+     ]
+    },
+    "history_mode": "on",
+    "history_notes": [
+     {
+      "level": "WARN",
+      "text": "history_mismatch: store 20260921T100000Z_fx1 differs from the snapshot over the snapshot window (600 value diffs, 0 sessions missing, 0 extra; e.g. a re-adjustment between fetch times). Not stitched: long windows use the 650-day snapshot"
+     }
+    ],
+    "history_rows": 150,
+    "history_source": "snapshot_650d",
+    "history_store_aborted": null,
+    "history_store_as_of": "2026-09-21",
+    "history_store_id": "20260921T100000Z_fx1"
+   },
+   "plan_p1": {
+    "capped_by": null,
+    "catastrophe_stop": 52097.9448,
+    "earliest_sell": "2026-09-24 13:00",
+    "effective_loss_pct": 19.6,
+    "entry_limit": 59498.22,
+    "entry_ref": 59202.21,
+    "invalidation": null,
+    "invalidation_rule": "close_below_panic_low",
+    "label": "Hồi ngắn sau hoảng loạn",
+    "max_tranches": 1,
+    "multipliers": {},
+    "nav": 1000000000.0,
+    "order_qty": 861,
+    "position_value": 50973102.81,
+    "profile": "P1",
+    "qty": 861,
+    "risk_multiplier": 1.0,
+    "risk_pct_nav": 1.0,
+    "risk_vnd": 10000000.0,
+    "scenarios": {
+     "effective_loss_vnd": 9990728.15076,
+     "three_more_floors_pct": 19.56429999999999,
+     "three_more_floors_vnd": 10278369.369916826
+    },
+    "time_stop_session": "2026-10-06",
+    "time_stop_sessions": 10,
+    "tranche": null,
+    "tranche_qty": null,
+    "value_max": 51020408.1632653,
+    "vnd_at_risk_effective": 9990728.15076,
+    "weight_pct": 5.097310281
+   },
+   "structural_failed": [
+    "BF-G4"
+   ],
+   "structural_verdict": "BLOCK",
+   "ticker": "VCB"
+  }
+ ],
+ "bf_scan_table": "# Bảng bắt đáy (VN30) — dữ liệu EOD tới 2026-09-21 (snapshot sha <sha>)\n\nRegime: GRIND | breadth 33.3% | phiên giao dịch kế: 2026-09-22\n\nChỉ giá: tin tức, lịch sự kiện và trạng thái margin KHÔNG có trong bảng này (BF-G2/G5/G6/G8 cần `check --mode bottomfish`).\nfall_type_auto là proxy giá (MARKET/IDIO/NONE), không phải phân loại (a)/(b)/(c). Structural = BF-G3/G4/G7.\n\nLong windows (SMA200, high_250, MAE/MFE, episode): history_source per_ticker (store 20260921T100000Z_fx1); snapshot_650d fallback: VCB\nWARN history_mismatch (store != snapshot, not stitched): VCB\n\n| Mã | fall_type_auto | stab_state | floor_streak | phiên từ sàn | idio_ret_10d | drawdown_60 | panic_low | capitulation | Structural |\n|---|---|---|---|---|---|---|---|---|---|\n| AAA | NONE | NONE | 0 | - | -6.6 | -11.9 | 2,190,105 |  | BLOCK (BF-G4) |\n| BBB | NONE | NONE | 0 | - | 1.2 | -1.3 | n/a |  | BLOCK (BF-G4) |\n| VCB | NONE | NONE | 0 | - | 3.1 | -0.6 | n/a |  | BLOCK (BF-G4) |\n\nChỉ tư vấn; bắt đáy chưa có bằng chứng edge tiến cứu; loại (b) có bằng chứng trôi giảm.\n",
+ "gate_table": "# Gate table — dữ liệu EOD tới 2026-09-21 (snapshot sha <sha>)\n\nRegime: GRIND | VNINDEX 2131.93 vs EMA50 2057.76 | breadth 33.3% | phiên giao dịch kế: 2026-09-22 | đáo hạn VN30F kế: 2026-10-15\n\nStructural = G0-G8 + G11 (G9 portfolio, G10 events đánh giá trong `check`).\n\nLong windows (SMA200, high_250, MAE/MFE, episode): history_source per_ticker (store 20260921T100000Z_fx1); snapshot_650d fallback: VCB\nWARN history_mismatch (store != snapshot, not stitched): VCB\n\n| Mã | Structural | Setup | Close | RSI2 | ATR% | SMA50 | R:R | Luật trượt |\n|---|---|---|---|---|---|---|---|---|\n| AAA | WARN | S1 | 2,201,110 | 1.8 | 2.0 | 2,096,603 | 1.59 | G2 |\n| BBB | WARN | - | 54,058 | 16.3 | 1.0 | 53,696 | 0.27 | G2, G8, G11 |\n| VCB | WARN | - | 59,202 | 63.3 | 1.0 | 55,818 | 0.07 | G2, G8, G11 |\n\nAdvisory only. PASS = không có cờ cấu trúc và có setup đã biết, không phải 'sẽ thắng'.\n",
+ "state_history": {
+  "fallbacks": [
+   "VCB"
+  ],
+  "history_mode": "on",
+  "history_source": "per_ticker",
+  "mismatches": [
+   "VCB"
+  ],
+  "per_ticker": {
+   "AAA": {
+    "history_first_date": "2024-04-23",
+    "history_mismatch": false,
+    "history_rows": 600,
+    "history_source": "history_store",
+    "history_store_id": "20260921T100000Z_fx1"
+   },
+   "BBB": {
+    "history_first_date": "2024-04-23",
+    "history_mismatch": false,
+    "history_rows": 600,
+    "history_source": "history_store",
+    "history_store_id": "20260921T100000Z_fx1"
+   },
+   "VCB": {
+    "history_first_date": "2026-02-09",
+    "history_mismatch": true,
+    "history_rows": 150,
+    "history_source": "snapshot_650d",
+    "history_store_id": "20260921T100000Z_fx1"
+   }
+  },
+  "skipped_stores": [],
+  "snapshot_as_of": "2026-09-21"
+ },
+ "state_tickers": {
+  "AAA": {
+   "as_of": "2026-09-21",
+   "earliest_sell": "2026-09-24 13:00",
+   "failed": [
+    "G2"
+   ],
+   "flows": {
+    "f_net_1d_bn": null,
+    "f_net_20d_bn": null,
+    "f_net_5d_bn": null,
+    "f_net_5d_pct_adv": null,
+    "flow_history_sessions": 0,
+    "flow_status": "UNVERIFIED",
+    "td_net_5d_bn": null
+   },
+   "gate": "WARN",
+   "history_data_issues": [],
+   "history_first_date": "2024-04-23",
+   "history_mismatch": false,
+   "history_mode": "on",
+   "history_notes": [],
+   "history_rows": 600,
+   "history_source": "history_store",
+   "history_store_id": "20260921T100000Z_fx1",
+   "indicators": {
+    "adx14": 79.89581485529804,
+    "atr14": 43438.67567159176,
+    "atr_pct": 1.9734892198495564,
+    "avg_value_20_bn": 6987.3905595,
+    "bb_lower": 2144480.9584622486,
+    "bb_upper": 2513779.414537752,
+    "close": 2201110.36,
+    "date": "2026-09-21",
+    "day2_ret_given_breach": -5.909999861094906,
+    "dist_high_20_pct": 13.521762261843161,
+    "ema21": 2296074.515218146,
+    "ema50": 2105305.0719088237,
+    "gap_open_1d": -3.000000079323606,
+    "high": 2212115.91,
+    "high_20": 2498739.27,
+    "high_250": 2498739.27,
+    "limit_down_t": false,
+    "limit_up_t": false,
+    "limit_up_t1": false,
+    "locked_breach_3pct_rate": 1.6,
+    "locked_mae_p50": -0.5000000216679068,
+    "locked_mae_p80": -0.500000392536113,
+    "locked_mae_p90": -0.5000007579457555,
+    "low": 2190104.81,
+    "low_20": 2179508.69,
+    "mae5_p50": -0.5000000216679068,
+    "mfe5_p50": 3.848224740948325,
+    "minus_di14": 41.77843455497867,
+    "n_breach": 3,
+    "n_locked": 250,
+    "n_window5": 250,
+    "open": 2201110.36,
+    "pct_b": 0.15334318518291712,
+    "plus_di14": 31.937137212321982,
+    "prev_close": 2269185.94,
+    "ret_1d": -3.000000079323606,
+    "ret_20d": 0.8530443077352068,
+    "ret_3d": -8.732699939897637,
+    "ret_5d": -10.937664739103958,
+    "rows": 150,
+    "rsi14": 43.07965393156395,
+    "rsi2": 1.7820970874354742,
+    "sma20": 2329130.1865000003,
+    "sma200": 1266179.37635,
+    "sma5": 2341537.896,
+    "sma50": 2096603.2522,
+    "stop_atr_multiple": 1.5201501836572975,
+    "up_streak": 0,
+    "vol_ratio_20": 1.0,
+    "vsa_no_supply": 0,
+    "vsa_stopping_volume": 0
+   },
+   "input_sha256": "2e5c133b9916efd66ec914a8049caf859562cc6737974c1f092f2c65c59eb453",
+   "plan_default_nav": {
+    "entry_ref": 2201110.36,
+    "nav": 1000000000.0,
+    "nav_source": "journal",
+    "qty": 98,
+    "stop_user": 2135077.0492,
+    "stop_validated": 2025021.5311999999,
+    "vnd_at_risk_effective": 9922605.50288,
+    "vnd_at_risk_nominal": 6471264.4584
+   },
+   "reward_risk": 1.5929845765234103,
+   "rules": [
+    {
+     "id": "G0",
+     "kind": "gate",
+     "reason": "verified snapshot as_of 2026-09-21",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G1",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G2",
+     "kind": "gate",
+     "reason": "GRIND: VNINDEX > EMA50 but breadth < 40%",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "G3",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G4",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G5",
+     "kind": "gate",
+     "reason": "no --price given",
+     "severity": "hard",
+     "status": "NA"
+    },
+    {
+     "id": "G6",
+     "kind": "gate",
+     "reason": "ATR 2.0%",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G7",
+     "kind": "gate",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G8",
+     "kind": "gate",
+     "reason": "R:R 1.59 (target 2,329,130)",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G9",
+     "kind": "gate",
+     "reason": "no portfolio.txt: open positions, open risk and sector counts unknown",
+     "severity": "hard",
+     "status": "UNVERIFIED"
+    },
+    {
+     "id": "G10",
+     "kind": "gate",
+     "reason": "no known event to 2026-09-25",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G11",
+     "kind": "gate",
+     "reason": "S1",
+     "severity": "soft",
+     "status": "PASS"
+    }
+   ],
+   "setups": [
+    "S1"
+   ],
+   "structural_gate": "WARN",
+   "structural_gate_ex_setup": "WARN",
+   "target": 2329130.1865000003,
+   "ticker": "AAA",
+   "unverified": [
+    "G9"
+   ]
+  },
+  "BBB": {
+   "as_of": "2026-09-21",
+   "earliest_sell": "2026-09-24 13:00",
+   "failed": [
+    "G2",
+    "G8",
+    "G11"
+   ],
+   "flows": {
+    "f_net_1d_bn": null,
+    "f_net_20d_bn": null,
+    "f_net_5d_bn": null,
+    "f_net_5d_pct_adv": null,
+    "flow_history_sessions": 0,
+    "flow_status": "UNVERIFIED",
+    "td_net_5d_bn": null
+   },
+   "gate": "WARN",
+   "history_data_issues": [],
+   "history_first_date": "2024-04-23",
+   "history_mismatch": false,
+   "history_mode": "on",
+   "history_notes": [],
+   "history_rows": 600,
+   "history_source": "history_store",
+   "history_store_id": "20260921T100000Z_fx1",
+   "indicators": {
+    "adx14": 26.0972192794664,
+    "atr14": 552.3508882684723,
+    "atr_pct": 1.0217662371841887,
+    "avg_value_20_bn": 162.3845265,
+    "bb_lower": 53657.32597434604,
+    "bb_upper": 54599.02502565396,
+    "close": 54058.44,
+    "date": "2026-09-21",
+    "day2_ret_given_breach": null,
+    "dist_high_20_pct": 1.3052725901820272,
+    "ema21": 54048.548916674044,
+    "ema50": 53218.45947253844,
+    "gap_open_1d": -0.49661097064803705,
+    "high": 54328.73,
+    "high_20": 54764.05,
+    "high_250": 54764.05,
+    "limit_down_t": false,
+    "limit_up_t": false,
+    "limit_up_t1": false,
+    "locked_breach_3pct_rate": 0.0,
+    "locked_mae_p50": -0.5000087138954279,
+    "locked_mae_p80": -0.6806988012750481,
+    "locked_mae_p90": -0.8396958148517952,
+    "low": 53788.15,
+    "low_20": 53498.31,
+    "mae5_p50": -0.5000171938999043,
+    "mfe5_p50": 1.2515842470796734,
+    "minus_di14": 13.53331358063829,
+    "n_breach": 0,
+    "n_locked": 250,
+    "n_window5": 250,
+    "open": 54058.44,
+    "pct_b": 0.4259471485044613,
+    "plus_di14": 15.319468304377983,
+    "prev_close": 54328.24,
+    "ret_1d": -0.49661097064803705,
+    "ret_20d": -0.13120396915098365,
+    "ret_3d": -0.7948933037189687,
+    "ret_5d": 0.30199080891084584,
+    "rows": 150,
+    "rsi14": 52.845542273265636,
+    "rsi2": 16.267380864033257,
+    "sma20": 54128.1755,
+    "sma200": 46844.0338,
+    "sma5": 54287.25,
+    "sma50": 53696.204000000005,
+    "stop_atr_multiple": 2.936092318207227,
+    "up_streak": 0,
+    "vol_ratio_20": 1.0,
+    "vsa_no_supply": 0,
+    "vsa_stopping_volume": 0
+   },
+   "input_sha256": "eff4cfa4febaca7fb23193a1691a345f4f7bf35d739be0af99324637dc6ddbbb",
+   "plan_default_nav": {
+    "entry_ref": 54058.44,
+    "nav": 1000000000.0,
+    "nav_source": "journal",
+    "qty": 4021,
+    "stop_user": 52436.6868,
+    "stop_validated": 49733.764800000004,
+    "vnd_at_risk_effective": 9998973.413040001,
+    "vnd_at_risk_nominal": 6521069.6172
+   },
+   "reward_risk": 0.26625664417118644,
+   "rules": [
+    {
+     "id": "G0",
+     "kind": "gate",
+     "reason": "verified snapshot as_of 2026-09-21",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G1",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G2",
+     "kind": "gate",
+     "reason": "GRIND: VNINDEX > EMA50 but breadth < 40%",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "G3",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G4",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G5",
+     "kind": "gate",
+     "reason": "no --price given",
+     "severity": "hard",
+     "status": "NA"
+    },
+    {
+     "id": "G6",
+     "kind": "gate",
+     "reason": "ATR 1.0%",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G7",
+     "kind": "gate",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G8",
+     "kind": "gate",
+     "reason": "R:R 0.27 < 1.5 (target 54,764)",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "G9",
+     "kind": "gate",
+     "reason": "no portfolio.txt: open positions, open risk and sector counts unknown",
+     "severity": "hard",
+     "status": "UNVERIFIED"
+    },
+    {
+     "id": "G10",
+     "kind": "gate",
+     "reason": "event calendar not checked for this ticker/session",
+     "severity": "soft",
+     "status": "UNVERIFIED"
+    },
+    {
+     "id": "G11",
+     "kind": "gate",
+     "reason": "no S1/S2 setup: buying without a signal",
+     "severity": "soft",
+     "status": "FAIL"
+    }
+   ],
+   "setups": [],
+   "structural_gate": "WARN",
+   "structural_gate_ex_setup": "WARN",
+   "target": 54764.05,
+   "ticker": "BBB",
+   "unverified": [
+    "G9",
+    "G10"
+   ]
+  },
+  "VCB": {
+   "as_of": "2026-09-21",
+   "earliest_sell": "2026-09-24 13:00",
+   "failed": [
+    "G2",
+    "G8",
+    "G11"
+   ],
+   "flows": {
+    "f_net_1d_bn": null,
+    "f_net_20d_bn": null,
+    "f_net_5d_bn": null,
+    "f_net_5d_pct_adv": null,
+    "flow_history_sessions": 0,
+    "flow_status": "UNVERIFIED",
+    "td_net_5d_bn": null
+   },
+   "gate": "WARN",
+   "history_data_issues": [],
+   "history_first_date": "2026-02-09",
+   "history_mismatch": true,
+   "history_mismatch_detail": {
+    "first_diff": {
+     "date": "2026-02-09",
+     "field": "open",
+     "snapshot": 44419.91,
+     "store": 43531.51
+    },
+    "sessions_extra_count": 0,
+    "sessions_extra_in_store": [],
+    "sessions_missing_count": 0,
+    "sessions_missing_in_store": [],
+    "snapshot_sessions": 150,
+    "value_diffs": 600,
+    "window": [
+     "2026-02-09",
+     "2026-09-21"
+    ]
+   },
+   "history_mode": "on",
+   "history_notes": [
+    {
+     "level": "WARN",
+     "text": "history_mismatch: store 20260921T100000Z_fx1 differs from the snapshot over the snapshot window (600 value diffs, 0 sessions missing, 0 extra; e.g. a re-adjustment between fetch times). Not stitched: long windows use the 650-day snapshot"
+    }
+   ],
+   "history_rows": 150,
+   "history_source": "snapshot_650d",
+   "history_store_id": "20260921T100000Z_fx1",
+   "indicators": {
+    "adx14": 66.56276140971728,
+    "atr14": 615.5603000204186,
+    "atr_pct": 1.0397589887614307,
+    "avg_value_20_bn": 173.2238535,
+    "bb_lower": 55638.31166440295,
+    "bb_upper": 59844.25733559704,
+    "close": 59202.21,
+    "date": "2026-09-21",
+    "day2_ret_given_breach": null,
+    "dist_high_20_pct": 0.6489960425463792,
+    "ema21": 57776.194969771306,
+    "ema50": 56070.7482394105,
+    "gap_open_1d": -0.14803513173727856,
+    "high": 59498.22,
+    "high_20": 59586.43,
+    "high_250": null,
+    "limit_down_t": false,
+    "limit_up_t": false,
+    "limit_up_t1": false,
+    "locked_breach_3pct_rate": 0.0,
+    "locked_mae_p50": -0.5000073903585145,
+    "locked_mae_p80": -0.6204265676796927,
+    "locked_mae_p90": -0.7913786830975522,
+    "low": 58906.2,
+    "low_20": 55433.97,
+    "mae5_p50": -0.5019081084150612,
+    "mfe5_p50": 1.3510995055399433,
+    "minus_di14": 4.901073420209483,
+    "n_breach": 0,
+    "n_locked": 149,
+    "n_window5": 146,
+    "open": 59202.21,
+    "pct_b": 0.8473476868723416,
+    "plus_di14": 27.817886133271973,
+    "prev_close": 59289.98,
+    "ret_1d": -0.14803513173727856,
+    "ret_20d": 6.060504542516498,
+    "ret_3d": 0.3616784592887612,
+    "ret_5d": 0.7632531495425754,
+    "rows": 150,
+    "rsi14": 84.89260727432078,
+    "rsi2": 63.3087244071232,
+    "sma20": 57741.284499999994,
+    "sma200": null,
+    "sma5": 59066.666000000005,
+    "sma50": 55817.7082,
+    "stop_atr_multiple": 2.885284024881212,
+    "up_streak": 0,
+    "vol_ratio_20": 1.0,
+    "vsa_no_supply": 0,
+    "vsa_stopping_volume": 0
+   },
+   "input_sha256": "64231de30734329f2129739bc08fcc486654871bcb8baa1b6bf8fc064fd1530c",
+   "plan_default_nav": {
+    "entry_ref": 59202.21,
+    "nav": 1000000000.0,
+    "nav_source": "journal",
+    "qty": 3672,
+    "stop_user": 57426.1437,
+    "stop_validated": 54466.0332,
+    "vnd_at_risk_effective": 9999963.695519999,
+    "vnd_at_risk_nominal": 6521715.453600001
+   },
+   "reward_risk": 0.07323413016070199,
+   "rules": [
+    {
+     "id": "G0",
+     "kind": "gate",
+     "reason": "verified snapshot as_of 2026-09-21",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G1",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G2",
+     "kind": "gate",
+     "reason": "GRIND: VNINDEX > EMA50 but breadth < 40%",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "G3",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G4",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G5",
+     "kind": "gate",
+     "reason": "no --price given",
+     "severity": "hard",
+     "status": "NA"
+    },
+    {
+     "id": "G6",
+     "kind": "gate",
+     "reason": "ATR 1.0%",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G7",
+     "kind": "gate",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G8",
+     "kind": "gate",
+     "reason": "R:R 0.07 < 1.5 (target 59,586)",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "G9",
+     "kind": "gate",
+     "reason": "no portfolio.txt: open positions, open risk and sector counts unknown",
+     "severity": "hard",
+     "status": "UNVERIFIED"
+    },
+    {
+     "id": "G10",
+     "kind": "gate",
+     "reason": "event calendar not checked for this ticker/session",
+     "severity": "soft",
+     "status": "UNVERIFIED"
+    },
+    {
+     "id": "G11",
+     "kind": "gate",
+     "reason": "no S1/S2 setup: buying without a signal",
+     "severity": "soft",
+     "status": "FAIL"
+    }
+   ],
+   "setups": [],
+   "structural_gate": "WARN",
+   "structural_gate_ex_setup": "WARN",
+   "target": 59586.43,
+   "ticker": "VCB",
+   "unverified": [
+    "G9",
+    "G10"
+   ]
+  }
+ },
+ "swing_AAA": {
+  "json": {
+   "ack_refused": false,
+   "acknowledged": false,
+   "amount": null,
+   "behaviour_block": false,
+   "checked_at": "2026-09-21T10:00:00+00:00",
+   "data_as_of": "2026-09-21",
+   "earliest_sell": "2026-09-24 13:00",
+   "emotion": null,
+   "eod_note": "EOD data as of 2026-09-21",
+   "exit_plan": "S1: bán khi đóng cửa > SMA5 hoặc sau 8 phiên; stop như trên",
+   "expected_session": "2026-09-21",
+   "failed": [
+    "G2"
+   ],
+   "flows": {
+    "flow_status": "UNVERIFIED",
+    "reason": "no desk state for this session (run refresh)"
+   },
+   "history": {
+    "history_data_issues": [],
+    "history_first_date": "2024-04-23",
+    "history_mismatch": false,
+    "history_mode": "on",
+    "history_notes": [],
+    "history_rows": 600,
+    "history_source": "history_store",
+    "history_store_aborted": null,
+    "history_store_as_of": "2026-09-21",
+    "history_store_id": "20260921T100000Z_fx1"
+   },
+   "horizon_warning": null,
+   "indicators": {
+    "adx14": 79.89581485529804,
+    "atr14": 43438.67567159176,
+    "atr_pct": 1.9734892198495564,
+    "avg_value_20_bn": 6987.3905595,
+    "bb_lower": 2144480.9584622486,
+    "bb_upper": 2513779.414537752,
+    "close": 2201110.36,
+    "date": "2026-09-21",
+    "day2_ret_given_breach": -5.909999861094906,
+    "dist_high_20_pct": 13.521762261843161,
+    "ema21": 2296074.515218146,
+    "ema50": 2105305.0719088237,
+    "gap_open_1d": -3.000000079323606,
+    "high": 2212115.91,
+    "high_20": 2498739.27,
+    "high_250": 2498739.27,
+    "limit_down_t": false,
+    "limit_up_t": false,
+    "limit_up_t1": false,
+    "locked_breach_3pct_rate": 1.6,
+    "locked_mae_p50": -0.5000000216679068,
+    "locked_mae_p80": -0.500000392536113,
+    "locked_mae_p90": -0.5000007579457555,
+    "low": 2190104.81,
+    "low_20": 2179508.69,
+    "mae5_p50": -0.5000000216679068,
+    "mfe5_p50": 3.848224740948325,
+    "minus_di14": 41.77843455497867,
+    "n_breach": 3,
+    "n_locked": 250,
+    "n_window5": 250,
+    "open": 2201110.36,
+    "pct_b": 0.15334318518291712,
+    "plus_di14": 31.937137212321982,
+    "prev_close": 2269185.94,
+    "ret_1d": -3.000000079323606,
+    "ret_20d": 0.8530443077352068,
+    "ret_3d": -8.732699939897637,
+    "ret_5d": -10.937664739103958,
+    "rows": 150,
+    "rsi14": 43.07965393156395,
+    "rsi2": 1.7820970874354742,
+    "sma20": 2329130.1865000003,
+    "sma200": 1266179.37635,
+    "sma5": 2341537.896,
+    "sma50": 2096603.2522,
+    "stop_atr_multiple": 1.5201501836572975,
+    "up_streak": 0,
+    "vol_ratio_20": 1.0,
+    "vsa_no_supply": 0,
+    "vsa_stopping_volume": 0
+   },
+   "journal_errors": [],
+   "market": {
+    "breadth_pct": 33.3,
+    "date": "2026-09-21",
+    "index_atr_pct": 1.0025205159754829,
+    "index_close": 2131.93,
+    "index_ema50": 2057.76,
+    "index_ret_1d": -0.2507848724319195,
+    "index_ret_5d": 0.9589521139566681,
+    "limit_down_count": 0,
+    "limit_up_count": 0,
+    "regime": "GRIND",
+    "state": "GRIND"
+   },
+   "nav_source": "journal",
+   "out_of_scope": false,
+   "params_hash": "4319bf8f482887ab",
+   "plan": {
+    "capped_by": null,
+    "effective_loss_pct": 4.6,
+    "effective_loss_pct_validated": 9.6,
+    "entry_ref": 2201110.36,
+    "nav": 1000000000.0,
+    "position_value": 215708815.28,
+    "qty": 98,
+    "qty_if_validated_stop": 47,
+    "risk_budget_vnd": 10000000.0,
+    "stop_user": 2135077.0492,
+    "stop_validated": 2025021.5311999999,
+    "vnd_at_risk_effective": 9922605.50288,
+    "vnd_at_risk_nominal": 6471264.4584,
+    "weight_pct": 21.570881528
+   },
+   "price": null,
+   "reason": null,
+   "recheck_from": null,
+   "reward_risk": 1.5929845765234103,
+   "rules": [
+    {
+     "id": "G0",
+     "kind": "gate",
+     "reason": "verified snapshot as_of 2026-09-21",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G1",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G2",
+     "kind": "gate",
+     "reason": "GRIND: VNINDEX > EMA50 but breadth < 40%",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "G3",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G4",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G5",
+     "kind": "gate",
+     "reason": "no --price given",
+     "severity": "hard",
+     "status": "NA"
+    },
+    {
+     "id": "G6",
+     "kind": "gate",
+     "reason": "ATR 2.0%",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G7",
+     "kind": "gate",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G8",
+     "kind": "gate",
+     "reason": "R:R 1.59 (target 2,329,130)",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G9",
+     "kind": "gate",
+     "reason": "order 21.6% NAV, open risk 0.99% NAV",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G10",
+     "kind": "gate",
+     "reason": "no known event to 2026-09-25",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G11",
+     "kind": "gate",
+     "reason": "S1",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "B1",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B2",
+     "kind": "behaviour",
+     "reason": "no --price given",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B6",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "COOL",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3P",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B4",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B5",
+     "kind": "behaviour",
+     "reason": "fewer than 3 prior entries",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B7",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    }
+   ],
+   "s2_status": "override",
+   "setups": [
+    "S1"
+   ],
+   "target": 2329130.1865000003,
+   "thesis_present": false,
+   "thesis_required": true,
+   "ticker": "AAA",
+   "trade_session": "2026-09-22",
+   "unverified": [],
+   "verdict": "WARN"
+  },
+  "text": "AAA — WARN   (dữ liệu EOD tới 2026-09-21, snapshot sha <sha>)\nPhiên giao dịch: 2026-09-22. EOD data as of 2026-09-21\nLuật không đạt / chưa kiểm:\n  - G2 thị trường (VNINDEX vs EMA50) [WARN]: GRIND: VNINDEX > EMA50 but breadth < 40%\nSetup: S1\nBán được sớm nhất: chiều 2026-09-24 13:00 (T+2). Stop 3% KHÔNG thực thi được trước thời điểm này.\nGiá tham chiếu: 2.201.110 (đóng cửa gần nhất)\nStop 3%: 2.135.077 | stop đã kiểm định (RSI2, −8%): 2.025.022\nTarget: 2.329.130 | R:R 1.59\nSize gợi ý (rủi ro 1,0% NAV, lỗ hiệu dụng 4,6%): 98 cp ≈ 215,7 tr\n  VND rủi ro: ở stop 3% 6,5 tr; hiệu dụng (3% + gap + phí) 9,9 tr. Nếu dùng stop −8%: 47 cp\nNAV dùng để tính: journal\nThoát: S1: bán khi đóng cửa > SMA5 hoặc sau 8 phiên; stop như trên\nDòng tiền NN (chú thích A4, không đổi verdict): UNVERIFIED\nLịch sử dài (SMA200, đỉnh 250, MAE/MFE, đợt giảm): history_store 20260921T100000Z_fx1 (sha <sha>), từ 2024-04-23, 600 phiên\nCần: viết 1 dòng THESIS (setup, stop, target, điều kiện sai) vào portfolio.txt rồi chạy lại với --ack; hoặc chờ phiên sau.\nTư vấn, không phải lệnh. PASS = không có cờ đỏ + có setup đã biết, không phải 'sẽ thắng'."
+ },
+ "swing_BBB": {
+  "json": {
+   "ack_refused": false,
+   "acknowledged": false,
+   "amount": null,
+   "behaviour_block": false,
+   "checked_at": "2026-09-21T10:00:00+00:00",
+   "data_as_of": "2026-09-21",
+   "earliest_sell": "2026-09-24 13:00",
+   "emotion": null,
+   "eod_note": "EOD data as of 2026-09-21",
+   "exit_plan": "Chung: target / stop / tối đa 8 phiên",
+   "expected_session": "2026-09-21",
+   "failed": [
+    "G2",
+    "G8",
+    "G11"
+   ],
+   "flows": {
+    "flow_status": "UNVERIFIED",
+    "reason": "no desk state for this session (run refresh)"
+   },
+   "history": {
+    "history_data_issues": [],
+    "history_first_date": "2024-04-23",
+    "history_mismatch": false,
+    "history_mode": "on",
+    "history_notes": [],
+    "history_rows": 600,
+    "history_source": "history_store",
+    "history_store_aborted": null,
+    "history_store_as_of": "2026-09-21",
+    "history_store_id": "20260921T100000Z_fx1"
+   },
+   "horizon_warning": null,
+   "indicators": {
+    "adx14": 26.0972192794664,
+    "atr14": 552.3508882684723,
+    "atr_pct": 1.0217662371841887,
+    "avg_value_20_bn": 162.3845265,
+    "bb_lower": 53657.32597434604,
+    "bb_upper": 54599.02502565396,
+    "close": 54058.44,
+    "date": "2026-09-21",
+    "day2_ret_given_breach": null,
+    "dist_high_20_pct": 1.3052725901820272,
+    "ema21": 54048.548916674044,
+    "ema50": 53218.45947253844,
+    "gap_open_1d": -0.49661097064803705,
+    "high": 54328.73,
+    "high_20": 54764.05,
+    "high_250": 54764.05,
+    "limit_down_t": false,
+    "limit_up_t": false,
+    "limit_up_t1": false,
+    "locked_breach_3pct_rate": 0.0,
+    "locked_mae_p50": -0.5000087138954279,
+    "locked_mae_p80": -0.6806988012750481,
+    "locked_mae_p90": -0.8396958148517952,
+    "low": 53788.15,
+    "low_20": 53498.31,
+    "mae5_p50": -0.5000171938999043,
+    "mfe5_p50": 1.2515842470796734,
+    "minus_di14": 13.53331358063829,
+    "n_breach": 0,
+    "n_locked": 250,
+    "n_window5": 250,
+    "open": 54058.44,
+    "pct_b": 0.4259471485044613,
+    "plus_di14": 15.319468304377983,
+    "prev_close": 54328.24,
+    "ret_1d": -0.49661097064803705,
+    "ret_20d": -0.13120396915098365,
+    "ret_3d": -0.7948933037189687,
+    "ret_5d": 0.30199080891084584,
+    "rows": 150,
+    "rsi14": 52.845542273265636,
+    "rsi2": 16.267380864033257,
+    "sma20": 54128.1755,
+    "sma200": 46844.0338,
+    "sma5": 54287.25,
+    "sma50": 53696.204000000005,
+    "stop_atr_multiple": 2.936092318207227,
+    "up_streak": 0,
+    "vol_ratio_20": 1.0,
+    "vsa_no_supply": 0,
+    "vsa_stopping_volume": 0
+   },
+   "journal_errors": [],
+   "market": {
+    "breadth_pct": 33.3,
+    "date": "2026-09-21",
+    "index_atr_pct": 1.0025205159754829,
+    "index_close": 2131.93,
+    "index_ema50": 2057.76,
+    "index_ret_1d": -0.2507848724319195,
+    "index_ret_5d": 0.9589521139566681,
+    "limit_down_count": 0,
+    "limit_up_count": 0,
+    "regime": "GRIND",
+    "state": "GRIND"
+   },
+   "nav_source": "journal",
+   "out_of_scope": false,
+   "params_hash": "4319bf8f482887ab",
+   "plan": {
+    "capped_by": null,
+    "effective_loss_pct": 4.6,
+    "effective_loss_pct_validated": 9.6,
+    "entry_ref": 54058.44,
+    "nav": 1000000000.0,
+    "position_value": 217368987.24,
+    "qty": 4021,
+    "qty_if_validated_stop": 1926,
+    "risk_budget_vnd": 10000000.0,
+    "stop_user": 52436.6868,
+    "stop_validated": 49733.764800000004,
+    "vnd_at_risk_effective": 9998973.413040001,
+    "vnd_at_risk_nominal": 6521069.6172,
+    "weight_pct": 21.736898724
+   },
+   "price": null,
+   "reason": null,
+   "recheck_from": null,
+   "reward_risk": 0.26625664417118644,
+   "rules": [
+    {
+     "id": "G0",
+     "kind": "gate",
+     "reason": "verified snapshot as_of 2026-09-21",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G1",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G2",
+     "kind": "gate",
+     "reason": "GRIND: VNINDEX > EMA50 but breadth < 40%",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "G3",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G4",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G5",
+     "kind": "gate",
+     "reason": "no --price given",
+     "severity": "hard",
+     "status": "NA"
+    },
+    {
+     "id": "G6",
+     "kind": "gate",
+     "reason": "ATR 1.0%",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G7",
+     "kind": "gate",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G8",
+     "kind": "gate",
+     "reason": "R:R 0.27 < 1.5 (target 54,764)",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "G9",
+     "kind": "gate",
+     "reason": "order 21.7% NAV, open risk 1.00% NAV",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G10",
+     "kind": "gate",
+     "reason": "event calendar not checked for this ticker/session",
+     "severity": "soft",
+     "status": "UNVERIFIED"
+    },
+    {
+     "id": "G11",
+     "kind": "gate",
+     "reason": "no S1/S2 setup: buying without a signal",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "B1",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B2",
+     "kind": "behaviour",
+     "reason": "no --price given",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B6",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "COOL",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3P",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B4",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B5",
+     "kind": "behaviour",
+     "reason": "fewer than 3 prior entries",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B7",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    }
+   ],
+   "s2_status": "override",
+   "setups": [],
+   "target": 54764.05,
+   "thesis_present": false,
+   "thesis_required": true,
+   "ticker": "BBB",
+   "trade_session": "2026-09-22",
+   "unverified": [
+    "G10"
+   ],
+   "verdict": "WARN"
+  },
+  "text": "BBB — WARN   (dữ liệu EOD tới 2026-09-21, snapshot sha <sha>)\nPhiên giao dịch: 2026-09-22. EOD data as of 2026-09-21\nLuật không đạt / chưa kiểm:\n  - G2 thị trường (VNINDEX vs EMA50) [WARN]: GRIND: VNINDEX > EMA50 but breadth < 40%\n  - G8 R:R [WARN]: R:R 0.27 < 1.5 (target 54,764)\n  - G10 sự kiện [UNVERIFIED]: event calendar not checked for this ticker/session\n  - G11 có setup [WARN]: no S1/S2 setup: buying without a signal\nSetup: không có (G11) — bạn đang mua không có tín hiệu\nBán được sớm nhất: chiều 2026-09-24 13:00 (T+2). Stop 3% KHÔNG thực thi được trước thời điểm này.\nGiá tham chiếu: 54.058 (đóng cửa gần nhất)\nStop 3%: 52.437 | stop đã kiểm định (RSI2, −8%): 49.734\nTarget: 54.764 | R:R 0.27\nSize gợi ý (rủi ro 1,0% NAV, lỗ hiệu dụng 4,6%): 4.021 cp ≈ 217,4 tr\n  VND rủi ro: ở stop 3% 6,5 tr; hiệu dụng (3% + gap + phí) 10,0 tr. Nếu dùng stop −8%: 1.926 cp\nNAV dùng để tính: journal\nThoát: Chung: target / stop / tối đa 8 phiên\nDòng tiền NN (chú thích A4, không đổi verdict): UNVERIFIED\nLịch sử dài (SMA200, đỉnh 250, MAE/MFE, đợt giảm): history_store 20260921T100000Z_fx1 (sha <sha>), từ 2024-04-23, 600 phiên\nCần: viết 1 dòng THESIS (setup, stop, target, điều kiện sai) vào portfolio.txt rồi chạy lại với --ack; hoặc chờ phiên sau.\nTư vấn, không phải lệnh. PASS = không có cờ đỏ + có setup đã biết, không phải 'sẽ thắng'."
+ },
+ "swing_VCB": {
+  "json": {
+   "ack_refused": false,
+   "acknowledged": false,
+   "amount": null,
+   "behaviour_block": false,
+   "checked_at": "2026-09-21T10:00:00+00:00",
+   "data_as_of": "2026-09-21",
+   "earliest_sell": "2026-09-24 13:00",
+   "emotion": null,
+   "eod_note": "EOD data as of 2026-09-21",
+   "exit_plan": "Chung: target / stop / tối đa 8 phiên",
+   "expected_session": "2026-09-21",
+   "failed": [
+    "G2",
+    "G8",
+    "G11"
+   ],
+   "flows": {
+    "flow_status": "UNVERIFIED",
+    "reason": "no desk state for this session (run refresh)"
+   },
+   "history": {
+    "history_data_issues": [],
+    "history_first_date": "2026-02-09",
+    "history_mismatch": true,
+    "history_mismatch_detail": {
+     "first_diff": {
+      "date": "2026-02-09",
+      "field": "open",
+      "snapshot": 44419.91,
+      "store": 43531.51
+     },
+     "sessions_extra_count": 0,
+     "sessions_extra_in_store": [],
+     "sessions_missing_count": 0,
+     "sessions_missing_in_store": [],
+     "snapshot_sessions": 150,
+     "value_diffs": 600,
+     "window": [
+      "2026-02-09",
+      "2026-09-21"
+     ]
+    },
+    "history_mode": "on",
+    "history_notes": [
+     {
+      "level": "WARN",
+      "text": "history_mismatch: store 20260921T100000Z_fx1 differs from the snapshot over the snapshot window (600 value diffs, 0 sessions missing, 0 extra; e.g. a re-adjustment between fetch times). Not stitched: long windows use the 650-day snapshot"
+     }
+    ],
+    "history_rows": 150,
+    "history_source": "snapshot_650d",
+    "history_store_aborted": null,
+    "history_store_as_of": "2026-09-21",
+    "history_store_id": "20260921T100000Z_fx1"
+   },
+   "horizon_warning": null,
+   "indicators": {
+    "adx14": 66.56276140971728,
+    "atr14": 615.5603000204186,
+    "atr_pct": 1.0397589887614307,
+    "avg_value_20_bn": 173.2238535,
+    "bb_lower": 55638.31166440295,
+    "bb_upper": 59844.25733559704,
+    "close": 59202.21,
+    "date": "2026-09-21",
+    "day2_ret_given_breach": null,
+    "dist_high_20_pct": 0.6489960425463792,
+    "ema21": 57776.194969771306,
+    "ema50": 56070.7482394105,
+    "gap_open_1d": -0.14803513173727856,
+    "high": 59498.22,
+    "high_20": 59586.43,
+    "high_250": null,
+    "limit_down_t": false,
+    "limit_up_t": false,
+    "limit_up_t1": false,
+    "locked_breach_3pct_rate": 0.0,
+    "locked_mae_p50": -0.5000073903585145,
+    "locked_mae_p80": -0.6204265676796927,
+    "locked_mae_p90": -0.7913786830975522,
+    "low": 58906.2,
+    "low_20": 55433.97,
+    "mae5_p50": -0.5019081084150612,
+    "mfe5_p50": 1.3510995055399433,
+    "minus_di14": 4.901073420209483,
+    "n_breach": 0,
+    "n_locked": 149,
+    "n_window5": 146,
+    "open": 59202.21,
+    "pct_b": 0.8473476868723416,
+    "plus_di14": 27.817886133271973,
+    "prev_close": 59289.98,
+    "ret_1d": -0.14803513173727856,
+    "ret_20d": 6.060504542516498,
+    "ret_3d": 0.3616784592887612,
+    "ret_5d": 0.7632531495425754,
+    "rows": 150,
+    "rsi14": 84.89260727432078,
+    "rsi2": 63.3087244071232,
+    "sma20": 57741.284499999994,
+    "sma200": null,
+    "sma5": 59066.666000000005,
+    "sma50": 55817.7082,
+    "stop_atr_multiple": 2.885284024881212,
+    "up_streak": 0,
+    "vol_ratio_20": 1.0,
+    "vsa_no_supply": 0,
+    "vsa_stopping_volume": 0
+   },
+   "journal_errors": [],
+   "market": {
+    "breadth_pct": 33.3,
+    "date": "2026-09-21",
+    "index_atr_pct": 1.0025205159754829,
+    "index_close": 2131.93,
+    "index_ema50": 2057.76,
+    "index_ret_1d": -0.2507848724319195,
+    "index_ret_5d": 0.9589521139566681,
+    "limit_down_count": 0,
+    "limit_up_count": 0,
+    "regime": "GRIND",
+    "state": "GRIND"
+   },
+   "nav_source": "journal",
+   "out_of_scope": false,
+   "params_hash": "4319bf8f482887ab",
+   "plan": {
+    "capped_by": null,
+    "effective_loss_pct": 4.6,
+    "effective_loss_pct_validated": 9.6,
+    "entry_ref": 59202.21,
+    "nav": 1000000000.0,
+    "position_value": 217390515.12,
+    "qty": 3672,
+    "qty_if_validated_stop": 1759,
+    "risk_budget_vnd": 10000000.0,
+    "stop_user": 57426.1437,
+    "stop_validated": 54466.0332,
+    "vnd_at_risk_effective": 9999963.695519999,
+    "vnd_at_risk_nominal": 6521715.453600001,
+    "weight_pct": 21.739051512000003
+   },
+   "price": null,
+   "reason": null,
+   "recheck_from": null,
+   "reward_risk": 0.07323413016070199,
+   "rules": [
+    {
+     "id": "G0",
+     "kind": "gate",
+     "reason": "verified snapshot as_of 2026-09-21",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G1",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G2",
+     "kind": "gate",
+     "reason": "GRIND: VNINDEX > EMA50 but breadth < 40%",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "G3",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G4",
+     "kind": "gate",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G5",
+     "kind": "gate",
+     "reason": "no --price given",
+     "severity": "hard",
+     "status": "NA"
+    },
+    {
+     "id": "G6",
+     "kind": "gate",
+     "reason": "ATR 1.0%",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G7",
+     "kind": "gate",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "G8",
+     "kind": "gate",
+     "reason": "R:R 0.07 < 1.5 (target 59,586)",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "G9",
+     "kind": "gate",
+     "reason": "order 21.7% NAV, open risk 1.00% NAV",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "G10",
+     "kind": "gate",
+     "reason": "event calendar not checked for this ticker/session",
+     "severity": "soft",
+     "status": "UNVERIFIED"
+    },
+    {
+     "id": "G11",
+     "kind": "gate",
+     "reason": "no S1/S2 setup: buying without a signal",
+     "severity": "soft",
+     "status": "FAIL"
+    },
+    {
+     "id": "B1",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B2",
+     "kind": "behaviour",
+     "reason": "no --price given",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B6",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    },
+    {
+     "id": "COOL",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B3P",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B4",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "hard",
+     "status": "PASS"
+    },
+    {
+     "id": "B5",
+     "kind": "behaviour",
+     "reason": "fewer than 3 prior entries",
+     "severity": "soft",
+     "status": "NA"
+    },
+    {
+     "id": "B7",
+     "kind": "behaviour",
+     "reason": "",
+     "severity": "soft",
+     "status": "PASS"
+    }
+   ],
+   "s2_status": "override",
+   "setups": [],
+   "target": 59586.43,
+   "thesis_present": false,
+   "thesis_required": true,
+   "ticker": "VCB",
+   "trade_session": "2026-09-22",
+   "unverified": [
+    "G10"
+   ],
+   "verdict": "WARN"
+  },
+  "text": "VCB — WARN   (dữ liệu EOD tới 2026-09-21, snapshot sha <sha>)\nPhiên giao dịch: 2026-09-22. EOD data as of 2026-09-21\nLuật không đạt / chưa kiểm:\n  - G2 thị trường (VNINDEX vs EMA50) [WARN]: GRIND: VNINDEX > EMA50 but breadth < 40%\n  - G8 R:R [WARN]: R:R 0.07 < 1.5 (target 59,586)\n  - G10 sự kiện [UNVERIFIED]: event calendar not checked for this ticker/session\n  - G11 có setup [WARN]: no S1/S2 setup: buying without a signal\nSetup: không có (G11) — bạn đang mua không có tín hiệu\nBán được sớm nhất: chiều 2026-09-24 13:00 (T+2). Stop 3% KHÔNG thực thi được trước thời điểm này.\nGiá tham chiếu: 59.202 (đóng cửa gần nhất)\nStop 3%: 57.426 | stop đã kiểm định (RSI2, −8%): 54.466\nTarget: 59.586 | R:R 0.07\nSize gợi ý (rủi ro 1,0% NAV, lỗ hiệu dụng 4,6%): 3.672 cp ≈ 217,4 tr\n  VND rủi ro: ở stop 3% 6,5 tr; hiệu dụng (3% + gap + phí) 10,0 tr. Nếu dùng stop −8%: 1.759 cp\nNAV dùng để tính: journal\nThoát: Chung: target / stop / tối đa 8 phiên\nDòng tiền NN (chú thích A4, không đổi verdict): UNVERIFIED\nLịch sử dài (SMA200, đỉnh 250, MAE/MFE, đợt giảm): snapshot_650d (150 phiên từ 2026-02-09)\n  WARN: history_mismatch: store 20260921T100000Z_fx1 differs from the snapshot over the snapshot window (600 value diffs, 0 sessions missing, 0 extra; e.g. a re-adjustment between fetch times). Not stitched: long windows use the 650-day snapshot\nCần: viết 1 dòng THESIS (setup, stop, target, điều kiện sai) vào portfolio.txt rồi chạy lại với --ack; hoặc chờ phiên sau.\nTư vấn, không phải lệnh. PASS = không có cờ đỏ + có setup đã biết, không phải 'sẽ thắng'."
+ }
+}

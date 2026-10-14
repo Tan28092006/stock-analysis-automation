@@ -114,7 +114,7 @@ class TestEnsembleModel:
     def _make_dataset(self, n_rows=500):
         """Create a synthetic labeled dataset for ensemble training."""
         np.random.seed(42)
-        dates = pd.date_range("2025-06-01", periods=n_rows, freq="B")
+        dates = pd.date_range("2023-06-01", periods=n_rows, freq="B")
         n_features = 15
 
         # Create features with some signal
@@ -129,6 +129,8 @@ class TestEnsembleModel:
         feature_cols = [f"feature_{i}" for i in range(n_features)]
         df = pd.DataFrame(features, columns=feature_cols)
         df["signal_date"] = dates[:n_rows]
+        df["exit_date"] = dates[:n_rows] + pd.offsets.BDay(2)
+        df["label_resolved"] = True
         df["symbol"] = np.random.choice(["FPT", "HPG", "VCB", "TCB", "MBB"], n_rows)
         df["net_t2_win"] = labels
         df["net_t2_return_pct"] = net_returns
@@ -145,7 +147,8 @@ class TestEnsembleModel:
         result = trainer.train(dataset, feature_cols=feature_cols)
 
         assert result["status"] == "trained"
-        assert result["train_rows"] == 500
+        assert result["train_rows"] == 398  # 80% development, 2 overlapping labels purged
+        assert trainer.metrics["test_size"] == 100
         assert trainer.lgb_model is not None
         assert trainer.xgb_model is not None
         assert trainer.ridge_pipeline is not None
@@ -200,7 +203,7 @@ class TestEnsembleModel:
         result = trainer.daily_update(dataset)
 
         assert result["status"] == "updated"
-        assert result["mode"] == "incremental"
+        assert result["mode"] == "purged_retrain"
 
     def test_ensemble_insufficient_data(self):
         from stock_agent.features.ensemble_model import EnsembleTrainer, EnsembleConfig

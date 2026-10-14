@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from pathlib import Path
+import uuid
 from typing import Any
 
 def clean_nan_inf(obj: Any) -> Any:
@@ -23,10 +25,16 @@ def ensure_parent(path: Path) -> None:
 
 def write_json(path: Path, payload: Any) -> None:
     ensure_parent(path)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    with tmp.open("w", encoding="utf-8") as f:
-        json.dump(clean_nan_inf(payload), f, ensure_ascii=False, indent=2)
-    tmp.replace(path)
+    # Unique temp per writer: concurrent writers never share or truncate one temp file.
+    tmp = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        with tmp.open("x", encoding="utf-8") as f:
+            json.dump(clean_nan_inf(payload), f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        tmp.replace(path)
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def read_json(path: Path, default: Any = None) -> Any:

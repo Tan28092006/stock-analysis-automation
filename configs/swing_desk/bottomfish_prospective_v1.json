@@ -1,0 +1,36 @@
+{
+  "protocol": "bottomfish_prospective_v1",
+  "status": "registered_before_first_log_row",
+  "registered": "2026-10-06",
+  "scope": "Advisory bottom-fish mode of the swing desk. Development data: everything up to 2026-10-06 incl. PNJ 2026 and the BF-doc descriptive study. A green result does not approve trading or larger size.",
+  "config": "configs/swing_desk/bottomfish_v1.json",
+  "unit": "episode = ticker x fall episode (episode_start); clustered by market episode (VNINDEX -5%/5 sessions)",
+  "arms": {
+    "bf_baseline": "VN30 tickers with price-only fall type MARKET (idx_ret_5d <= -5% or PANIC_BEAR with breadth < 40%, idio_ret_10d > -8%), stab_state STAB2 and BF-G3/G4/G7 PASS; excluded if a bf-news record for the session says fact_negative; flagged price_only_classification when no bf-news record exists; P1 standard plan",
+    "bf_knife": "same MARKET-type tickers/episodes with a floor close in the episode; hypothetical entry at the open after the first floor close of the episode (counterfactual; that entry can precede the freeze); same P1 exits",
+    "bf_random": "3 random VN30 tickers with ret_10d <= -10%, seeded by the target session date; P1 plan",
+    "bf_desk": "optional, <= 1 analyst bottom-fish idea per session, type a only (freeze --source bf_desk)",
+    "user_bf": "every check --mode bottomfish (checks.jsonl, mode=bottomfish) and every journal BUY with reason=bottomfish"
+  },
+  "plan_P1": {"entry": "limit close x 1.005 on the next session (no fill -> no_fill)",
+              "lock": "no exit on the entry session and the next one (T+2.5)",
+              "invalidation": "close < panic_low -> exit next open (closes from e+2)",
+              "catastrophe": "close <= fill x 0.88 -> exit next open (closes from e+2)",
+              "exit_signal": "close > SMA5 or close > EMA21 -> exit next open (closes from e+2)",
+              "time_stop": 10,
+              "floor_carry": "an exit planned at the open of a session that closes <= -6.5% is deferred to the next open; count floor_lock_days",
+              "risk": "1% NAV on the effective loss 12 + 7 + 0.6 = 19.6% (user decision 2026-10-06)",
+              "costs": {"primary": 0.4, "stress": 0.6}},
+  "hypotheses": {
+    "BF-H1": "bf_baseline mean net > 0 at 0.6% cost (positive net profit, not merely beating VNINDEX)",
+    "BF-H2": "bf_baseline > bf_random, paired by session",
+    "BF-H3": "bf_baseline - bf_knife (cost/benefit of BF-G3/G4; may be negative)",
+    "BF-H4": "user BF trades tagged BLOCK have lower mean net than PASS; descriptive until >= 30 per group",
+    "BF-H5": "share of user BF checks/trades with BF-B1/B4/B5 violations declines across quarters"
+  },
+  "minimum_sample": {"resolved_episodes_per_arm": 30, "distinct_market_episodes": 3, "months": 12},
+  "analysis": "block bootstrap by market episode; report per episode and per year; cash-restart vs held attribution; monthly new BF episodes and zero-episode months (expected, not a failure); floor_lock_days and no-fill rate",
+  "activity_floor": {"bf": null, "rule": "no quota; never force entries"},
+  "decision": "'not proven' unless the CI > 0 at 0.6% cost in both halves and across >= 3 market episodes; any rule/profile change -> new protocol version",
+  "swing_counter_note": "Adding the bottom-fish modules changes desk_code_hash on swing rows (code_hash covers every module). The change is additive: tests/test_swing_desk_bottomfish_golden.py proves swing check/scan outputs are identical to base 08dc727, and desk_v1.json / prospective_v1.json are unchanged. Recommendation: do NOT reset the swing prospective counters; the coordinator/user decides."
+}

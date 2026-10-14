@@ -17,11 +17,26 @@ services required. Data lives on disk under `data/`.
 | Component | Command | Cadence |
 |---|---|---|
 | **Dashboard + API** | `python -m stock_agent.app` | long-running |
-| **EOD data update** | `python -m stock_agent.pipeline.eod_update` | daily 17:05 T2–T6 |
+| **Scheduled EOD job** (`run_eod_update.bat`, task `StockAgent_EOD_Update`) | `python -m stock_agent.pipeline.foreign_refresh --retry-stale`, then `python -m stock_agent.pipeline.paper_runner --refresh --run` | 17:05 T2–T6 (Windows Task Scheduler) |
+| **Legacy dashboard price refresh** | `python -m stock_agent.pipeline.eod_update` | manual only — not scheduled |
 | **(optional) P(win) model** | `python -c "from stock_agent.features.win_probability import train_and_save; print(train_and_save())"` | once / occasionally |
 
-The dashboard **reads** the price history and caches that the EOD job **writes**. They
-share the `data/` directory — keep it on a persistent volume so updates survive restarts.
+What the 17:05 job writes (local only, no Git publishing since commit `7d788cb`, 22/09/2026):
+
+- `data/foreign_flows_v2/` — verified foreign/proprietary flow runs (see [FOREIGN-FLOWS.md](FOREIGN-FLOWS.md));
+- `data/paper/snapshots/<UTC>/` — a new source-verified VCI price snapshot (VN30 + VNINDEX);
+- `data/paper/runs/<session>/paper.json`, `data/paper/latest.json`, `data/paper/scores/latest.json`;
+- `data/pipeline/eod_update.log` — appended by the BAT.
+
+What it does **not** write: `data/raw/prices_hist/*.csv`, the dashboard scan caches
+(`data/pipeline/{mr,momentum,swing}_scan_cache.json`) and `data/pipeline/forward_test.jsonl`.
+Those are written only by the legacy `eod_update` (manual CLI) or the dashboard's
+`POST /api/data/update`. Unless someone runs that by hand, `prices_hist` and the dashboard
+stay **stale** (they stopped at 21/09/2026 when the push was removed). Re-enabling a
+scheduled `eod_update` is a separate user decision; do not add it to the BAT silently.
+
+The dashboard **reads** `prices_hist` and those caches. They share the `data/` directory —
+keep it on a persistent volume so manual updates survive restarts.
 
 Runtime deps: `libgomp1` (for LightGBM/XGBoost) — already handled in the `Dockerfile`.
 
@@ -93,8 +108,10 @@ changes needed.
      > ⚠️ This HTTP-trigger path (including the `.github/workflows/eod-update.yml` workflow)
      > is **paid-disk only**. On the **free** tier it does NOT work: the fetched data lands
      > on ephemeral storage (lost on redeploy) and the fetch runs from Render's IP which
-     > vnstock blocks. On free tier, refresh via the local `run_eod_update.bat` + `git push`
-     > — see [RENDER-FREE.md](RENDER-FREE.md).
+     > vnstock blocks. The local `run_eod_update.bat` **no longer** runs `eod_update` or
+     > `git push` (removed in commit `7d788cb`, 22/09/2026), so a free-tier deploy receives
+     > no new prices unless someone runs `eod_update` and pushes by hand — see
+     > [RENDER-FREE.md](RENDER-FREE.md).
   Note: Render's *free* web service sleeps after inactivity and does not include a
   persistent disk — a paid instance (or the cheapest paid tier) is needed for the disk +
   always-on behaviour.
@@ -106,12 +123,14 @@ changes needed.
 > Free/ephemeral filesystems lose `data/` on restart. Without a persistent disk the app
 > still boots (bundled prices), but tracked positions and fresh EOD prices won't persist.
 
-### Scheduling the EOD update on PaaS
-The dashboard container does **not** self-schedule. Options:
+### Scheduling the legacy dashboard refresh on PaaS
+The dashboard container does **not** self-schedule. This is the legacy dashboard price
+refresh, separate from the local paper/flow job in §6. Options:
 - A platform **Cron Job** (Render Cron / Railway Cron / `fly machine run … --schedule`)
   running `python -m stock_agent.pipeline.eod_update` **against the same volume**, at
-  10:05 UTC (≈17:05 ICT), Mon–Fri.
-- Or keep the EOD job on a machine at home (§6) and only host the read-only dashboard.
+  10:05 UTC (≈17:05 ICT), Mon–Fri. Nothing like this is configured today.
+- Or keep the EOD job on a machine at home (§6) and only host the read-only dashboard —
+  remembering that the home job no longer refreshes `prices_hist` or the dashboard caches.
 
 ---
 
@@ -151,13 +170,62 @@ schtasks /Create /TN StockAgent_EOD_Update /TR "D:\Chungkhoan\run_eod_update.bat
   /SC WEEKLY /D MON,TUE,WED,THU,FRI /ST 17:05 /F
 ```
 
-**Linux (cron)** — 17:05 ICT is 10:05 UTC:
+The BAT runs exactly two steps and nothing else — no `eod_update`, no git push, no
+broker call, no model retrain:
+
+1. `python -m stock_agent.pipeline.foreign_refresh --retry-stale` — flow collector,
+   bounded retries 60/300/900 s for late-published rows;
+2. `python -m stock_agent.pipeline.paper_runner --refresh --run` — new VCI snapshot,
+   readiness, MR + momentum paper record inside the 16:00 → next session 09:00 VN window,
+   then scoring. It runs even if step 1 failed.
+
+Exit code: the paper exit code wins if non-zero, otherwise the flow exit code. Exit 2 from
+the paper step can mean "scoring blocked" even though `paper.json` **was** recorded — read
+the step status file rather than inferring one cause from the code.
+
+Each step also writes `data/pipeline/eod_status/<session>.json` (atomic; override the folder
+with `VN30_EOD_STATUS_DIR`). `steps.foreign_refresh` holds mode, start/finish UTC, outcome
+(`ready`/`partial`/`blocked`), exit code and manifest paths; `steps.paper_runner` holds
+`outcome` (`recorded`, `already_recorded`, `recorded_scoring_blocked`,
+`recorded_scoring_failed`, `preview_only_outside_window`, `blocked`, `failed`),
+`paper_recorded`, `paper_record_path`, snapshot and scoring status. Exit codes are unchanged;
+a status-write failure only prints a warning.
+
+**Linux (cron)** — 17:05 ICT is 10:05 UTC. Untested mirror of the BAT (no git push):
 ```cron
-5 10 * * 1-5  cd /app && /usr/local/bin/python -m stock_agent.pipeline.eod_update >> data/pipeline/eod_update.log 2>&1
+5 10 * * 1-5  cd /app && (python -m stock_agent.pipeline.foreign_refresh --retry-stale; python -m stock_agent.pipeline.paper_runner --refresh --run) >> data/pipeline/eod_update.log 2>&1
 ```
 
-The EOD job is resilient to vnstock's guest rate-limit (20 req/min): it catches the
-rate-limit `SystemExit`, retries up to 4×, and backs off 20 s.
+The legacy `eod_update` (manual only) is resilient to vnstock's guest rate-limit
+(20 req/min): it catches the rate-limit `SystemExit`, retries up to 4×, and backs off 20 s.
+
+### Daily health check (≈2 minutes, read-only)
+
+Run from the repo root after 17:30 on a trading day. None of these commands fetch data,
+record paper runs or change the schedule.
+
+1. `Get-Content data\pipeline\eod_update.log -Tail 30` — the last block must end with
+   `EOD PAPER SUCCESS`. `FAILED` / `FLOW FAILED` lines name the failing step; a block with
+   no closing line means the job was interrupted (e.g. `^C`, sleep, power loss).
+2. `python -m stock_agent.pipeline.foreign_refresh --status` — expect `"status": "ready"`
+   for today's `expected_session`. A stale `.collect-lock` or a run dir without
+   `manifest.json` keeps it `partial` every day until handled — follow the troubleshooting
+   steps in [FOREIGN-FLOWS.md](FOREIGN-FLOWS.md).
+3. Open `data/pipeline/eod_status/<today>.json` — `steps.paper_runner.paper_recorded`
+   should be `true` and `steps.foreign_refresh.outcome` `ready`. `recorded_scoring_blocked`
+   means the session **is** recorded and only scoring stopped (usually a provider revision;
+   see `data/paper/scores/latest.json`). `data/paper/latest.json` shows the last scan.
+4. `python -m stock_agent.pipeline.paper_runner --status` (read-only) — prints
+   `calendar_warning` (HOSE holiday table about to run out) and `missed_sessions`: trading
+   sessions since the first record with no `runs/<session>/paper.json`. Entries under
+   `missed` had their window close (09:00 VN next session) and are **lost**; never backfill
+   them. `window_open_unrecorded` can still be recorded today. The same block is written to
+   `data/paper/latest.json` on every run.
+5. Remember: `prices_hist` and the dashboard are **not** part of this job; their dates
+   reflect the last manual `eod_update`.
+6. Occasionally: `python -m stock_agent.pipeline.retention_report --days 30` lists snapshot
+   and flow run dirs older than 30 days with sizes, flagging snapshots referenced by paper
+   records. Report only — it deletes nothing, and no deletion policy exists yet.
 
 ---
 

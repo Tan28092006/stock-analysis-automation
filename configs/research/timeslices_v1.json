@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "holdout": false,
+  "live_eligible": false,
+  "start": "2022-09-01",
+  "end": "2026-09-29",
+  "regime": {"index":"VNINDEX", "average":"simple", "window":200, "slope_sessions":20, "lag_sessions":1},
+  "required_calendar_slice": {"start":"2026-01-01", "end":"2026-06-30"},
+  "cash_restart_strategies": ["mr/bracket", "mr/fixed15", "momentum/baseline"],
+  "scenarios": ["normal", "double_cost", "delay_one_session"],
+  "notes": [
+    "Uptrend: prior close > prior SMA200 AND prior SMA200 > SMA200 20 sessions earlier; downtrend reverses both strict comparisons; all other cases transition.",
+    "Every contiguous episode is retained, including one-session whipsaws. No retrospective extrema or minimum-length merging. Episodes end retrospectively but labels were knowable at each session open.",
+    "All fixed calendar half-years are retained, clipped to available evaluation bounds and marked partial; 2026 H1 is complete. Calendar slices may contain multiple regimes.",
+    "Carry attribution includes prior holdings, original rebalance clock, costs and settlement from continuous parent runs. It is not a cash-start backtest or an entry-regime cohort study.",
+    "Cash restarts run the three reference strategies in all three scenarios separately per slice, with full prior warmup, no forced ending liquidation. Restarting monthly momentum resets its first rebalance date; this is a sensitivity analysis, not a tradable switch selected in advance.",
+    "2026 H1 additionally runs every parent ablation/control plus all book variants and their stresses. All other slice ablations/stresses are attributed from unchanged continuous parent replays.",
+    "Carry benchmark uses previous-close to final-close (first evaluation slice uses original first open). Cash restart benchmark uses first open to final close. Never mix denominators.",
+    "Slice win flags are descriptive after-cost return comparisons, not significance claims. Positive net P&L and excess over index are separate flags. A negative return that loses less than index is not profit.",
+    "No pooled 2022-2026 headline acceptance, no treating overlapping calendar/regime slices as independent samples, no aggregate p-value or cherry-picked best slice. Parent inference remains archived, not an approval gate.",
+    "Price-vintage/corporate-action, queue/impact and production execution-parity limitations remain. Backtest profits are simulated, not realized live-money profits."
+  ]
+}

@@ -44,6 +44,8 @@ class DeepResearchModelTests(unittest.TestCase):
                 {
                     "symbol": "AAA" if idx % 2 == 0 else "BBB",
                     "signal_date": day,
+                    "exit_date": (pd.Timestamp(day) + pd.offsets.BDay(2)).date(),
+                    "label_resolved": True,
                     "decision": "BUY_SETUP" if alpha else "WATCH",
                     "rules_version": rules_version,
                     "net_t2_win": alpha,
@@ -75,6 +77,7 @@ class DeepResearchModelTests(unittest.TestCase):
                 self.assertIn(payload["models"]["lstm"]["status"], {"skipped", "failed"})
 
                 signal = SimpleNamespace(
+                    latest_date=str((pd.Timestamp.now(tz="UTC") + pd.Timedelta(days=1)).date()),
                     evidence=[RuleEvidence("AAA:alpha", "alpha", True, 1, "ok")],
                     features={
                         "close": 120.0,

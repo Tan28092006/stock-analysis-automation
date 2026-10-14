@@ -1,0 +1,163 @@
+{
+  "activity_floor": {
+    "applies_to": "monthly portfolio activity; reported separately from add-ons; never forced",
+    "distinct_entry_days_per_month_min": 3,
+    "flat_to_long_entries_per_month_min": 4,
+    "status": "not_evaluated_in_R5"
+  },
+  "artifact_hashes": {
+    "dataset_manifest.json": "f68124a65d4fefce43cf2d0ca9118e10446b6783071c716f0dbc1f40f4fdb331",
+    "environment.json": "4fd27cc8ebf3b22556c0a1d1d4f47c0fc02968668a433b9fb0f95cc7901a7065",
+    "metrics.json": "2c593056c17dfcced2d3c3be4ae392949a94653981e83990e45f5b5b8188e639",
+    "portfolio/README.json": "f153cfd17e385de0cf372f832cf41144a9fc259ca1e4f5475a35c1d04d9710e5",
+    "predictions/README.json": "d7947c06080e93b7e94b7a26ab1fd321418452ed14d9ff89f73657d3bc61c1df",
+    "regression/README.json": "f479b94c027480f77507da84c01ea36aefafac9f81fe7cad0999a09afcd2a599",
+    "source_manifest.json": "d0eef63056106b212e1ef860cb7642b4c8b704cb0c80372977a693b91d1f2d43",
+    "splits.json": "7c2cd5c2ea40bf373a6bd26ed8f89cb54c10ecf6aa43a6847fdea78e75e71ab2",
+    "transforms/README.json": "be31e6166156e87455f5aa9ac6e36b5a20099bc9732335af80b7c511a578448d"
+  },
+  "git_commit": "a7099a4f5e6bca9760de96951cd0c74b708aa3fd",
+  "hypotheses": [
+    "H-MO02(simplified, per-lot)"
+  ],
+  "protocol": {
+    "activity": "Monthly activity floor is a portfolio property: not evaluated in R5 weekly lane (needs R7 replay); reported as not_evaluated.",
+    "controls": [
+      "m0_rule_only",
+      "universe_equal_weight_pit",
+      "label_shuffle_within_date_train_only"
+    ],
+    "costs": {
+      "commission_pct": 0.15,
+      "sell_tax_pct": 0.1,
+      "slippage_pct": 0.1
+    },
+    "data": {
+      "decision_window": {
+        "end": "2026-09-29",
+        "start": "2022-09-01"
+      },
+      "f1_f4": "BLOCKED: no PIT breadth/sector sources",
+      "foreign_f3": "BLOCKED: no verified foreign v2 vintages in the pinned snapshot; F3 trials not run",
+      "manifest": "tests/fixtures/research/research-snapshot-v1.zip (extracted manifest.json)",
+      "membership": "configs/research/vn30_membership_2022_2026.json",
+      "rules": "configs/rules_mr.json"
+    },
+    "decision_rule": "Per-lot diagnostics only: weekly full turnover, no NAV, no participation/capacity. A positive result is INCONCLUSIVE until the R7 portfolio regression passes. Floors unmet => BLOCKED. All trials retained.",
+    "feature_families": {
+      "f0_momentum": [
+        "f0_mom_126_21",
+        "f0_high_prox_120"
+      ],
+      "f0_reversal": [
+        "f0_ret_1",
+        "f0_ret_5"
+      ],
+      "f0_risk": [
+        "f0_vol_20",
+        "f0_drawdown_60"
+      ],
+      "f0_volume": [
+        "f0_volume_anomaly_20"
+      ],
+      "f2_liquidity": [
+        "f2_adv_value_20"
+      ]
+    },
+    "floor_application": "Ranking lane is governed by the date floors (>=120 train dates, >=40 test dates per fold). The 50 events/class floor applies only to classification targets (MR lane, unchanged from v1); stock rows within a date are not independent events and are never counted toward any floor.",
+    "floors": {
+      "activity": {
+        "applies_to": "monthly portfolio activity; reported separately from add-ons; never forced",
+        "distinct_entry_days_per_month_min": 3,
+        "flat_to_long_entries_per_month_min": 4
+      },
+      "events_per_class_min": 50,
+      "source": "user decision 2026-10-04",
+      "test_dates_min": 40,
+      "train_dates_min": 120
+    },
+    "folds": {
+      "first_train_dates": 121,
+      "note": "121 first train dates so >=120 remain after the one-date purge; folds = as many full 40-date test blocks as fit",
+      "scheme": "expanding date folds, fixed geometry, purge by label_available_at",
+      "test_block_dates": 40
+    },
+    "independence_rule": "Decision dates are every 5th session of the VNINDEX calendar from 2022-09-01 (index 0,5,10,...). Entry = next open, exit = close of entry+5 sessions, so consecutive lot return windows do not overlap (exit close t+6 precedes the next entry only at the same session's open). A date counts as independent only on that rule; overlapping or daily dates never count toward floors.",
+    "inference": {
+      "alpha": 0.05,
+      "block_lengths_dates": [
+        4,
+        8
+      ],
+      "correction": "Bonferroni over the 2 primary comparisons; ablations and controls are descriptive only; unknown past trials not corrected",
+      "draws": 4000,
+      "method": "paired circular block bootstrap on date-level (top10 - universe) net return",
+      "primary_family": [
+        "m0_vs_universe",
+        "m1_baseline_vs_universe"
+      ],
+      "seed": 20261004
+    },
+    "metrics": {
+      "ranking": [
+        "rank_ic_by_date"
+      ],
+      "system": [
+        "top10_mean_net_pct",
+        "universe_mean_net_pct",
+        "excess_mean_pct",
+        "bootstrap_ci"
+      ]
+    },
+    "model_m1": {
+      "ridge": {
+        "alpha": 10.0
+      },
+      "seed": 20261004,
+      "top_k": 10
+    },
+    "not_run_here": [
+      "NAV replay, delay stress, VN100 (R7)",
+      "F3 foreign (no verified vintages)",
+      "ensembles (R6)"
+    ],
+    "parent": "ml_research_v1",
+    "preprocessing": {
+      "missing_indicators": true,
+      "scaler": "robust",
+      "winsor": [
+        0.01,
+        0.99
+      ]
+    },
+    "protocol": "ml_research_v2_weekly",
+    "registered_on": "2026-10-04",
+    "schema_version": 1,
+    "status_note": "Registered before any weekly-lane result. v1 stays as recorded (BLOCKED). Development data only; not a live approval.",
+    "stress": {
+      "cost_x2": "subtract the round-trip cost a second time per lot (per-lot diagnostic only)",
+      "delay_one_session": "not run (R7)"
+    },
+    "tasks": {
+      "mom_5_weekly": {
+        "decision_dates": "every 5th session (see independence_rule)",
+        "label": "mom_5",
+        "m0": "formation_6_1 rank (f0_mom_126_21), top 10 equal weight",
+        "m1": "ridge on 5-session net return, top 10",
+        "universe_control": "PIT VN30 equal weight same dates"
+      }
+    },
+    "trials": [
+      "baseline_all_features",
+      "drop_f0_reversal",
+      "drop_f0_momentum",
+      "drop_f0_risk",
+      "drop_f0_volume",
+      "drop_f2_liquidity"
+    ],
+    "user_decision": "2026-10-04: switch momentum R5 to a weekly lane; floors unchanged from v1"
+  },
+  "sample_floors": {
+    "dates": 160
+  }
+}

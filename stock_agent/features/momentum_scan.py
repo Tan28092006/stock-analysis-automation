@@ -18,6 +18,7 @@ handles risk. See memory: momentum-excess-gate, crash-response-by-shape.
 from __future__ import annotations
 
 import json
+import logging
 import math
 from pathlib import Path
 
@@ -25,6 +26,7 @@ import numpy as np
 import pandas as pd
 
 from ..config import compute_rules_hash, load_json
+from ..data.eod import read_eod_csv, scan_input_snapshot
 from .indicators import ema
 from .mr_scan import PRICES_DIR, MR_RULES_PATH, _load_frames, _market_state
 from .position_manager import money_cfg
@@ -36,6 +38,7 @@ TARGET_VOL = 0.20        # annualized portfolio vol target
 DEFAULT_TOP_N = 10
 BUFFER_MULT = 2          # hold a name until it leaves the top (2 x top_n)
 CACHE_PATH = Path("data/pipeline/momentum_scan_cache.json")
+_log = logging.getLogger(__name__)
 
 
 def _vn30() -> set:
@@ -46,12 +49,14 @@ def _vn30() -> set:
         return set()
 
 
-def _market_vol() -> float:
+def _market_vol(prices_dir: Path | None = None) -> float:
     """VNINDEX 20-day realized vol, annualized (latest)."""
-    idx = PRICES_DIR / "VNINDEX.csv"
+    idx = (prices_dir if prices_dir is not None else PRICES_DIR) / "VNINDEX.csv"
     if not idx.exists():
         return TARGET_VOL
-    df = pd.read_csv(idx)
+    df = read_eod_csv(idx)
+    if df.empty:
+        return TARGET_VOL
     r = df["close"].pct_change()
     v = r.rolling(20, min_periods=10).std().iloc[-1] * math.sqrt(252)
     return float(v) if np.isfinite(v) else TARGET_VOL
@@ -73,14 +78,16 @@ def _rank(frames: dict) -> list[tuple]:
     return scored
 
 
-def _compute(top_n: int) -> dict:
+def _compute(top_n: int, *, prices_dir: Path | None = None,
+             include_positions: bool = True) -> dict:
+    prices_dir = prices_dir if prices_dir is not None else PRICES_DIR
     rules = load_json(MR_RULES_PATH)
     cfg = money_cfg(rules)
-    frames = _load_frames(PRICES_DIR)
-    market = _market_state(PRICES_DIR, frames)
+    frames = _load_frames(prices_dir)
+    market = _market_state(prices_dir, frames)
     vn30 = _vn30()
 
-    mvol = _market_vol()
+    mvol = _market_vol(prices_dir)
     exposure = min(1.0, TARGET_VOL / max(mvol, 1e-6))   # de-risk when vol high
     ranked = _rank(frames)
     top = ranked[:top_n]
@@ -103,7 +110,7 @@ def _compute(top_n: int) -> dict:
     positions, sell_alerts = [], []
     try:
         from .position_manager import PositionStore, check_momentum_positions
-        positions = check_momentum_positions(PositionStore(), buffer_syms, True)
+        positions = check_momentum_positions(PositionStore(), buffer_syms, True) if include_positions else []
         sell_alerts = [p for p in positions if p.get("live_status") == "SELL"]
     except Exception:
         pass
@@ -115,6 +122,8 @@ def _compute(top_n: int) -> dict:
         "active": True,           # always on; vol-targeting handles risk (no RISK_ON gate)
         "market": market,
         "top_n": top_n,
+        "scanned_symbols": sorted(frames),
+        "momentum_ineligible": sorted(set(frames) - {s for s, *_ in ranked}),
         "exposure_pct": round(exposure * 100, 0),
         "market_vol_pct": round(mvol * 100, 0),
         "buffer_symbols": sorted(buffer_syms),
@@ -128,29 +137,36 @@ def _compute(top_n: int) -> dict:
 
 
 def momentum_scan(top_n: int = DEFAULT_TOP_N, force: bool = False) -> dict:
+    from .scan_guard import readiness, blocked
+    status = readiness(PRICES_DIR)
+    if not status["data_ready"]:
+        return blocked(status, "quant_momentum_12_1")
     rules_hash = compute_rules_hash(load_json(MR_RULES_PATH))
+    snapshot = scan_input_snapshot(PRICES_DIR)
     if not force and CACHE_PATH.exists():
         try:
             cached = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
             latest = None
             idx = PRICES_DIR / "VNINDEX.csv"
             if idx.exists():
-                latest = str(pd.read_csv(idx)["date"].astype(str).str.slice(0, 10).max())
-            if cached.get("rules_hash") == rules_hash and cached.get("data_date") == latest and cached.get("top_n") == top_n:
+                latest = str(read_eod_csv(idx)["date"].max())
+            if (cached.get("rules_hash") == rules_hash and cached.get("data_date") == latest
+                    and cached.get("top_n") == top_n and cached.get("input_snapshot") == snapshot):
                 try:
                     from .position_manager import PositionStore, check_momentum_positions
                     buf = set(cached.get("buffer_symbols", []))
                     cached["positions"] = check_momentum_positions(PositionStore(), buf, True)
                     cached["sell_alerts"] = [p for p in cached["positions"] if p.get("live_status") == "SELL"]
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _log.warning("momentum_scan position refresh failed; serving cached positions: %r", exc)
                 return cached
-        except Exception:
-            pass
+        except Exception as exc:
+            _log.warning("momentum_scan cache read failed (%s); recomputing: %r", CACHE_PATH, exc)
     payload = _compute(top_n)
+    payload["input_snapshot"] = snapshot
     try:
         CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         CACHE_PATH.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
-    except Exception:
-        pass
+    except Exception as exc:
+        _log.warning("momentum_scan cache write failed (%s); serving uncached result: %r", CACHE_PATH, exc)
     return payload

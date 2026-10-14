@@ -1,0 +1,6 @@
+{
+  "as_of": "2026-09-29",
+  "limitations": "source bytes, hash, OHLCV validity and completed-session freshness only",
+  "manifest_sha256": "21b2deff6694a2a7218c861a681524b91f311617fc1e84de0598fc8001e155d0",
+  "symbols": 40
+}

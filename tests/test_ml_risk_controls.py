@@ -35,24 +35,24 @@ class TestMLRiskControls:
         assert processed["rule_ema_trend"].tolist() == [1, 0, 1, 0, 1]
         
         # check imputation
-        # RSI: neutral is 50. Row 0: NaN -> filled with 50. Row 2: inf -> ffilled to 45. Row 3: NaN -> ffilled to 45.
+        # Row-local defaults: never forward-fill values from another stock/date.
         assert processed["feature_rsi14"].iloc[0] == 50.0
-        assert processed["feature_rsi14"].iloc[2] == 45.0
-        assert processed["feature_rsi14"].iloc[3] == 45.0
+        assert processed["feature_rsi14"].iloc[2] == 50.0
+        assert processed["feature_rsi14"].iloc[3] == 50.0
         
-        # Volume ratio: neutral is 1.0. Row 1: NaN -> ffilled to 1.5. Row 2: -inf -> ffilled to 1.5. Row 4: NaN -> ffilled to 1.2.
-        assert processed["feature_volume_ratio_20"].iloc[1] == 1.5
-        assert processed["feature_volume_ratio_20"].iloc[2] == 1.5
-        assert processed["feature_volume_ratio_20"].iloc[4] == 1.2
+        # Volume ratio: neutral is 1.0.
+        assert processed["feature_volume_ratio_20"].iloc[1] == 1.0
+        assert processed["feature_volume_ratio_20"].iloc[2] == 1.0
+        assert processed["feature_volume_ratio_20"].iloc[4] == 1.0
         
-        # Cross rsi rank: neutral is 0.5. Row 0, 1: NaN -> filled with 0.5. Row 3: NaN -> ffilled to 0.4.
+        # Cross rsi rank: neutral is 0.5.
         assert processed["feature_cross_rsi14_rank"].iloc[0] == 0.5
         assert processed["feature_cross_rsi14_rank"].iloc[1] == 0.5
-        assert processed["feature_cross_rsi14_rank"].iloc[3] == 0.4
+        assert processed["feature_cross_rsi14_rank"].iloc[3] == 0.5
         
-        # Return 1d: neutral is 0.0. Row 1: NaN -> ffilled to 0.02. Row 3: NaN -> ffilled to -0.01.
-        assert processed["feature_return_1d"].iloc[1] == 0.02
-        assert processed["feature_return_1d"].iloc[3] == -0.01
+        # Return 1d: neutral is 0.0.
+        assert processed["feature_return_1d"].iloc[1] == 0.0
+        assert processed["feature_return_1d"].iloc[3] == 0.0
 
     def test_preprocess_features_robust_winsorization(self):
         # Create a df with an outlier
@@ -79,7 +79,7 @@ class TestMLRiskControls:
         assert processed_new["feature_return_1d"].iloc[0] == lower
         assert processed_new["feature_return_1d"].iloc[2] == upper
 
-    def test_dynamic_threshold_adjustments(self):
+    def test_dynamic_threshold_adjustments(self, tmp_path, monkeypatch):
         # Mock signal with different regimes and volatilities
         class MockSignal:
             def __init__(self, features, evidence):
@@ -87,6 +87,7 @@ class TestMLRiskControls:
                 self.evidence = evidence
                 self.decision = "BUY_SETUP"
                 self.score = 60
+                self.latest_date = "2026-06-10"
                 
         # Setup mock rules
         rules = {"ml": {"enabled": True, "model_family": "ensemble", "probability_threshold": 0.55}}
@@ -95,6 +96,12 @@ class TestMLRiskControls:
         # We need a mock trainer registered or cached
         from unittest.mock import MagicMock
         import stock_agent.features.ml_models as ml_mod
+
+        # This unit test must not require a trained registry in the developer's
+        # ignored data directory or pick up local symbol-threshold overrides.
+        monkeypatch.chdir(tmp_path)
+        registry = tmp_path / 'synthetic_ensemble_registry.json'
+        monkeypatch.setattr(ml_mod, 'ENSEMBLE_REGISTRY_PATH', registry)
         
         mock_trainer = MagicMock()
         mock_trainer.predict_single.return_value = (0.6, {
@@ -102,17 +109,23 @@ class TestMLRiskControls:
             "shap_top5": {},
             "base_probabilities": {}
         })
-        mock_trainer.trained_at = "2026-06-08T12:00:00"
+        mock_trainer.trained_at = "2026-06-08T00:00:00+00:00"
+        mock_trainer.training_metadata = {"training_protocol": "purged-eod-v2",
+                                          "fit_label_end": "2026-05-01", "evaluation_label_end": "2026-06-01"}
         
         # Inject mock trainer
-        ml_mod._cached_ensemble_trainer = mock_trainer
+        monkeypatch.setattr(ml_mod, '_cached_ensemble_trainer', mock_trainer)
         
         # Test Case 1: Normal regime and typical volatility
         signal_normal = MockSignal(
             features={"atr_pct": 0.025, "regime_trend": 1.0, "regime_vol_class": 1.0},
             evidence=[RuleEvidence(evidence_id="rule:ema_trend", name="EMA Trend", passed=True, points=10.0, detail="Passed")]
         )
+        unavailable = _predict_ensemble("FPT", signal_normal, rules, ml_rules)
+        assert unavailable.status == 'unavailable' and unavailable.threshold is None
+        registry.write_text('{}', encoding='utf-8')
         res_normal = _predict_ensemble("FPT", signal_normal, rules, ml_rules)
+        assert res_normal.status == 'available'
         # Expected: base 0.55 + vol_adjust(0) + regime_adjust(0) = 0.55
         assert abs(res_normal.threshold - 0.55) < 0.001
         assert res_normal.passed is True  # prob 0.6 >= threshold 0.55
@@ -131,5 +144,4 @@ class TestMLRiskControls:
         assert abs(res_bear_vol.threshold - 0.70) < 0.005
         assert res_bear_vol.passed is False  # prob 0.6 < threshold 0.70
         
-        # Clear cache
-        ml_mod.clear_ensemble_cache()
+        # monkeypatch restores the previous cache even when an assertion fails.

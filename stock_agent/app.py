@@ -29,6 +29,27 @@ import threading
 # Background data-update state (fetch fresh EOD prices -> rebuild scans). Separate from
 # "re-scan" which only recomputes on the data already on disk.
 _DATA_UPDATE = {"running": False, "message": "idle", "last_result": None}
+_DATA_UPDATE_LOCK = threading.Lock()  # makes check-and-start of the background update atomic
+
+
+def _start_data_update() -> bool:
+    """Start one background update; False if one is already running (no second writer)."""
+    with _DATA_UPDATE_LOCK:
+        if _DATA_UPDATE["running"]:
+            return False
+        _DATA_UPDATE["running"] = True
+        _DATA_UPDATE["message"] = "Đang tải giá EOD mới nhất (vnstock, có thể vài phút)..."
+    try:
+        threading.Thread(target=_do_data_update, daemon=True).start()
+    except BaseException:
+        _finish_data_update()
+        raise
+    return True
+
+
+def _finish_data_update() -> None:
+    with _DATA_UPDATE_LOCK:
+        _DATA_UPDATE["running"] = False
 
 
 def _do_data_update() -> None:
@@ -47,7 +68,7 @@ def _do_data_update() -> None:
     except BaseException as exc:  # vnstock rate limiter can raise SystemExit
         _DATA_UPDATE["message"] = f"Lỗi cập nhật: {repr(exc)[:140]}"
     finally:
-        _DATA_UPDATE["running"] = False
+        _finish_data_update()
 
 
 # --- HTTP Basic auth -------------------------------------------------------------------
@@ -332,8 +353,7 @@ class StockAgentHandler(BaseHTTPRequestHandler):
                 _json_response(self, {"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
             return
         if parsed.path == "/api/data/update":
-            if not _DATA_UPDATE["running"]:
-                threading.Thread(target=_do_data_update, daemon=True).start()
+            _start_data_update()
             _json_response(self, _DATA_UPDATE, status=HTTPStatus.ACCEPTED)
             return
         if parsed.path == "/api/momentum/positions":

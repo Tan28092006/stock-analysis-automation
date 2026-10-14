@@ -17,10 +17,13 @@ class ExchangeCalendarTests(unittest.TestCase):
 
     def test_known_holidays_are_not_trading_days(self):
         for holiday in [
+            date(2026, 1, 2),
             date(2026, 2, 17),
             date(2026, 4, 27),
             date(2026, 4, 30),
             date(2026, 5, 1),
+            date(2026, 8, 31),
+            date(2026, 9, 1),
             date(2026, 9, 2),
         ]:
             self.assertFalse(is_trading_day(holiday))

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "coverage_start": "2022-08-01", "coverage_end": "2026-09-29",
+  "member_count": 30, "initial_known_on": "2022-07-26",
+  "initial_members": ["ACB","BID","BVH","CTG","FPT","GAS","GVR","HDB","HPG","KDH","MBB","MSN","MWG","NVL","PDR","PLX","POW","SAB","SSI","STB","TCB","TPB","VCB","VHM","VIB","VIC","VJC","VNM","VPB","VRE"],
+  "initial_source": "https://static2.vietstock.vn/vietstock/2022/7/26/20220726_hose_220726_hose_index_7_2022__attached_file_.pdf",
+  "changes": [
+    {"known_on":"2023-01-18","effective_on":"2023-02-06","add":["BCM"],"remove":["KDH"],"source":"https://www.vndirect.com.vn/en/etf-monitor-vn30-vndiamond-vnfinlead-review-results/"},
+    {"known_on":"2023-08-02","effective_on":"2023-08-07","add":["SSB","SHB"],"remove":["NVL","PDR"],"source":"https://www.vndirect.com.vn/Market-Strategy_August_20230802.pdf"},
+    {"known_on":"2025-02-03","effective_on":"2025-02-03","add":["LPB"],"remove":["POW"],"source":"https://mobi.fireant.vn/News/NewsAttachedFile/1732373","note":"Conservative availability bound; first session may retain old membership until close."},
+    {"known_on":"2025-07-16","effective_on":"2025-08-04","add":["DGC"],"remove":["BVH"],"source":"https://www.ssi.com.vn/khach-hang-ca-nhan/ban-tin-etf?page=2"},
+    {"known_on":"2026-01-23","effective_on":"2026-02-02","add":["VPL"],"remove":["BCM"],"source":"https://www.ssi.com.vn/khach-hang-ca-nhan/ban-tin-etf"},
+    {"known_on":"2026-05-08","effective_on":"2026-05-13","add":["BSR"],"remove":["DGC"],"source":"https://www.ssi.com.vn/khach-hang-ca-nhan/ban-tin-etf"},
+    {"known_on":"2026-07-16","effective_on":"2026-08-03","add":["MCH","TCX"],"remove":["PLX","TPB"],"source":"https://www.ssi.com.vn/khach-hang-ca-nhan/ban-tin-etf"}
+  ],
+  "unchanged_reviews": [
+    {"date":"2024-01-17","source":"https://www.vndirect.com.vn/ETF-Report_Jan_20240117.pdf"},
+    {"date":"2024-07-17","source":"https://www.vndirect.com.vn/cmsupload/beta/Daily-Market-Recap-July-17-2024-BMP-Earnings-Flash-MBB-Update.pdf"}
+  ],
+  "limitations":["Manually reconstructed public membership, not archival exchange feed.","Conservative known_on at close; not open.","Provider-adjusted price vintage and corporate actions are not point-in-time certified."]
+}

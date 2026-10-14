@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "coverage_start": "2025-02-03",
+  "coverage_end": "2026-09-25",
+  "member_count": 30,
+  "initial_known_on": "2025-02-03",
+  "initial_members": ["ACB", "BCM", "BID", "BVH", "CTG", "FPT", "GAS", "GVR", "HDB", "HPG", "LPB", "MBB", "MSN", "MWG", "PLX", "SAB", "SHB", "SSB", "SSI", "STB", "TCB", "TPB", "VCB", "VHM", "VIB", "VIC", "VJC", "VNM", "VPB", "VRE"],
+  "initial_source": "https://mobi.fireant.vn/News/NewsAttachedFile/1732373",
+  "initial_source_note": "Original HOSE January 2025 constituent document, page 1, mirrored by FireAnt. Initial known_on is a conservative availability bound, not the announcement date.",
+  "changes": [
+    {
+      "known_on": "2025-07-16",
+      "effective_on": "2025-08-04",
+      "add": ["DGC"],
+      "remove": ["BVH"],
+      "source": "https://www.ssi.com.vn/khach-hang-ca-nhan/ban-tin-etf?page=2",
+      "effective_date_source": "https://masvn.com/api/attachment/file/1751856428359-202507ForecastHOSEIndexesreviewin3_25_VN.pdf",
+      "note": "SSI July 16 final-result summary confirms DGC/BVH. August 4 schedule is in the July 7 Mirae Asset calendar; prior HOSE document explicitly ends August 1. Membership is not taken from the forecast."
+    },
+    {
+      "known_on": "2026-01-23",
+      "effective_on": "2026-02-02",
+      "add": ["VPL"],
+      "remove": ["BCM"],
+      "source": "https://www.ssi.com.vn/khach-hang-ca-nhan/ban-tin-etf",
+      "constituent_document": "https://static2.vietstock.vn/vietstock/2026/1/21/21012026_cbtt___danh_sach_thanh_phan_hose_index_thang_1_2026.pdf",
+      "note": "SSI January 23 final-result summary, conservatively later than the January 21 HOSE document."
+    },
+    {
+      "known_on": "2026-05-08",
+      "effective_on": "2026-05-13",
+      "add": ["BSR"],
+      "remove": ["DGC"],
+      "source": "https://www.ssi.com.vn/khach-hang-ca-nhan/ban-tin-etf",
+      "note": "SSI May 8 summary of the May 7 HOSE notice, off-cycle replacement."
+    },
+    {
+      "known_on": "2026-07-16",
+      "effective_on": "2026-08-03",
+      "add": ["MCH", "TCX"],
+      "remove": ["PLX", "TPB"],
+      "source": "https://www.ssi.com.vn/khach-hang-ca-nhan/ban-tin-etf",
+      "note": "SSI July 16 final-result summary; effective August 3."
+    }
+  ],
+  "limitations": [
+    "Manually reconstructed index membership from cited public records, not an archival exchange feed.",
+    "Daily known_on means usable at that day's close, never at its open.",
+    "No claims about corporate-action adjustment lineage, investability, index weights, or membership outside coverage."
+  ]
+}

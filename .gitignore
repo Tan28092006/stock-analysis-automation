@@ -44,3 +44,23 @@ catboost_info/
 /optimize_test.json
 /optimize_test_widen.json
 data/pipeline/eod_update.log
+data/pipeline/eod_status/
+
+# Isolated live-source snapshots and immutable paper records (local runtime state).
+data/paper/
+# Long daily price history stores (immutable runtime state; see docs/HISTORY-STORE.md).
+data/history/
+data/foreign_flows_v2/
+
+# Swing desk: private journal and generated runtime state (only docs/examples/prompts/triggers are tracked).
+swing_desk/portfolio.txt
+swing_desk/*.txt
+!swing_desk/portfolio.example.txt
+swing_desk/state/
+swing_desk/snapshots/
+swing_desk/checks/
+swing_desk/recommendations/
+swing_desk/sentiment/
+swing_desk/runs/
+swing_desk/events/
+swing_desk/logs/

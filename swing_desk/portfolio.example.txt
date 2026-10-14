@@ -1,0 +1,21 @@
+# Swing desk journal — EXAMPLE with fake rows. Copy to swing_desk/portfolio.txt (git-ignored) and edit.
+# One event per line, '|'-separated, '#' comments and blank lines ignored. The desk never rewrites this file.
+# Required: date|action|ticker|amount_vnd|price (fields may be empty where the action allows it).
+#   action    BUY, SELL, THESIS, CASH (+deposit / -withdraw), NAV (explicit NAV statement)
+#   BUY       amount_vnd, or qty and price; missing price -> that session's close (price_estimated)
+#   SELL      qty empty = sell everything held (FIFO)
+#   reason    BUY: S1, S2, A-code, news, forum, tip, kol, group, other, bottomfish
+#             SELL: target, stop, time, sma5, invalid, rebalance, other
+#   gate      PASS, WARN, BLOCK, NONE (empty -> filled from checks.jsonl for the same session, else NONE)
+#   emotion   calm, confident, fomo, fear, revenge, hope, hype, bored, other
+#   note      free text; 'plan=scalein' on the FIRST lot (or an earlier THESIS) exempts averaging down (B4)
+#             bottomfish keys (';'-separated): BUY bf_type=a|b|c; profile=P1|P2|P3; episode=TICKER-YYYYMMDD;
+#             attempt=n; tranche=k/n; why=code. THESIS: invalid=; time_stop=YYYY-MM-DD; max_attempts=n; target=; checklist=done
+# date      |action|ticker|amount_vnd |price  |qty |reason |gate |emotion|thesis_id|note
+2026-10-01  |NAV   |      |1000000000 |       |    |       |     |       |         |starting NAV
+2026-10-07  |BUY   |HPG   |50000000   |27350  |    |S1     |PASS |calm   |T001     |rsi2 3.1
+2026-10-07  |THESIS|HPG   |           |       |    |       |     |       |T001     |S1 dip; stop 26530; target 28800; invalid if VNI < EMA50
+2026-10-12  |SELL  |HPG   |           |28100  |1828|target |     |calm   |T001     |
+2026-10-08  |BUY   |VIC   |80000000   |       |    |forum  |NONE |fomo   |         |group tip
+2026-11-03  |THESIS|HPG   |           |       |    |       |     |       |T020     |bf_type=a; profile=P1; invalid=close<24100; time_stop=2026-11-17; max_attempts=1; target=26500; checklist=done
+2026-11-03  |BUY   |HPG   |280000     |25000  |    |bottomfish|PASS|calm  |T020     |bf_type=a; profile=P1; episode=HPG-20261028; attempt=1

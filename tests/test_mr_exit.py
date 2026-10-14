@@ -85,19 +85,19 @@ def test_forward_test_wrapper_matches():
 
 
 def test_position_manager_wrapper_matches(tmp_path, monkeypatch):
-    # check_positions: recorded position entered on d0 (entry bar = idx0), stop 90.
+    # check_positions: recorded position entered on first EOD bar, stop 90.
     # Anchored on entry_date (not signal+1) — but uses the SAME exit loop.
     from stock_agent.features import position_manager as pm
     f = _frame([
-        ("d0", 100, 102, 98, 100),   # entry_date bar (idx0)
-        ("d1", 100, 101, 99, 100),   # inside lock
-        ("d2", 100, 101, 88, 100),   # idx2 = entry+2, first tradable -> stop 90 hit
-        ("d3", 100, 130, 80, 100),
+        ("2026-07-06", 100, 102, 98, 100),   # entry_date bar (idx0)
+        ("2026-07-07", 100, 101, 99, 100),   # inside lock
+        ("2026-07-08", 100, 101, 88, 100),   # idx2 = entry+2 -> stop 90 hit
+        ("2026-07-09", 100, 130, 80, 100),
     ])
     monkeypatch.setattr(pm, "PRICES_DIR", tmp_path)
     f.to_csv(tmp_path / "TEST.csv", index=False)
     store = pm.PositionStore(path=tmp_path / "pos.json")
-    store.add(symbol="TEST", entry_date="d0", entry_price=100.0, stop=90.0,
+    store.add(symbol="TEST", entry_date="2026-07-06", entry_price=100.0, stop=90.0,
               target=120.0, max_hold_days=10, qty=100)
     res = pm.check_positions(store)
     assert len(res) == 1

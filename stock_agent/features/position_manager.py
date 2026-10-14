@@ -19,6 +19,7 @@ from datetime import date
 from pathlib import Path
 
 import pandas as pd
+from ..data.eod import read_eod_csv
 
 from .mr_exit import simulate_mr_exit
 
@@ -138,7 +139,7 @@ def _symbol_frame(symbol: str) -> pd.DataFrame | None:
     p = PRICES_DIR / f"{symbol.upper()}.csv"
     if not p.exists():
         return None
-    df = pd.read_csv(p)
+    df = read_eod_csv(p)
     df["date"] = df["date"].astype(str).str.slice(0, 10)
     return df.sort_values("date").reset_index(drop=True)
 

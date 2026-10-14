@@ -1,0 +1,2 @@
+# Sealed research evidence bundles are hashed byte-for-byte; never convert line endings.
+docs/audits/*-bundle/** -text

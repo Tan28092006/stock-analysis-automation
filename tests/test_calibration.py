@@ -146,6 +146,8 @@ class CalibrationModelTests(unittest.TestCase):
                 {
                     "symbol": "AAA" if idx % 2 == 0 else "BBB",
                     "signal_date": day,
+                    "exit_date": (pd.Timestamp(day) + pd.offsets.BDay(2)).date(),
+                    "label_resolved": True,
                     "decision": "BUY_SETUP" if alpha else "WATCH",
                     "rules_version": compute_rules_hash(load_rules()),
                     "net_t2_win": win,

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "holdout": false,
+  "live_eligible": false,
+  "future_boundary": "2026-10-01",
+  "parent_registry": "configs/research/research_gate_v1.json",
+  "variants": ["baseline", "weekly", "slope90", "quality", "breakout50", "breakout50_volume"],
+  "comparators": {"weekly":"baseline", "slope90":"weekly", "quality":"weekly", "breakout50":"weekly", "breakout50_volume":"breakout50"},
+  "scenarios": ["normal", "double_cost", "delay_one_session"],
+  "family": 27,
+  "bootstrap_blocks": [20, 40],
+  "min_sessions": 252,
+  "alpha": 0.05,
+  "hypotheses": {
+    "weekly": "Change only rebalance cadence to first VN trading session of each ISO week; compare monthly. More buys may be cost-only churn.",
+    "slope90": "Weekly rank using (exp(252 * OLS slope of log close on time over 90 sessions)-1) * R-squared. Same 254-bar eligibility, sizing and buffer as control. Clenow-inspired ranking only, not full book replication.",
+    "quality": "Weekly: first top20 12-1 momentum, then rank by negative information discreteness: -sign(12-1 return)*(fraction negative minus fraction positive daily returns over formation). Ties use 12-1 then symbol. Keep top20 hold buffer and inverse-vol sizing. Gray/Vogel-inspired two-stage adaptation to 30 names, not their published strategy.",
+    "breakout50": "Weekly control targets, but each attempted purchase requires prior completed close > max high of preceding 50 sessions (excluding signal bar). Apply to new and add-on buys. A channel-breakout proxy, not CAN SLIM or chart-pattern replication.",
+    "breakout50_volume": "Same breakout gate plus signal-bar volume >=1.5 * preceding 50-session average volume. Compare breakout without volume to isolate incremental signal. O'Neil/IBD-inspired price-volume proxy only. No historical earnings availability, no claim to full CAN SLIM."
+  },
+  "invariants": [
+    "All 10 parent windows, PIT membership, prior-close inputs, next-open execution, fees, T+3 settlement, no leverage.",
+    "180 portfolio trials = 10 windows x 6 variants x 3 execution/cost scenarios. No parameter grid search, combined winners, or threshold retuning after results.",
+    "Weekly membership and gates are rechecked before every retry. Delay stress may use newly completed entry evidence, but quantities remain from scheduled decision.",
+    "Frequency counts separate filled buys, flat-to-long entries, additions, unique buy dates and rebalances. Broker fill count is not independent trade count.",
+    "Paired tests on continuous normal-case returns only; family 27 includes 22 previous registered comparisons plus 5 new comparisons. Historical global trial count remains unknown.",
+    "All current history is development; pass cannot auto-promote. Keep corporate-action/queue/market-impact and UI execution-parity limitations."
+  ],
+  "sources": {
+    "clenow": "https://www.followingthetrend.com/premium/equity-momentum-model-documentation/",
+    "gray_vogel": "https://alphaarchitect.com/quantitative-momentum-investing-philosophy/",
+    "information_discreteness": "https://business.uq.edu.au/sites/default/files/events/files/mitch-warachka-paper.pdf",
+    "oneil_book": "https://www.mheducation.com/highered/mhp/product/how-make-money-stocks-and-become-successful-investor-tablet-ebook.html",
+    "ibd_volume": "https://shop.investors.com/images/promotional/flat-b-b_112408.pdf"
+  }
+}
